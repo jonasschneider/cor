@@ -10,21 +10,36 @@ _start:
   # The string is placed near the beginning so that it's at a known location
   # (The BIOS loads the MBR into address 0x7c00, and the jump is 16 bits, so the string
   #  is known to start at 0x7c02. Ultra hacky, but ok.)
-
   jmp go
 
 .string "Hello from the grid.\r\nEntering protected mode...\0"
 
 go:
-  # Set a counter. BX (Base Index) is one of the few 16-bit registers that can be
+  mov $0x7c02, %bx
+  call print_str_BX
+
+  # Let's enter protected mode.
+  # http://wiki.osdev.org/Protected_Mode
+  #cli
+  #lgdt %gdtr
+
+
+  # It's unclear what the processor will do when we just stop doing anything here.
+  # It'll probably start executing null byte instructions or something else silly.
+  # So, just busy loop here.
+hang:
+  jmp hang
+
+
+
+print_str_BX:
+  # BX (Base Index) is one of the few 16-bit registers that can be
   # used for address arithmetic. I'm not yet sure why, but it apparently has something to
   # do with segments (x86 in Real Mode has a 20-bit address space, but only 16-bit registers).
   # Cf. http://f.osdev.org/viewtopic.php?f=13&t=18374
-  mov $0, %bx
 
-char:
   # Load the next byte to print into AL, exit if it's \0.
-  mov  0x7c02(%bx), %al
+  mov (%bx), %al
   test %al, %al
   jz print_done
 
@@ -34,12 +49,7 @@ char:
 
   # Advance the counter, and rinse
   inc %bx
-  jmp char
+  jmp print_str_BX
 
 print_done:
-
-  # It's unclear what the processor will do when we just stop doing anything here.
-  # It'll probably start executing null byte instructions or something else silly.
-  # So, just busy loop here.
-hang:
-  jmp hang
+  ret
