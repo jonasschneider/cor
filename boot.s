@@ -65,15 +65,29 @@ gdt_descriptor:
   .word gdt - _start + 0x7c00
 
 gdt:
-  # Null Descriptor
+  # The fairly ridiculous GDT format is as follows:
+  # Cf. http://www.cs.cmu.edu/~410/doc/segments/segments.html
+  # (Don't get confused by endianness, I certainly did.)
+
+  # - 16 low bits of limit
+  # - 16 low bits of base
+  # - 8 middle bits of base
+  # - 8 access bits
+  # - 4 middle bits of limit
+  # - 4 granularity bits (?)
+  # - 8 high bits of base
+
+  # Null Descriptor that just does nothing
   .word 0x0000, 0x0000
   .byte 0x00, 0b00000000, 0b00000000, 0x00
-  # Code Descriptor
+  # Code Descriptor, this segment is executable, but read-only
   .word 0xffff, 0x0000
   .byte 0x00, 0b10011010, 0b11001111, 0x00
-  # Data Descriptor
+  # Data Descriptor, this segment is writable, but not executable
   .word 0xffff, 0x0000
   .byte 0x00, 0b10010010, 0b11001111, 0x00
+
+  # All these segments are kernel-level for now. Userspace where?
 
 # This is the first procedure called after completing the switch to protected mode.
 # (Might want to re-enable interrupts again?)
@@ -94,7 +108,7 @@ startup_message:
 
 # Print the null-terminated string starting at %eax on the first line of the screen.
 print_str_eax:
-  # Apparently, once we're out of real mode, we can use ALL the registers however we want.
+  # Apparently, once we're out of real mode, we can use all the registers however we want.
   mov $0, %ebx
 char:
   movb (%eax, %ebx), %ecx
