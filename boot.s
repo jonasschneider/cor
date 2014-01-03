@@ -136,20 +136,15 @@ in_prot32:
   # It also increments %edi for each byte written.
   movl $0x1000, %edi
   movl $0, %eax
-  #movl $2, %ecx
   movl $(0x4000 / 4), %ecx
   rep stosl
 
-  # reset edi
-  movl %cr3, %edi
+  # Reset %edi back to the beginning of the highest-level page table.
+  movl $0x1000, %edi
 
-# PML4T - 0x1000.
-# PDPT - 0x2000.
-# PDT - 0x3000.
-# PT - 0x4000.
-
-  # Add three to the destiation address to set the two lower bits,
-  # which means Present, Readable, and Writable. (?)
+  # Now write out one page table entry on each level, linking to the next table.
+  # Add three to the destination address to set the two lower bits,
+  # which cause the page to be Present, Readable, and Writable. (?)
   movl $0x2003, (%edi)
   add $0x1000, %edi
   movl $0x3003, (%edi)
@@ -157,8 +152,10 @@ in_prot32:
   movl $0x4003, (%edi)
   add $0x1000, %edi
 
-  # Now we want to identity map the first megabyte. %edi points to the
+  # Now all that's left is the innermost level.
+  # We want to identity map the first megabyte. %edi points to the
   # address of the first page table entry.
+  # We won't care about any other pages for now.
 
   # This is the page table entry for the first page, it has offset 0 and
   # the same bits as above set.
@@ -180,23 +177,25 @@ next_page_entry:
   # Loop(t) = if(--%ecx > 0) { goto t; }
   loop next_page_entry
 
-  # Next, enable PAE paging (physical address extension).
+  # Next, enable PAE (physical address extension).
   # This is done by setting bit 5 of CR4.
   # Why do we need this? I don't know.
   mov %cr4, %eax
   or $(1<<5), %eax
   mov %eax, %cr4
 
-  # To switch to long mode, set the LM bit 8 on the model-specific register "EFER MSR".
-  # EFER MSR corresponds to 0xC0000080, and %ecx tells rdmsr and wrmsr which MSR to look at.
+  # To switch to long mode, set the LM bit 8 on the model-specific register "EFER"
+  # (extended features something something). The code for EFER is 0xC0000080,
+  # and %ecx tells rdmsr and wrmsr which MSR to look at.
   mov $0xC0000080, %ecx
   rdmsr
   or $(1<<8), %eax
   wrmsr
 
-  # Now we are in Long mode, but in the Compatibility mode and not the one we actually want, the 64 bit mode.
+  # Now we are in Long mode, but in the Compatibility mode and not the one
+  # that we actually want, the 64 bit mode.
 
-  # Also, enable paging by setting the PG bit 31 in CR0.
+  # Enable paging by setting the PG bit 31 in CR0.
   # Note to self, all of this would break if we weren't identity-mapping the first few pages,
   # since we wouldn't be able to actually load the instructions coming after here.
   mov %cr0, %eax
@@ -213,17 +212,7 @@ next_page_entry:
 
 in_long64:
 .code64
-  # do some stuff to simulate useful work
-  #mov $0xdeadbeefdeadbeef, %rax
-  #mov $0xcafebabecafebabe, %rbx
-  #xor %rbx, %rax
-  #mov $0xB501454135014541, %rcx
-  #xor %rcx, %rax
-  #jnz broken
 
-  # Jump to the kernel at 0x10000
-  #hlt
-  #jmp hang
   # For some reason, I can't do an absolute jump with an immediate operand.
   mov $0x10000, %rax
   jmp *%rax
@@ -236,7 +225,6 @@ broken:
   # It'll probably start executing null byte instructions or something else silly.
   # So, just busy loop here.
 hang:
-  inc %eax
   jmp hang
 
 
