@@ -6,6 +6,14 @@
 # the MBR. At runtime, the BIOS loads the MBR into address 0x7c00.
 .globl  _start
 _start:
+  # Apparently, the 20th bit of memory addresses is always disabled on PCs by default
+  # because of ridiculous backwards compat. Also, enabling/disabling this
+  # behaviour is managed by the keyboard controller (!!!).
+  # We'll pretend that we didn't hear this, enable the A20 line and move on.
+  in $0x92, %al
+  or $2, %al
+  out %al, $0x92
+
   # Let's enter protected mode.
 
   # Disable interrupts - apparently that's a thing.
