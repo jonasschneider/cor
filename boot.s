@@ -212,7 +212,10 @@ next_page_entry:
 
 in_long64:
 .code64
+  mov $(startup_message_ok - _start + 0x7c00), %eax
+  call print_str_eax
 
+  hlt
   # For some reason, I can't do an absolute jump with an immediate operand.
   mov $0x10000, %rax
   jmp *%rax
@@ -227,6 +230,9 @@ broken:
 hang:
   jmp hang
 
+
+startup_message_ok:
+.string "\\o/ - in 64-bit mode!\0"
 
 startup_message_broken:
 .string "Failed to enter 64-bit mode.\0"
