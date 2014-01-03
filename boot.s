@@ -115,10 +115,8 @@ gdt64:
 # (Might want to re-enable interrupts again?)
 in_prot32:
 .code32
-  # Just print a fancy message here
-  #mov $(startup_message - _start + 0x7c00), %eax
-  #call print_str_eax
-
+  # Actually, we don't do anything fancy in protected mode besides preparing the switch
+  # to long mode. Maybe we could skip protected mode altogether, but meh.
 
   # We're going to set up our page tables starting at 0x1000.
   # CR3 holds the address to the topmost page directory (there are 4 levels)
@@ -213,8 +211,39 @@ next_page_entry:
   lgdt (gdt64_descriptor - _start + 0x7c00)
   ljmp $0b1000, $(in_long64 - _start + 0x7c00)
 
+in_long64:
+.code64
+  # do some stuff to simulate useful work
+  mov $0xdeadbeef, %rax
+  mov $0xcafebabe, %rbx
+  xor %rbx, %rax
+  xor $0x14530451, %rax
+  jnz broken
+
+  # Just print a fancy message here
+  mov $(startup_message - _start + 0x7c00), %eax
+  call print_str_eax
+  jmp hang
+
+
+broken:
+  mov $(startup_message_broken - _start + 0x7c00), %eax
+  call print_str_eax
+  jmp hang
+
+
+  # It's unclear what the processor will do when we just stop doing anything here.
+  # It'll probably start executing null byte instructions or something else silly.
+  # So, just busy loop here.
+hang:
+  jmp hang
+
+
 startup_message:
-.string "Hello from the grid, speaking to you from protected mode.\0"
+.string "Hello from the grid, speaking to you from 64-bit long mode, yay!                      \0"
+
+startup_message_broken:
+.string "Hello from the grid. Sorry, but my long mode is broken. :'(                      \0"
 
 # Print the null-terminated string starting at %eax on the first line of the screen.
 print_str_eax:
@@ -238,22 +267,3 @@ char:
 
 print_done:
   ret
-
-
-in_long64:
-.code64
-  # do some stuff to simulate useful work
-  movb $'X', 0xB8000
-  #mov $0xffffffffffffffff, %rax
-  mov $0xB8000, %edi
-  mov $0x1F201F201F201F20, %rax
-  mov $500, %ecx
-  rep movsq
-#  hlt
-
-
-  # It's unclear what the processor will do when we just stop doing anything here.
-  # It'll probably start executing null byte instructions or something else silly.
-  # So, just busy loop here.
-hang:
-  jmp hang
