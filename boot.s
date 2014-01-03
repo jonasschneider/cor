@@ -95,21 +95,123 @@ gdt:
   .word 0xffff, 0x0000
   .byte 0x00, 0b10010010, 0b11001111, 0x00
 
-  # All these segments are kernel-level for now. Userspace where?
+gdt64_descriptor:
+  .word (3 * 8) - 1 # GDT size in bytes - 1, 3 is the number of entries
+  .word gdt64 - _start + 0x7c00
+
+gdt64:
+  # Null Descriptor that just does nothing
+  .word 0x0000, 0x0000
+  .byte 0x00, 0b00000000, 0b00000000, 0x00
+  # Code Descriptor, this segment is executable, but read-only (Long mode bit set)
+  .word 0xffff, 0x0000
+  .byte 0x00, 0b10011010, 0b11101111, 0x00
+  # Data Descriptor, this segment is writable, but not executable
+  .word 0xffff, 0x0000
+  .byte 0x00, 0b10010010, 0b11001111, 0x00
+
 
 # This is the first procedure called after completing the switch to protected mode.
 # (Might want to re-enable interrupts again?)
 in_prot32:
 .code32
   # Just print a fancy message here
-  mov $(startup_message - _start + 0x7c00), %eax
-  call print_str_eax
+  #mov $(startup_message - _start + 0x7c00), %eax
+  #call print_str_eax
 
-  # It's unclear what the processor will do when we just stop doing anything here.
-  # It'll probably start executing null byte instructions or something else silly.
-  # So, just busy loop here.
-hang:
-  jmp hang
+
+  # We're going to set up our page tables starting at 0x1000.
+  # CR3 holds the address to the topmost page directory (there are 4 levels)
+  # Nb: it's OK to set this here already (even though nothing's really set up yet)
+  # because paging is still disabled.
+
+  # Ooh. I wanted to just do this:
+  #   movl $0x1000, %cr3
+  # but apparently you can't load an immediate value (=a constant) into these control
+  # registers, you have to load them in one of the other registers first. Ok.
+
+  movl $0x1000, %edi
+  mov %edi, %cr3
+
+  # Zero out 0x1000-0x4FFF.
+  # The rep thing apparently writes %eax to %ecx units of memory, starting at %edi.
+  # It also increments %edi for each byte written.
+  movl $0x1000, %edi
+  movl $0, %eax
+  #movl $2, %ecx
+  movl $(0x4000 / 4), %ecx
+  rep stosl
+
+  # reset edi
+  movl %cr3, %edi
+
+# PML4T - 0x1000.
+# PDPT - 0x2000.
+# PDT - 0x3000.
+# PT - 0x4000.
+
+  # Add three to the destiation address to set the two lower bits,
+  # which means Present, Readable, and Writable. (?)
+  movl $0x2003, (%edi)
+  add $0x1000, %edi
+  movl $0x3003, (%edi)
+  add $0x1000, %edi
+  movl $0x4003, (%edi)
+  add $0x1000, %edi
+
+  # Now we want to identity map the first megabyte. %edi points to the
+  # address of the first page table entry.
+
+  # This is the page table entry for the first page, it has offset 0 and
+  # the same bits as above set.
+  mov $0x00000003, %ebx
+
+  # Run the block 512 times.
+  mov $512, %ecx
+
+next_page_entry:
+  # write out the next page descriptor
+  movl %ebx, (%edi)
+
+  # move our target to the next page
+  add $0x1000, %ebx
+  # and move to the next page table entry, each entry is 8 bytes
+  add $8, %edi
+
+  # Exit when ecx=0.
+  # Loop(t) = if(--%ecx > 0) { goto t; }
+  loop next_page_entry
+
+  # Next, enable PAE paging (physical address extension).
+  # This is done by setting bit 5 of CR4.
+  # Why do we need this? I don't know.
+  mov %cr4, %eax
+  or $(1<<5), %eax
+  mov %eax, %cr4
+
+  # To switch to long mode, set the LM bit 8 on the model-specific register "EFER MSR".
+  # EFER MSR corresponds to 0xC0000080, and %ecx tells rdmsr and wrmsr which MSR to look at.
+  mov $0xC0000080, %ecx
+  rdmsr
+  or $(1<<8), %eax
+  wrmsr
+
+  # Now we are in Long mode, but in the Compatibility mode and not the one we actually want, the 64 bit mode.
+
+  # Also, enable paging by setting the PG bit 31 in CR0.
+  # Note to self, all of this would break if we weren't identity-mapping the first few pages,
+  # since we wouldn't be able to actually load the instructions coming after here.
+  mov %cr0, %eax
+  or $(1<<31), %eax
+  mov %eax, %cr0
+
+  # That was hard! Now we should be able to jump to a 64-bit instruction.
+  # (Since this is still all stored in the first meg of memory, we don't have to worry
+  # about things breaking right away.)
+
+  # Jump to a 64-bit instruction to switch to 64-bit mode
+  lgdt (gdt64_descriptor - _start + 0x7c00)
+  ljmp $0b1000, $(in_long64 - _start + 0x7c00)
 
 startup_message:
 .string "Hello from the grid, speaking to you from protected mode.\0"
@@ -119,8 +221,8 @@ print_str_eax:
   # Apparently, once we're out of real mode, we can use all the registers however we want.
   mov $0, %ebx
 char:
-  movb (%eax, %ebx), %ecx
-  test %ecx, %ecx
+  movb (%eax, %ebx), %cl
+  test %cl, %cl
   jz print_done
 
   # Thank god we don't have to actually mess with pixels.
@@ -128,7 +230,7 @@ char:
   # 2 bytes are stored; the first byte is the ASCII code, and the second byte is formatting.
   # I read somewhere that the formatting is 4 bits each for foreground and background color,
   # and a value of 7 is grey on black.
-  movb %ecx, 0xB8000(,%ebx,2)
+  movb %cl, 0xB8000(,%ebx,2)
   movb $7, 0xB8001(,%ebx,2)
 
   inc %ebx
@@ -136,3 +238,22 @@ char:
 
 print_done:
   ret
+
+
+in_long64:
+.code64
+  # do some stuff to simulate useful work
+  movb $'X', 0xB8000
+  #mov $0xffffffffffffffff, %rax
+  mov $0xB8000, %edi
+  mov $0x1F201F201F201F20, %rax
+  mov $500, %ecx
+  rep movsq
+#  hlt
+
+
+  # It's unclear what the processor will do when we just stop doing anything here.
+  # It'll probably start executing null byte instructions or something else silly.
+  # So, just busy loop here.
+hang:
+  jmp hang
