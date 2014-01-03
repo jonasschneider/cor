@@ -214,36 +214,34 @@ next_page_entry:
 in_long64:
 .code64
   # do some stuff to simulate useful work
-  mov $0xdeadbeef, %rax
-  mov $0xcafebabe, %rbx
-  xor %rbx, %rax
-  xor $0x14530451, %rax
-  jnz broken
+  #mov $0xdeadbeefdeadbeef, %rax
+  #mov $0xcafebabecafebabe, %rbx
+  #xor %rbx, %rax
+  #mov $0xB501454135014541, %rcx
+  #xor %rcx, %rax
+  #jnz broken
 
-  # Just print a fancy message here
-  mov $(startup_message - _start + 0x7c00), %eax
-  call print_str_eax
-  jmp hang
-
+  # Jump to the kernel at 0x10000
+  #hlt
+  #jmp hang
+  # For some reason, I can't do an absolute jump with an immediate operand.
+  mov $0x10000, %rax
+  jmp *%rax
 
 broken:
   mov $(startup_message_broken - _start + 0x7c00), %eax
   call print_str_eax
-  jmp hang
-
 
   # It's unclear what the processor will do when we just stop doing anything here.
   # It'll probably start executing null byte instructions or something else silly.
   # So, just busy loop here.
 hang:
+  inc %eax
   jmp hang
 
 
-startup_message:
-.string "Hello from the grid, speaking to you from 64-bit long mode, yay!                      \0"
-
 startup_message_broken:
-.string "Hello from the grid. Sorry, but my long mode is broken. :'(                      \0"
+.string "Failed to enter 64-bit mode.\0"
 
 # Print the null-terminated string starting at %eax on the first line of the screen.
 print_str_eax:

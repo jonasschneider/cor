@@ -1,13 +1,17 @@
 SECTIONS
 {
-  . = 0x0;
-  .text : {
+  .text 0x10000 : {
+    stage2_entrypoint.o(entrypoint);
     *(.text);
   }
-  . = 0x1000;
-  .data : {
+  .data 0x50000 : {
     *(.data)
-    . = 0x2000;
+    . = 0x70000;
+  }
+
+  /DISCARD/ : {
+    *(.comment);
+    *(.eh_frame);
   }
 }
 ENTRY(kernel_main)
