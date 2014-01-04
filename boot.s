@@ -14,6 +14,42 @@ _start:
   or $2, %al
   out %al, $0x92
 
+  # probe for the existence of disk read extensions
+  mov $0x41, %ah
+  mov $0x80, %dl
+  mov $0x55aa, %bx
+  int $0x13
+
+  # Do this here because otherwise AX fuckup etc.
+  mov $0, %ax
+  mov %ax, %ds
+
+  # Load the second boot stage from the first HDD,
+  # using the BIOS routine "INT 13h/AH=42h: Extended Read Sectors From Drive".
+  mov $0x42, %ah
+  mov $0x80, %dl # drive index (0x80 is first drive)
+
+  movw $(dap - _start + 0x7c00), %si
+
+  int $0x13
+  jmp skip
+
+  .align 4
+dap:
+  .byte 0x10 # size
+  .byte 0
+  # number of sectors to read
+  .word 1
+
+   # target position for read, offset then segment because of little endian
+  .word 0x7e00
+  .word 0x0000
+
+  .long 0 # first sector to read
+  .long 0 # high address
+
+  .align 4
+skip:
   # Let's enter protected mode.
 
   # Disable interrupts - apparently that's a thing.
