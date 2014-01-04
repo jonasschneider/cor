@@ -31,8 +31,8 @@ stage2.bin: stage2.o
 	$(OBJCOPY) --only-section=.text -O binary stage2.o stage2.bin
 
 disk.bin: mbr.bin stage2.o Makefile
-	# we want a 0x70000 byte disk
-	dd if=/dev/zero of=disk.bin~ conv=notrunc bs=1 count=$$((0x70000))
+	# we want a 0x60100 byte disk
+	dd if=/dev/zero of=disk.bin~ conv=notrunc bs=1 count=$$((0x60100))
 	$(OBJCOPY) -I elf64-x86-64 --only-section=.text -O binary stage2.o stage2_text~
 	$(OBJCOPY) -I elf64-x86-64 --only-section=.data -O binary stage2.o stage2_data~
 	# add the MBR.

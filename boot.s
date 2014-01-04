@@ -14,42 +14,44 @@ _start:
   or $2, %al
   out %al, $0x92
 
-  # probe for the existence of disk read extensions
-  mov $0x41, %ah
-  mov $0x80, %dl
-  mov $0x55aa, %bx
-  int $0x13
+  # Our task here is to load the second boot stage into RAM, according to our memory map.
+  # We could write our own IDE drivers, but we can also just use the BIOS while we're still
+  # in protected mode.
+  # We'll use "INT 13h/AH=42h: Extended Read Sectors From Drive", which takes a pointer
+  # to a "data address packet" or something (DAP), which tells the BIOS which HD blocks to
+  # load where. We'll use LBA and not the traditional cylinder, head, sector addressing
+  # because who needs backwards compat.
 
-  # Do this here because otherwise AX fuckup etc.
+  # Learned here the hard way: AL, AH and AX are not separate registers. AX is just composed
+  # of the two. So if you load AH with something, then later load AX with 0, AH will also be 0.
+  # By the way, simply ensure the data segment is 0 so that the BIOS loads the DAP from the
+  # right position.
   mov $0, %ax
   mov %ax, %ds
 
-  # Load the second boot stage from the first HDD,
-  # using the BIOS routine "INT 13h/AH=42h: Extended Read Sectors From Drive".
   mov $0x42, %ah
-  mov $0x80, %dl # drive index (0x80 is first drive)
+  mov $0x80, %dl # Set the drive index (0x80 is first drive)
 
+  # Set the address to our DAP
   movw $(dap - _start + 0x7c00), %si
 
   int $0x13
-  jmp skip
 
-  .align 4
+  jmp real_to_prot
+
 dap:
-  .byte 0x10 # size
-  .byte 0
-  # number of sectors to read
-  .word 1
+  .byte 0x10 # struct size (16 bytes)
+  .byte 0 # reserved 0
+  .word (0x60000 / 512) # number of sectors to read
 
    # target position for read, offset then segment because of little endian
-  .word 0x7e00
   .word 0x0000
+  .word 0x1000
 
-  .long 0 # first sector to read
+  .long 1 # first sector to read
   .long 0 # high address
 
-  .align 4
-skip:
+real_to_prot:
   # Let's enter protected mode.
 
   # Disable interrupts - apparently that's a thing.

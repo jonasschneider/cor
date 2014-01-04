@@ -6,7 +6,9 @@ SECTIONS
   }
   .data 0x50000 : {
     *(.data)
-    . = 0x70000;
+    . = 0x6FFFE;
+    BYTE(0x13);
+    BYTE(0x37);
   }
 
   /DISCARD/ : {
