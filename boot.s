@@ -213,7 +213,7 @@ next_page_entry:
 in_long64:
 .code64
   # Check if we successfully loaded the next stage (magic values are overrated)
-  movw 0x10000, %eax
+  mov 0x10000, %eax
   test %eax, %eax
   je broken
 
@@ -237,10 +237,10 @@ hang:
 
 
 startup_message_ok:
-.string "\\o/ - in 64-bit mode!\0"
+.string "\\o/ - loaded stage 2\0"
 
 startup_message_broken:
-.string "Failed to enter 64-bit mode.\0"
+.string "Failed to load stage 2.\0"
 
 # Print the null-terminated string starting at %eax on the first line of the screen.
 print_str_eax:

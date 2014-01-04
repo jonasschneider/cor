@@ -15,7 +15,7 @@ boot.o: boot.s
 mbr.o: boot.o boot.ldscript
 	$(LD) boot.o -T boot.ldscript -o mbr.o
 
-mbr.bin: mbr.o blank_mbr
+mbr.bin: mbr.o blank_mbr boot.o
 	cp blank_mbr mbr.bin
 	$(OBJCOPY) --only-section=.text -O binary boot.o mbr_contents.bin
 	dd if=mbr_contents.bin of=mbr.bin conv=notrunc
