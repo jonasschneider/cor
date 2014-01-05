@@ -3,4 +3,5 @@
 .section entrypoint
 .globl  _start
 _start:
-  jmp *kernel_main
+  mov $kernel_main, %rax
+  jmp *%rax

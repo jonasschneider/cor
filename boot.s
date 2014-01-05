@@ -256,7 +256,6 @@ in_long64:
   mov $(startup_message_ok - _start + 0x7c00), %eax
   call print_str_eax
 
-  hlt
   # For some reason, I can't do an absolute jump with an immediate operand.
   mov $0x10000, %rax
   jmp *%rax

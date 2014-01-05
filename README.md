@@ -13,7 +13,7 @@ Synopsis
 
     set disassemble-next-line on
     set arch i386:x86-64
-    tar ext :1234
+    tar rem :1234
 
 - To debug the bootloader, look at how `bin/debug` skips it
 
