@@ -5,17 +5,15 @@ CFLAGS32=-nostdlib -static -nostartfiles -nodefaultlibs -Wall -Wextra
 CC=./sshwrap gcc
 OBJCOPY=./sshwrap objcopy
 LD=./sshwrap ld
+AS=./sshwrap as
 
 run: all
 	qemu-system-x86_64 -s disk.bin
 
 boot.o: boot.s
-	$(CC) $(CFLAGS32) boot.s -o boot.o
+	$(AS) boot.s -o boot.o
 
-mbr.o: boot.o boot.ldscript
-	$(LD) boot.o -T boot.ldscript -o mbr.o
-
-mbr.bin: mbr.o blank_mbr boot.o
+mbr.bin: blank_mbr boot.o
 	cp blank_mbr mbr.bin
 	$(OBJCOPY) --only-section=.text -O binary boot.o mbr_contents.bin
 	dd if=mbr_contents.bin of=mbr.bin conv=notrunc
