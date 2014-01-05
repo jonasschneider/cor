@@ -37,21 +37,6 @@ _start:
 
   int $0x13
 
-  jmp real_to_prot
-
-dap:
-  .byte 0x10 # struct size (16 bytes)
-  .byte 0 # reserved 0
-  .word (0x60000 / 512) # number of sectors to read
-
-   # target position for read, offset then segment because of little endian
-  .word 0x0000
-  .word 0x1000
-
-  .long 1 # first sector to read
-  .long 0 # high address
-
-real_to_prot:
   # Let's enter protected mode.
 
   # Disable interrupts - apparently that's a thing.
@@ -104,6 +89,18 @@ real_to_prot:
   # physical and logical addresses are identical, we can just pass the location of our jump target.
   # So long, 8086 mode!
   ljmp $0b1000, $(in_prot32 - _start + 0x7c00)
+
+dap:
+  .byte 0x10 # struct size (16 bytes)
+  .byte 0 # reserved 0
+  .word (0x60000 / 512) # number of sectors to read
+
+   # target position for read, offset then segment because of little endian
+  .word 0x0000
+  .word 0x1000
+
+  .long 1 # first sector to read
+  .long 0 # high address
 
 # This is some strange metadata struct that points to the GDT.
 gdt_descriptor:
