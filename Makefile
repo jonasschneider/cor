@@ -8,7 +8,7 @@ LD=./sshwrap ld
 AS=./sshwrap as
 
 clean:
-	rm *.o *.bin
+	rm *.o *.bin *~
 
 boot.o: boot.s
 	$(AS) boot.s -o boot.o
