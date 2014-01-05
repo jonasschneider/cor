@@ -7,13 +7,15 @@ Physical memory map at the time of stage2 startup
 
 Synopsis
 =========
-- Run `make run` to watch things in qemu
-- Run `gdb`, then do:
+- `make`
+- `bin/run` to launch the thing in qemu
+- To debug the kernel, `bin/debug` and then attach a `gdb` like so:
 
     set disassemble-next-line on
     set arch i386:x86-64
     tar ext :1234
 
+- To debug the bootloader, look at how `bin/debug` skips it
 
 The tools
 =========
