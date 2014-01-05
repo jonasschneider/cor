@@ -248,14 +248,16 @@ will_enter_longmode64:
 
 in_long64:
 .code64
-  # Check if we successfully loaded the next stage (magic values are overrated)
-  mov 0x10000, %eax
-  test %eax, %eax
-  je broken
+  # Check if we successfully loaded the next stage by checking the magic bytes
+  xor %ax, %ax
+  movw 0x6fffe, %ax
+  cmp $0x3713, %ax
+  jne broken
 
   mov $(startup_message_ok - _start + 0x7c00), %eax
   call print_str_eax
 
+  # Jump to stage 2!
   # For some reason, I can't do an absolute jump with an immediate operand.
   mov $0x10000, %rax
   jmp *%rax
