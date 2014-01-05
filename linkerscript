@@ -4,9 +4,10 @@ SECTIONS
     stage2_entrypoint.o(entrypoint);
     *(.text);
   }
-  .data 0x50000 : {
+  . = 0x50000;
+  .data . : {
     *(.data)
-    . = 0x6FFFE;
+    . = 0x1FFFE;
     BYTE(0x13);
     BYTE(0x37);
   }
