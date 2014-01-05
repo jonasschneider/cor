@@ -8,6 +8,12 @@ void kernel_main(void) {
   int a = 0xdead;
   int b = my_kernel_subroutine();
   int c = a + b;
+  {
+    int i = 0;
+    while(1) {
+      *((unsigned char*)0xB8000+(i++)) = 'X';
+    }
+  }
 }
 
 int my_kernel_subroutine() {
