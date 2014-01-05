@@ -243,6 +243,7 @@ next_page_entry:
 
   # Jump to a 64-bit instruction to switch to 64-bit mode
   lgdt (gdt64_descriptor - _start + 0x7c00)
+will_enter_longmode64:
   ljmp $0b1000, $(in_long64 - _start + 0x7c00)
 
 in_long64:

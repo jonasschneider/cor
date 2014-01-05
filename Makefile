@@ -1,4 +1,4 @@
-.PHONY: all run
+.PHONY: all clean
 all: disk.bin
 CFLAGS=-nostdlib -static -nostartfiles -nodefaultlibs -Wall -Wextra -m64
 CFLAGS32=-nostdlib -static -nostartfiles -nodefaultlibs -Wall -Wextra
@@ -7,8 +7,8 @@ OBJCOPY=./sshwrap objcopy
 LD=./sshwrap ld
 AS=./sshwrap as
 
-run: all
-	qemu-system-x86_64 -s disk.bin
+clean:
+	rm *.o *.bin
 
 boot.o: boot.s
 	$(AS) boot.s -o boot.o
