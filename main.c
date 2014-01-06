@@ -1,3 +1,4 @@
+#include <stdarg.h>
 int my_kernel_subroutine() {
   return 0xbeef;
 }
@@ -5,11 +6,12 @@ int my_kernel_subroutine() {
 int lawl = 0xdeadbeef;
 
 void console_clear(void);
-int printk(const char *text);
+int printk(const char *text, ...);
 
 void kernel_main(void) {
   console_clear();
   printk("Hello from the kernel.\nYes, we can multiline.\n");
+  printk("Leet is \'%u\'\n", 1337);
 
   while(1) {}
 
@@ -34,7 +36,7 @@ void console_clear(void) {
 }
 
 void writec_k(const char c) {
-  if(console_col == console_height-1 || c == '\n') {
+  if(console_col == console_width-1 || c == '\n') {
     console_line++;
     console_col = 0;
     if(c == '\n') return;
@@ -45,10 +47,41 @@ void writec_k(const char c) {
   *((unsigned char*)0xB8000+grid_index*2) = c;
 }
 
-int printk(const char *text) {
-  while(*text) {
-    writec_k(*text);
-    text++;
+void printk_uint(unsigned int value) {
+  const int max_digits = 20;
+  char buffer[max_digits+1]; // FIXME: yeah, this is never going to break, ever
+  buffer[max_digits] = '\0';
+  int i = max_digits-1;
+  while(value > 10) {
+    if(i == 0) // leave one for the last digit
+      buffer[0] = 'E'; // at least indicate the error
+    else
+      buffer[i--] = 0x30 + (value % 10);
+    value /= 10;
   }
+  buffer[i--] = 0x30 + value;
+
+  printk(buffer+i+1);
+}
+
+int printk(const char *format, ...) {
+  va_list ap;
+  va_start(ap, format); //Requires the last fixed parameter (to get the address)
+
+  while(*format) {
+    if(*format == '%') {
+      format++;
+      if(*format == '%') {
+        writec_k('%');
+      } else if(*format == 'u') {
+        printk_uint(va_arg(ap, unsigned int));
+      }
+    } else {
+      writec_k(*format);
+    }
+    format++;
+  }
+
+  va_end(ap);
   return 0;
 }
