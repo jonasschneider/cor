@@ -1,6 +1,7 @@
 .PHONY: all clean
 all: disk.bin
-CFLAGS=-nostdlib -static -nostartfiles -nodefaultlibs -Wall -Wextra -m64 -Werror -std=c11
+# TODO: add a real configure script to remove debug options
+CFLAGS=-nostdlib -static -nostartfiles -nodefaultlibs -Wall -Wextra -m64 -Werror -std=c11 -ggdb
 CC=./sshwrap gcc
 OBJCOPY=./sshwrap objcopy
 LD=./sshwrap ld
