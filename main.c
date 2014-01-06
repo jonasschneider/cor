@@ -1,4 +1,7 @@
 #include <stdarg.h>
+
+typedef unsigned int uint;
+
 int my_kernel_subroutine() {
   return 0xbeef;
 }
@@ -11,8 +14,8 @@ int printk(const char *text, ...);
 void kernel_main(void) {
   console_clear();
   printk("Hello from the kernel.\nYes, we can multiline.\n");
-  printk("Leet is \'%u\'\n", 1337);
-  printk("Haxx is \'%x\'\n", 0x1234321);
+  printk("Leet is \'%u\', 0 is \'%u\'\n", 1337, 0);
+  printk("Haxx is \'%x\', 0 is \'%x\'\n", 0x1234321, 0);
 
   while(1) {}
 
@@ -48,7 +51,7 @@ void writec_k(const char c) {
   *((unsigned char*)0xB8000+grid_index*2) = c;
 }
 
-void printk_uint(unsigned int value) {
+void printk_uint(uint value) {
   const int max_digits = 20;
   char buffer[max_digits+1]; // FIXME: yeah, this is never going to break, ever
   buffer[max_digits] = '\0';
@@ -69,22 +72,26 @@ void printk_uint(unsigned int value) {
   printk(buffer+i+1);
 }
 
-void printk_hex(unsigned int value) {
+void printk_hex(uint value) {
   printk("0x");
-  unsigned int trailing_zeroes = 0;
-  for(unsigned int i = sizeof(value) * 2; i > 0; i--) {
-    char nibble = (value & (0xf << (sizeof(value)*2-4*i+4) )) >> (sizeof(value)*2-4*i+4);
-    if(nibble != 0) {
-      trailing_zeroes = i;
-      break;
+  const int max_digits = 20;
+  char buffer[max_digits+1]; // FIXME: yeah, this is never going to break, ever
+  buffer[max_digits] = '\0';
+  int i = max_digits-1;
+  char overflow = 0;
+  while(value > 16) {
+    if(i == 0) { // leave one for the last digit
+      overflow = 1;
+    } else {
+      buffer[i--] = "0123456789abcdef"[(value % 16)];
     }
+    value /= 16;
   }
-  printk("trailing:%u  ", trailing_zeroes);
-  for(unsigned int i = 0; i < sizeof(value)*2; i++) {
-    char nibble = (value & (0xf << (sizeof(value)*2-4*i+4) )) >> (sizeof(value)*2-4*i+4);
-    printk("%u", (unsigned int)nibble);
-    //writec_k("0123456789abcdef"[(unsigned int)nibble]);
-  }
+  if(overflow)
+    printk("ERR"); // at least indicate the error
+  buffer[i] = "0123456789abcdef"[(value % 16)];
+
+  printk(buffer+i);
 }
 
 int printk(const char *format, ...) {
@@ -97,9 +104,9 @@ int printk(const char *format, ...) {
       if(*format == '%') {
         writec_k('%');
       } else if(*format == 'u') {
-        printk_uint(va_arg(ap, unsigned int));
+        printk_uint(va_arg(ap, uint));
       } else if(*format == 'x') {
-        printk_hex(va_arg(ap, unsigned int));
+        printk_hex(va_arg(ap, uint));
       }
     } else {
       writec_k(*format);
