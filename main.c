@@ -11,7 +11,7 @@ int printk(const char *text, ...);
 void kernel_main(void) {
   console_clear();
   printk("Hello from the kernel.\nYes, we can multiline.\n");
-  printk("Leet is \'%u\'\n", 1337);
+  printk("Leet is \'%u\'\n", 0xffffffffff);
 
   while(1) {}
 
@@ -52,13 +52,17 @@ void printk_uint(unsigned int value) {
   char buffer[max_digits+1]; // FIXME: yeah, this is never going to break, ever
   buffer[max_digits] = '\0';
   int i = max_digits-1;
+  char overflow = 0;
   while(value > 10) {
-    if(i == 0) // leave one for the last digit
-      buffer[0] = 'E'; // at least indicate the error
-    else
+    if(i == 0) { // leave one for the last digit
+      overflow = 1;
+    } else {
       buffer[i--] = 0x30 + (value % 10);
+    }
     value /= 10;
   }
+  if(overflow)
+    printk("ERR"); // at least indicate the error
   buffer[i--] = 0x30 + value;
 
   printk(buffer+i+1);
