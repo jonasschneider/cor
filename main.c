@@ -4,10 +4,11 @@ int my_kernel_subroutine() {
 
 int lawl = 0xdeadbeef;
 
+void console_clear(void);
 int printk(const char *text);
 
 void kernel_main(void) {
-  *((unsigned char*)0xB8000) = 'X';
+  console_clear();
   printk("Hello from the kernel.\nYes, we can multiline.\n");
 
   while(1) {}
@@ -25,7 +26,14 @@ const int console_height = 25;
 int console_line = 0;
 int console_col = 0;
 
-inline void writec_k(const char c) {
+void console_clear(void) {
+  console_line = 0;
+  console_col = 0;
+  for(int i = 0; i < (console_width*console_height); i++)
+    *((unsigned char*)0xB8000+i*2) = ' ';
+}
+
+void writec_k(const char c) {
   if(console_col == console_height-1 || c == '\n') {
     console_line++;
     console_col = 0;
@@ -39,7 +47,6 @@ inline void writec_k(const char c) {
 
 int printk(const char *text) {
   while(*text) {
-  //while(1) {
     writec_k(*text);
     text++;
   }
