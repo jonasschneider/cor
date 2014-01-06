@@ -51,47 +51,34 @@ void writec_k(const char c) {
   *((unsigned char*)0xB8000+grid_index*2) = c;
 }
 
-void printk_uint(uint value) {
+void print_itoa(uint value, const uint base, const char *alphabet) {
   const int max_digits = 20;
   char buffer[max_digits+1]; // FIXME: yeah, this is never going to break, ever
   buffer[max_digits] = '\0';
   int i = max_digits-1;
   char overflow = 0;
-  while(value > 10) {
+  while(value > base) {
     if(i == 0) { // leave one for the last digit
       overflow = 1;
     } else {
-      buffer[i--] = 0x30 + (value % 10);
+      buffer[i--] = alphabet[(value % base)];
     }
-    value /= 10;
+    value /= base;
   }
   if(overflow)
     printk("ERR"); // at least indicate the error
-  buffer[i--] = 0x30 + value;
+  buffer[i] = alphabet[(value % base)];
 
-  printk(buffer+i+1);
+  printk(buffer+i);
+}
+
+void printk_uint(uint value) {
+  print_itoa(value, 10, "0123456789");
 }
 
 void printk_hex(uint value) {
   printk("0x");
-  const int max_digits = 20;
-  char buffer[max_digits+1]; // FIXME: yeah, this is never going to break, ever
-  buffer[max_digits] = '\0';
-  int i = max_digits-1;
-  char overflow = 0;
-  while(value > 16) {
-    if(i == 0) { // leave one for the last digit
-      overflow = 1;
-    } else {
-      buffer[i--] = "0123456789abcdef"[(value % 16)];
-    }
-    value /= 16;
-  }
-  if(overflow)
-    printk("ERR"); // at least indicate the error
-  buffer[i] = "0123456789abcdef"[(value % 16)];
-
-  printk(buffer+i);
+  print_itoa(value, 16, "0123456789abcdef");
 }
 
 int printk(const char *format, ...) {
