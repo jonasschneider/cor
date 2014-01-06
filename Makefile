@@ -6,6 +6,7 @@ CC=./sshwrap gcc
 OBJCOPY=./sshwrap objcopy
 LD=./sshwrap ld
 AS=./sshwrap as
+OBJS=main.o printk.o
 
 clean:
 	rm *.o *.bin *~
@@ -22,8 +23,8 @@ mbr.bin: blank_mbr boot.o
 stage2_entrypoint.o: stage2_entrypoint.s
 	$(CC) $(CFLAGS) -c stage2_entrypoint.s -o stage2_entrypoint.o
 
-stage2.o: main.o linkerscript stage2_entrypoint.o
-	$(LD) main.o stage2_entrypoint.o -T linkerscript -o stage2.o
+stage2.o: $(OBJS) linkerscript stage2_entrypoint.o
+	$(LD) $(OBJS) stage2_entrypoint.o -T linkerscript -o stage2.o
 
 stage2.bin: stage2.o
 	$(OBJCOPY) --only-section=.text -O binary stage2.o stage2.bin
