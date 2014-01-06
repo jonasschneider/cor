@@ -8,7 +8,7 @@ int printk(const char *text);
 
 void kernel_main(void) {
   *((unsigned char*)0xB8000) = 'X';
-  printk("Hello from the kernel\n");
+  printk("Hello from the kernel.\nYes, we can multiline.\n");
 
   while(1) {}
 
@@ -20,15 +20,16 @@ void kernel_main(void) {
   }
 }
 
-const int console_width = 25;
-const int console_height = 40;
+const int console_width = 80;
+const int console_height = 25;
 int console_line = 0;
 int console_col = 0;
 
 inline void writec_k(const char c) {
-  if(console_col == (console_height-1) || c == '\n') {
+  if(console_col == console_height-1 || c == '\n') {
     console_line++;
     console_col = 0;
+    if(c == '\n') return;
   }
 
   int grid_index = (console_col++) + console_line*console_width;
