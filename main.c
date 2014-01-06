@@ -11,7 +11,8 @@ int printk(const char *text, ...);
 void kernel_main(void) {
   console_clear();
   printk("Hello from the kernel.\nYes, we can multiline.\n");
-  printk("Leet is \'%u\'\n", 0xffffffffff);
+  printk("Leet is \'%u\'\n", 1337);
+  printk("Haxx is \'%x\'\n", 0x1234321);
 
   while(1) {}
 
@@ -68,6 +69,24 @@ void printk_uint(unsigned int value) {
   printk(buffer+i+1);
 }
 
+void printk_hex(unsigned int value) {
+  printk("0x");
+  unsigned int trailing_zeroes = 0;
+  for(unsigned int i = sizeof(value) * 2; i > 0; i--) {
+    char nibble = (value & (0xf << (sizeof(value)*2-4*i+4) )) >> (sizeof(value)*2-4*i+4);
+    if(nibble != 0) {
+      trailing_zeroes = i;
+      break;
+    }
+  }
+  printk("trailing:%u  ", trailing_zeroes);
+  for(unsigned int i = 0; i < sizeof(value)*2; i++) {
+    char nibble = (value & (0xf << (sizeof(value)*2-4*i+4) )) >> (sizeof(value)*2-4*i+4);
+    printk("%u", (unsigned int)nibble);
+    //writec_k("0123456789abcdef"[(unsigned int)nibble]);
+  }
+}
+
 int printk(const char *format, ...) {
   va_list ap;
   va_start(ap, format); //Requires the last fixed parameter (to get the address)
@@ -79,6 +98,8 @@ int printk(const char *format, ...) {
         writec_k('%');
       } else if(*format == 'u') {
         printk_uint(va_arg(ap, unsigned int));
+      } else if(*format == 'x') {
+        printk_hex(va_arg(ap, unsigned int));
       }
     } else {
       writec_k(*format);
