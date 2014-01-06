@@ -1,13 +1,17 @@
-int my_kernel_subroutine(void);
+int my_kernel_subroutine() {
+  return 0xbeef;
+}
 
 int lawl = 0xdeadbeef;
 
-// For now, this has to be the first symbol defined or it won't be placed at 0x0. Ugh.
+int printk(const char *text);
+
 void kernel_main(void) {
   *((unsigned char*)0xB8000) = 'X';
-  int a = 0xdead;
-  int b = my_kernel_subroutine();
-  int c = a + b;
+  printk("Hello from the kernel\n");
+
+  while(1) {}
+
   {
     int i = 0;
     while(1) {
@@ -16,6 +20,27 @@ void kernel_main(void) {
   }
 }
 
-int my_kernel_subroutine() {
-  return 0xbeef;
+const int console_width = 25;
+const int console_height = 40;
+int console_line = 0;
+int console_col = 0;
+
+inline void writec_k(const char c) {
+  if(console_col == (console_height-1) || c == '\n') {
+    console_line++;
+    console_col = 0;
+  }
+
+  int grid_index = (console_col++) + console_line*console_width;
+
+  *((unsigned char*)0xB8000+grid_index*2) = c;
+}
+
+int printk(const char *text) {
+  while(*text) {
+  //while(1) {
+    writec_k(*text);
+    text++;
+  }
+  return 0;
 }

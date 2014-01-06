@@ -1,6 +1,6 @@
 .PHONY: all clean
 all: disk.bin
-CFLAGS=-nostdlib -static -nostartfiles -nodefaultlibs -Wall -Wextra -m64
+CFLAGS=-nostdlib -static -nostartfiles -nodefaultlibs -Wall -Wextra -m64 -Werror
 CFLAGS32=-nostdlib -static -nostartfiles -nodefaultlibs -Wall -Wextra
 CC=./sshwrap gcc
 OBJCOPY=./sshwrap objcopy
