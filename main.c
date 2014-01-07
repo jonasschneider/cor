@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include "common.h"
 #include "printk.h"
 
@@ -11,6 +12,8 @@ void console_clear(void);
 
 void kernel_main(void) {
   console_clear();
+  uint32_t revision = *((uint32_t*)0x6fffa);
+  cor_printk("\n   Cor rev. %xx\n\n",revision);
   cor_printk("Hello from the kernel.\nYes, we can multiline.\n");
   cor_printk("Leet is \'%u\', 0 is \'%u\'\n", 1337, 0);
   cor_printk("Haxx is \'%x\', 0 is \'%x\'\n", 0x1234321, 0);

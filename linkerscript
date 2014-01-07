@@ -9,6 +9,8 @@ SECTIONS
     *(.data)
     *(.rodata) /* ummm... */
     *(.bss) /* yeeeah... */
+    . = 0x1FFFA;
+    INCLUDE versionstamp~;
     . = 0x1FFFE;
     BYTE(0x13);
     BYTE(0x37);

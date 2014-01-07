@@ -30,7 +30,6 @@ static void printk_uint(uint value) {
 }
 
 static void printk_hex(uint value) {
-  cor_printk("0x");
   print_itoa(value, 16, "0123456789abcdef");
 }
 
@@ -46,6 +45,12 @@ int cor_printk(const char *format, ...) {
       } else if(*format == 'u') {
         printk_uint(va_arg(ap, uint));
       } else if(*format == 'x') {
+        // another x allows you to skip the "0x" part
+        if(*(format+1) == 'x') {
+          format++;
+        } else {
+          cor_printk("0x");
+        }
         printk_hex(va_arg(ap, uint));
       }
     } else {

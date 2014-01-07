@@ -24,6 +24,7 @@ stage2_entrypoint.o: stage2_entrypoint.s
 	$(CC) $(CFLAGS) -c stage2_entrypoint.s -o stage2_entrypoint.o
 
 stage2.o: $(OBJS) linkerscript stage2_entrypoint.o
+	echo LONG\(0x$(shell git rev-parse HEAD | cut -c 1-6)\) > versionstamp~
 	$(LD) $(OBJS) stage2_entrypoint.o -T linkerscript -o stage2.o
 
 stage2.bin: stage2.o
