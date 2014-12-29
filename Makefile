@@ -9,7 +9,7 @@ AS=./sshwrap as
 OBJS=main.o printk.o chrdev_serial.o io.o
 
 clean:
-	rm *.o *.bin *~
+	rm -f *.o *.bin *~ init *.so
 
 boot.o: boot.s
 	$(AS) boot.s -o boot.o
@@ -23,9 +23,9 @@ mbr.bin: blank_mbr boot.o
 stage2_entrypoint.o: stage2_entrypoint.s
 	$(CC) $(CFLAGS) -c stage2_entrypoint.s -o stage2_entrypoint.o
 
-stage2.o: $(OBJS) linkerscript stage2_entrypoint.o
+stage2.o: $(OBJS) linkerscript stage2_entrypoint.o init_static.o
 	echo LONG\(0x$(shell git rev-parse HEAD | cut -c 1-6)\) > versionstamp~
-	$(LD) $(OBJS) stage2_entrypoint.o -T linkerscript -o stage2.o
+	$(LD) $(OBJS) stage2_entrypoint.o init_static.o -T linkerscript -o stage2.o
 
 stage2.bin: stage2.o
 	$(OBJCOPY) --only-section=.text -O binary stage2.o stage2.bin
@@ -42,3 +42,13 @@ disk.bin: mbr.bin stage2.o Makefile
 	# and add the data. ultra hacky to mess with the offsets here, and it's probably wrong, but meh...
 	dd if=stage2_data~ of=disk.bin~ conv=notrunc bs=1 seek=$$((512 + 0x40000))
 	mv disk.bin~ disk.bin
+
+init_static.o: init_static.c~
+	$(CC) $(CFLAGS) -c -x c $< -o $@
+
+init_static.c~: init
+	cat $< | ruby -e 'b = $$stdin.read.bytes; puts "int cor_stage2_init_data_len = "+b.count.to_s+"; char cor_stage2_init_data[] = {";puts b.map{|x|"0x#{x.to_s(16)}"}.join(", ");puts "};"' > $@
+
+init: init.c
+	$(CC) $(CFLAGS) -c init.c -o init.o
+	$(LD) init.o -o init

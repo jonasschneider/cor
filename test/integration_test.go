@@ -23,6 +23,10 @@ func TestStartupSerialMessage(t *testing.T) {
   <-time.After(500*time.Millisecond)
   msg := string(buf.Bytes())
   needle := "Switched to serial console."
+  if len(msg) < len(needle) {
+    t.Error("needle is",len(needle),"long, but msg has only",len(msg))
+    return
+  }
   match := msg[0:len(needle)]
   if needle != match {
     t.Error("expected match:",needle,match)

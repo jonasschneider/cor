@@ -1,7 +1,7 @@
 .code64
 
 .section entrypoint
-.globl  _start
-_start:
+.globl  stage2_entrypoint
+stage2_entrypoint:
   mov $kernel_main, %rax
   jmp *%rax

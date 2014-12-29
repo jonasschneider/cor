@@ -7,6 +7,8 @@ int my_kernel_subroutine() {
   return 0xbeef;
 }
 
+extern char cor_stage2_init_data;
+
 int lawl = 0xdeadbeef;
 
 void console_clear(void);
@@ -45,6 +47,7 @@ void kernel_main(void) {
   cor_current_writec = cor_chrdev_serial_write;
   cor_printk("Switched to serial console.\n");
   //cor_dump_page_table((uint64_t *)0x1000, 1);
+  cor_printk("stage2 storage location:%x\n",&cor_stage2_init_data);
 
   while(1) {
     cor_printk(".");

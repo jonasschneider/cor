@@ -1,4 +1,6 @@
 *.bin
 .vagrant
 *.o
+*.so
 *~
+init
