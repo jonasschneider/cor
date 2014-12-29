@@ -7,10 +7,12 @@ Physical memory map at the time of stage2 startup
 
 Synopsis
 =========
-- `make`
-- `bin/run` to launch the thing in qemu, you'll be connected to the serial console
-- To start debugging the kernel, `bin/debug` will run qemu and tell you how to attach a `gdb`
-- To debug the bootloader, look at how `bin/debug` skips it, and play with `bin/debug_stage1`
+- `$ make`
+- `$ bin/run` to launch the thing in qemu, you'll be connected to the serial console
+- To start debugging the kernel, `$ bin/debug` will run qemu and tell you how to attach a `gdb`
+- To debug the bootloader, look at how `bin/debug` skips it, and play with `$ bin/debug_stage1`
+- To run integration/blackbox tests (requires working Golang instellation), do `$ test/run`
+
 
 The tools
 =========
@@ -46,6 +48,8 @@ As this is an academic project, I'll try to document things I stumbled over.
   After debugging these, I realized that somehow Homebrew or OS X libs might be the culprit. And it turns out that under Linux (tested under Ubuntu and Arch), attaching to QEMU's `gdbserver` port *after* the switch to 64-bit mode works, but crashes when switching while attached. On the other hand, on OS X, the `g` packet crash happens even when attaching `gdb` after the switch to 64-bit mode.
 
   I'm not yet sure how to finally solve this. So far, the workaround seems to be to (a) run `gdb` under Linux, and (b) restart it when switching architectures. Meh.
+
+- On Yosemite (not sure if relevant), `gdb`'s readline doesn't play nice with iTerm. That means gdb will hang if it asks you a yes/no question, it won't respond to hitting the enter key after typing your answer. This happens both on a Homebrew-installed gdb, and over an SSH connection (via Vagrant). Terminal.app doesn't have this problem.
 
 
 History
