@@ -1,4 +1,3 @@
-#include <stdint.h>
 #include "common.h"
 #include "printk.h"
 #include "chrdev_serial.h"
@@ -14,6 +13,11 @@ extern int cor_stage2_init_data_len;
 int lawl = 0xdeadbeef;
 
 void console_clear(void);
+
+void cor_panic() {
+  cor_printk("Panicking.\n");
+  while(1) {};
+}
 
 void cor_dump_page_table(uint64_t *start, int level) {
   for(uint64_t *page_table_entry = start; page_table_entry < start+512; page_table_entry++) {
@@ -37,6 +41,23 @@ void cor_writec(const char c);
 void (*cor_current_writec)(const char c) = cor_writec;
 
 void kernel_main(void) {
+  if(sizeof(uint8_t) != 1) {
+    cor_printk("sizeof(uint8_t) = %d !!", sizeof(uint8_t));
+    cor_panic();
+  }
+  if(sizeof(uint16_t) != 2) {
+    cor_printk("sizeof(uint16_t) = %d !!", sizeof(uint16_t));
+    cor_panic();
+  }
+  if(sizeof(uint32_t) != 4) {
+    cor_printk("sizeof(uint32_t) = %d !!", sizeof(uint32_t));
+    cor_panic();
+  }
+  if(sizeof(uint64_t) != 8) {
+    cor_printk("sizeof(uint64_t) = %d !!", sizeof(uint64_t));
+    cor_panic();
+  }
+
   console_clear();
   uint32_t revision = *((uint32_t*)0x6fffa);
   cor_printk("\n   Cor rev. %xx\n\n",revision);
