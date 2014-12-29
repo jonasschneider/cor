@@ -8,19 +8,9 @@ Physical memory map at the time of stage2 startup
 Synopsis
 =========
 - `make`
-- `bin/run` to launch the thing in qemu
-- To debug the kernel, `bin/debug` and then attach a `gdb` like so:
-
-    set disassemble-next-line on
-    set arch i386:x86-64
-    tar rem :1234
-
-To skip until the stage 2 entry point:
-
-    break *0x10000
-    c
-
-- To debug the bootloader, look at how `bin/debug` skips it
+- `bin/run` to launch the thing in qemu, you'll be connected to the serial console
+- To start debugging the kernel, `bin/debug` will run qemu and tell you how to attach a `gdb`
+- To debug the bootloader, look at how `bin/debug` skips it, and play with `bin/debug_stage1`
 
 The tools
 =========
@@ -34,7 +24,7 @@ Roadmap
 [x] Boot *something*, and show a hello world on the Screen
 [x] Enter 64-bit long mode and never worry about the 80s again
 [x] Print something on the serial console
-[ ] Set up debugging symbols & stack traces for stage2 kernel code
+[x] Set up debugging symbols & stack traces for stage2 kernel code
 [ ] Make something like a shell over serial
 [ ] ELF userspace binary loader
 [ ] Multitasking / Scheduler / Process isolation
