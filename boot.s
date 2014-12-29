@@ -254,9 +254,6 @@ in_long64:
   cmp $0x3713, %ax
   jne broken
 
-  mov $(startup_message_ok - _start + 0x7c00), %eax
-  call print_str_eax
-
   # Jump to stage 2!
   # For some reason, I can't do an absolute jump with an immediate operand.
   mov $0x10000, %rax
@@ -271,10 +268,6 @@ broken:
   # So, just busy loop here.
 hang:
   jmp hang
-
-
-startup_message_ok:
-.string "\\o/ - loaded stage 2\0"
 
 startup_message_broken:
 .string "Failed to load stage 2.\0"

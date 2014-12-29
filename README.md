@@ -15,6 +15,11 @@ Synopsis
     set arch i386:x86-64
     tar rem :1234
 
+To skip until the stage 2 entry point:
+
+    break *0x10000
+    c
+
 - To debug the bootloader, look at how `bin/debug` skips it
 
 The tools
@@ -22,6 +27,21 @@ The tools
 - `qemu` is a great emulator. It has an intuitive CLI, does what you'd expect, and even has a nice debugging console.
 - The GNU `binutils` provide great insight into what actually comes out of your compiler/assembler. `objcopy`, `objdump` allowed me to actually mess with the compilation, disassemble things, and shuffle sections around to form the actual boot media.
 - The almighty `gdb`
+
+
+Roadmap
+=====
+[x] Boot *something*, and show a hello world on the Screen
+[x] Enter 64-bit long mode and never worry about the 80s again
+[x] Print something on the serial console
+[ ] Set up debugging symbols & stack traces for stage2 kernel code
+[ ] Make something like a shell over serial
+[ ] ELF userspace binary loader
+[ ] Multitasking / Scheduler / Process isolation
+[ ] PCI device detection (virtio)
+[ ] Networking -> DHCP + TCP/IP
+[ ] Tiniest VFS implementation possible (read-only single-level?)
+[ ] implement `ls` & `netcat` equivalents
 
 Caveats
 =======
