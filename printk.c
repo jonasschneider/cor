@@ -1,4 +1,4 @@
-#include <stdarg.h>
+#include "vendor/stdarg.h"
 #include "common.h"
 #include "printk.h"
 
