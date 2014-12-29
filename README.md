@@ -27,9 +27,17 @@ Roadmap
 [x] Enter 64-bit long mode and never worry about the 80s again
 [x] Print something on the serial console
 [x] Set up debugging symbols & stack traces for stage2 kernel code
-[ ] Make something like a shell over serial
 [ ] ELF userspace binary loader
-[ ] Multitasking / Scheduler / Process isolation
+  [ ] Make a minimal ELF that uses statically linked kernel functions to print something
+  [ ] Implement MVP ELF loader in stage2
+  [ ] Memory management
+[ ] Implement syscall basics (choose INT 0x14 for fun, maybe start with just exit, then write)
+[ ] permanent ring switch when starting init (except for syscalls)
+[ ] Create an actual toolchain
+  [x] Make a "hello world" binary that runs on host Linux and is as static as it gets (no libc)
+  [ ] appropriately mod dietlibc for our syscall semantics
+[ ] Make something like a shell over serial (this will be our /sbin/init)
+[ ] Multitasking / Scheduler (make ringswitch non-permanent)
 [ ] PCI device detection (virtio)
 [ ] Networking -> DHCP + TCP/IP
 [ ] Tiniest VFS implementation possible (read-only single-level?)
