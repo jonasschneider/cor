@@ -4,6 +4,7 @@ Physical memory map at the time of stage2 startup
 - `0x50000-0x6FFFD`: Kernel `.data` and stack, not sure yet if this is a good idea
 - `0x6FFFE`: `0x13` (magic)
 - `0x6FFFF`: `0x37` (magic)
+- `0x70000-0x7FFFF`: i don't know, init text
 
 Synopsis
 =========
@@ -28,7 +29,8 @@ Roadmap
 [x] Print something on the serial console
 [x] Set up debugging symbols & stack traces for stage2 kernel code
 [ ] ELF userspace binary loader
-  [ ] Make a minimal ELF that uses statically linked kernel functions to print something
+  [-] Make a minimal ELF that uses statically linked kernel functions to print something
+  [x] Make a minimal ELF that somehow signals that it's executing (HLT)
   [ ] Implement MVP ELF loader in stage2
   [ ] Memory management
 [ ] Implement syscall basics (choose INT 0x14 for fun, maybe start with just exit, then write)

@@ -6,7 +6,7 @@ CC=./sshwrap gcc
 OBJCOPY=./sshwrap objcopy
 LD=./sshwrap ld
 AS=./sshwrap as
-OBJS=main.o printk.o chrdev_serial.o io.o
+OBJS=main.o printk.o chrdev_serial.o io.o elf.o
 
 clean:
 	rm -f *.o *.bin *~ init *.so
@@ -50,5 +50,4 @@ init_static.c~: init
 	cat $< | ruby -e 'b = $$stdin.read.bytes; puts "int cor_stage2_init_data_len = "+b.count.to_s+"; char cor_stage2_init_data[] = {";puts b.map{|x|"0x#{x.to_s(16)}"}.join(", ");puts "};"' > $@
 
 init: init.c
-	$(CC) $(CFLAGS) -c init.c -o init.o
-	$(LD) init.o -o init
+	$(CC) $(CFLAGS) init.c -o init

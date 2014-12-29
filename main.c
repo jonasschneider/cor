@@ -2,12 +2,14 @@
 #include "common.h"
 #include "printk.h"
 #include "chrdev_serial.h"
+#include "elf.h"
 
 int my_kernel_subroutine() {
   return 0xbeef;
 }
 
 extern char cor_stage2_init_data;
+extern int cor_stage2_init_data_len;
 
 int lawl = 0xdeadbeef;
 
@@ -47,7 +49,7 @@ void kernel_main(void) {
   cor_current_writec = cor_chrdev_serial_write;
   cor_printk("Switched to serial console.\n");
   //cor_dump_page_table((uint64_t *)0x1000, 1);
-  cor_printk("stage2 storage location:%x\n",&cor_stage2_init_data);
+  cor_elf_exec(&cor_stage2_init_data, cor_stage2_init_data_len);
 
   while(1) {
     cor_printk(".");
