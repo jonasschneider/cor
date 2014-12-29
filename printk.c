@@ -2,7 +2,7 @@
 #include "common.h"
 #include "printk.h"
 
-void cor_writec(const char c);
+void (*cor_current_writec)(const char c);
 
 static void print_itoa(uint value, const uint base, const char *alphabet) {
   const int max_digits = 20;
@@ -10,7 +10,7 @@ static void print_itoa(uint value, const uint base, const char *alphabet) {
   buffer[max_digits] = '\0';
   int i = max_digits-1;
   char overflow = 0;
-  while(value > base) {
+  while(value >= base) {
     if(i == 0) { // leave one for the last digit
       overflow = 1;
     } else {
@@ -41,7 +41,7 @@ int cor_printk(const char *format, ...) {
     if(*format == '%') {
       format++;
       if(*format == '%') {
-        cor_writec('%');
+        (*cor_current_writec)('%');
       } else if(*format == 'u') {
         printk_uint(va_arg(ap, uint));
       } else if(*format == 'x') {
@@ -54,7 +54,7 @@ int cor_printk(const char *format, ...) {
         printk_hex(va_arg(ap, uint));
       }
     } else {
-      cor_writec(*format);
+      (*cor_current_writec)(*format);
     }
     format++;
   }

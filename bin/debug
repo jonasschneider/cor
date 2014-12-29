@@ -3,4 +3,4 @@
 # it aborts on error *and detaches*, but we deliberately want to skip past the error,
 # and disconnect without resuming. sigh.
 (sleep 1; ./sshwrap gdb < ./scripts/advance_qemu_to_64bit.gdb; echo; echo "You are now in the qemu shell, sorry for the confusion!") &
-exec qemu-system-x86_64 -s disk.bin -S -monitor stdio
+exec qemu-system-x86_64 -s disk.bin -S -monitor stdio -serial stdio
