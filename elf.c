@@ -85,6 +85,11 @@ int cor_elf_exec(char *elf, unsigned int len) {
     char *target_base = (char *)sectionheader->addr - shift;
 
     cor_printk("segment %x at %x starts at %x shifted to %x, off %x, sz %x\n",i,addr, sectionheader->addr, target_base, sectionheader->offset, sectionheader->size);
+    if(sectionheader->addr < 0x400000 || sectionheader->addr > 0x500000-1) {
+      // TODO: also check size
+      cor_printk(" [!] segment to be placed outside 0x4-----, ignoring\n");
+      continue;
+    }
     if(sectionheader->addr > 0) {
       for(int j = 0; j < sectionheader->size; j++) {
         char *loadtarget = target_base+j;
@@ -100,7 +105,15 @@ int cor_elf_exec(char *elf, unsigned int len) {
     }
   }
 
-  void (*entry)() = (void(*)(void *))(hdr->entrypoint - shift);
+  // check memory map correctness: these should be equal.
+  // 0x70000 is the physical location, 0x400000 is the ELF starting thingie
+  if(*((int *)0x07010c) != *((int *)0x40010c)) {
+    cor_printk("Virtual memory sanity check failed\n");
+    return -1;
+  }
+
+  void (*entry)() = (void(*)(void *))(hdr->entrypoint);
+  cor_printk("entry = %x\n", entry);
 
   cor_printk("will now jump to %x (%x)\n",entry, *(char*)(hdr->entrypoint - shift));
 

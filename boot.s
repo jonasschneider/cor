@@ -166,12 +166,12 @@ in_prot32:
   movl $0x1000, %edi
   mov %edi, %cr3
 
-  # Zero out 0x1000-0x4FFF.
+  # Zero out 0x1000-0x5FFF.
   # The rep thing apparently writes %eax to %ecx units of memory, starting at %edi.
   # It also increments %edi for each byte written.
   movl $0x1000, %edi
   movl $0, %eax
-  movl $(0x4000 / 4), %ecx
+  movl $(0x5000 / 4), %ecx
   rep stosl
 
   # Reset %edi back to the beginning of the highest-level page table.
@@ -185,6 +185,7 @@ in_prot32:
   movl $0x3003, (%edi)
   add $0x1000, %edi
   movl $0x4003, (%edi)
+  movl $0x5003, 16(%edi)
   add $0x1000, %edi
 
   # Now all that's left is the innermost level.
@@ -211,6 +212,10 @@ next_page_entry:
   # Exit when ecx=0.
   # Loop(t) = if(--%ecx > 0) { goto t; }
   loop next_page_entry
+
+  # write page table entry for stage2.init
+  movl $0x70003, 0x5000
+
 
   # Next, enable PAE (physical address extension).
   # This is done by setting bit 5 of CR4.

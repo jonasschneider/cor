@@ -50,4 +50,4 @@ init_static.c~: init
 	cat $< | ruby -e 'b = $$stdin.read.bytes; puts "int cor_stage2_init_data_len = "+b.count.to_s+"; char cor_stage2_init_data[] = {";puts b.map{|x|"0x#{x.to_s(16)}"}.join(", ");puts "};"' > $@
 
 init: init.c
-	$(CC) $(CFLAGS) init.c -o init
+	$(CC) $(CFLAGS) -fPIC init.c -o init
