@@ -26,6 +26,20 @@ struct elf64_header {
   uint16_t sh_entnum;
   uint16_t sh_section_name_entry_idx;
 };
+
+struct elf64_sectionheader {
+  uint32_t name;
+  uint32_t type;
+  uint64_t flags;
+  uint64_t addr;
+  uint64_t offset;
+  uint64_t size;
+  uint32_t link;
+  uint32_t info;
+  uint64_t addralign;
+  uint64_t entsize;
+};
+
 #pragma pack(pop)
 
 int cor_elf_exec(char *data, int len) {
@@ -55,6 +69,47 @@ int cor_elf_exec(char *data, int len) {
     cor_printk("ELF magic looks OK.\n");
   }
 
+  if(sizeof(struct elf64_sectionheader) != hdr->sh_entsize) {
+    cor_printk("ERROR: ELF section header entry size invalid\n");
+    return -1;
+  }
+
+  cor_printk("Nsections: %x\n", hdr->sh_entnum);
+
+  if(hdr->sh_entnum > 30) {
+    cor_printk("ELF: too many sections");
+    return -1;
+  }
+
+  int shift = 0x382000;
+
+  for(int i = 0; i < hdr->sh_entnum; i++) {
+    void *addr = target + hdr->sh_offset + hdr->sh_entsize * i;
+    struct elf64_sectionheader *sectionheader = (struct elf64_sectionheader *) addr;
+
+    char *target_base = (char *)sectionheader->addr-shift;
+
+    cor_printk("segment %x at %x starts at %x shifted to %x, off %x, sz %x\n",i,addr, sectionheader->addr, target_base, sectionheader->offset, sectionheader->size);
+    if(sectionheader->addr > 0) {
+      for(int j = 0; j < sectionheader->size; j++) {
+        char *loadtarget = target_base+j;
+        char *loadsrc = (char *)target + sectionheader->offset + j;
+        if(loadtarget == (char*)0xe010c) {
+          cor_printk("Shoving %x (%x) -> %x (%x) ..", loadsrc, *loadsrc, loadtarget, *loadtarget);
+        }
+        *loadtarget = *loadsrc;
+        if(loadtarget == (char*)0xe010c) {
+          cor_printk(".. now it's %x\n" ,*loadtarget);
+        }
+      }
+    }
+  }
+
+  void (*entry)() = (void(*)(void *))(hdr->entrypoint - shift);
+
+  cor_printk("will now jump to %x (%x)\n",entry, *(char*)(hdr->entrypoint - shift));
+
+  entry();
 
   cor_printk("done?!\n");
   return 0;
