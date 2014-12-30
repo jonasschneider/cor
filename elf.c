@@ -42,25 +42,19 @@ struct elf64_sectionheader {
 
 #pragma pack(pop)
 
-int cor_elf_exec(char *data, int len) {
-  cor_printk("Called cor_elf_exec with data=%x, len=%x\n",data, len);
+int cor_elf_exec(char *elf, unsigned int len) {
+  cor_printk("Called cor_elf_exec with elf=%x, len=%x\n",elf, len);
   if(sizeof(struct elf64_header) != 64) {
     cor_printk("assertion failed: elf64 header struct is size %x\n",sizeof(struct elf64_header));
     return -1;
   }
 
-  char *target;
-  target = (char*)0x70000;
-  cor_printk("Copying to %x\n",target);
-
-  // TODO: memcpy
-  for(int i = 0; i < len; i++) {
-    target[i] = data[i];
+  if(len < sizeof(struct elf64_header)) {
+    cor_printk("assertion failed: elf64 data too short at %x\n", len);
+    return -1;
   }
 
-  cor_printk("Wrote ELF there.\n",target);
-
-  struct elf64_header *hdr = (struct elf64_header *)target;
+  struct elf64_header *hdr = (struct elf64_header *)elf;
 
   if(0x464c457f != hdr->magic) {
     cor_printk("ERROR: magic of %x did not match ELF header of 0x464c457f\n", hdr->magic);
@@ -81,19 +75,20 @@ int cor_elf_exec(char *data, int len) {
     return -1;
   }
 
-  int shift = 0x382000;
+  // target position is 0x70000, and the ELF offset seems to be 0x400000
+  int shift = 0x400000 - 0x70000;
 
   for(int i = 0; i < hdr->sh_entnum; i++) {
-    void *addr = target + hdr->sh_offset + hdr->sh_entsize * i;
+    void *addr = elf + hdr->sh_offset + hdr->sh_entsize * i;
     struct elf64_sectionheader *sectionheader = (struct elf64_sectionheader *) addr;
 
-    char *target_base = (char *)sectionheader->addr-shift;
+    char *target_base = (char *)sectionheader->addr - shift;
 
     cor_printk("segment %x at %x starts at %x shifted to %x, off %x, sz %x\n",i,addr, sectionheader->addr, target_base, sectionheader->offset, sectionheader->size);
     if(sectionheader->addr > 0) {
       for(int j = 0; j < sectionheader->size; j++) {
         char *loadtarget = target_base+j;
-        char *loadsrc = (char *)target + sectionheader->offset + j;
+        char *loadsrc = elf + sectionheader->offset + j;
         if(loadtarget == (char*)0xe010c) {
           cor_printk("Shoving %x (%x) -> %x (%x) ..", loadsrc, *loadsrc, loadtarget, *loadtarget);
         }
