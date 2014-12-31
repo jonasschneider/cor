@@ -37,6 +37,13 @@ void cor_dump_page_table(uint64_t *start, int level) {
   }
 }
 
+int dummy_isr;
+
+void cor_1bitpanic() {
+  cor_printk("FIRED!\n");
+  cor_panic();
+}
+
 void cor_writec(const char c);
 void (*cor_current_writec)(const char c) = cor_writec;
 
@@ -79,8 +86,36 @@ void kernel_main(void) {
 
   cor_printk("Initializing interrupts..");
 
-  idtr.base = 0x6000;
-  idtr.limit = 0;
+  // cf. intel_64_software_developers_manual.pdf pg. 1832
+  void *target = (void*)&dummy_isr;
+  uint32_t target_high = (uint32_t) ((uint64_t)target >> 32);
+  uint16_t target_mid = (uint16_t) ((uint64_t)target >> 16);
+  uint16_t target_low = (uint16_t) ((uint64_t)target >> 0);
+  cor_printk("target=%x, so hi=%x, mid=%x, lo=%x\n", target, target_high, target_mid, target_low);
+
+  uint32_t isr_0 = 0; // reserved
+  uint32_t isr_1 = target_high;
+  uint32_t isr_2 = ((uint32_t)target_mid) << 16 | 1<<15;
+  uint32_t isr_3 = 0 | ((uint32_t)target_low);
+  cor_printk("isr=%x %x %x %x\n", isr_0, isr_1, isr_2, isr_3);
+
+  void *base = (void*)0x6000;
+  const int entrysize = 16; // in bytes
+  const int n_entry = 40;
+  idtr.base = (uint64_t)base;
+  idtr.limit = entrysize * n_entry;
+
+  for(int i = 0; i < n_entry; i++) {
+    uint32_t *offset = (uint32_t *)((void*)base+(i*entrysize));
+
+    cor_printk("writing to: %p\n", offset);
+
+    *(offset+0) = isr_0;
+    *(offset+1) = isr_1;
+    *(offset+2) = isr_2;
+    *(offset+3) = isr_3;
+  }
+
 
   void *x = (void*)&idtr;
 
@@ -90,7 +125,7 @@ void kernel_main(void) {
   );
 
   cor_printk("done.\n");
-  __asm__ ( "hlt" );
+  //__asm__ ( "hlt" );
 
   cor_printk("Exec'ing init.\n");
 

@@ -4,7 +4,7 @@
 
 void (*cor_current_writec)(const char c);
 
-static void print_itoa(uint value, const uint base, const char *alphabet) {
+static void print_itoa(unsigned long value, const uint base, const char *alphabet) {
   const int max_digits = 20;
   char buffer[max_digits+1]; // FIXME: yeah, this is never going to break, ever
   buffer[max_digits] = '\0';
@@ -26,22 +26,38 @@ static void print_itoa(uint value, const uint base, const char *alphabet) {
 }
 
 static void printk_uint(uint value) {
-  print_itoa(value, 10, "0123456789");
+  print_itoa((unsigned long)value, 10, "0123456789");
 }
 
 static void printk_hex(uint value) {
+  print_itoa((unsigned long)value, 16, "0123456789abcdef");
+}
+
+
+static void printk_lhex(unsigned long value) {
   print_itoa(value, 16, "0123456789abcdef");
 }
+
 
 int cor_printk(const char *format, ...) {
   va_list ap;
   va_start(ap, format); //Requires the last fixed parameter (to get the address)
 
   while(*format) {
+    short islong = 0;
     if(*format == '%') {
       format++;
       if(*format == '%') {
         (*cor_current_writec)('%');
+        continue;
+      }
+      if(*format == 'l') {
+        islong = 1;
+        format++;
+      }
+      if(*format == 'p') {
+        cor_printk("0x");
+        printk_lhex(va_arg(ap, unsigned long));
       } else if(*format == 'u') {
         printk_uint(va_arg(ap, uint));
       } else if(*format == 'x') {
@@ -51,7 +67,12 @@ int cor_printk(const char *format, ...) {
         } else {
           cor_printk("0x");
         }
-        printk_hex(va_arg(ap, uint));
+
+        if(islong) {
+          printk_lhex(va_arg(ap, unsigned long));
+        } else {
+          printk_hex(va_arg(ap, uint));
+        }
       }
     } else {
       (*cor_current_writec)(*format);

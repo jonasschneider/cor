@@ -9,7 +9,7 @@ Physical memory map at the time of stage2 startup
 Physical memory map before initial switch to user mode:
 
 [..]
-- `0x09000-0x09FFF`: stage2's IDT
+- `0x06000-0x09FFF`: stage2's IDT
 - `0x70000-0x7FFFF`: text/data segments of init, init entrypoint is near there
 
 Additional mapped virtual memory at this time:

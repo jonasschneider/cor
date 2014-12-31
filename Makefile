@@ -6,7 +6,7 @@ CC=./sshwrap gcc
 OBJCOPY=./sshwrap objcopy
 LD=./sshwrap ld
 AS=./sshwrap as
-OBJS=main.o printk.o chrdev_serial.o io.o elf.o
+OBJS=main.o printk.o chrdev_serial.o io.o elf.o interrupthandler.o
 
 clean:
 	rm -f *.o *.bin *~ init *.so
@@ -22,6 +22,9 @@ mbr.bin: blank_mbr boot.o
 
 stage2_entrypoint.o: stage2_entrypoint.s
 	$(CC) $(CFLAGS) -c stage2_entrypoint.s -o stage2_entrypoint.o
+
+interrupthandler.o: interrupthandler.s
+	$(CC) $(CFLAGS) -c $< -o $@
 
 stage2.o: $(OBJS) linkerscript stage2_entrypoint.o init_static.o
 	echo LONG\(0x$(shell git rev-parse HEAD | cut -c 1-6)\) > versionstamp~
