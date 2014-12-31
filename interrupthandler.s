@@ -20,4 +20,4 @@ dummy_isr:
     push %rcx
     push %rax
 
-    iret
+    iretq
