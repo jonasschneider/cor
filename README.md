@@ -1,10 +1,20 @@
 Physical memory map at the time of stage2 startup
 
-- `0x10000-0x4FFFF`: Kernel `.text`, `0x10000` is the x86_64 entry point from bootloader
-- `0x50000-0x6FFFD`: Kernel `.data` and stack, not sure yet if this is a good idea
+- `0x01000-0x05FFF`: page tables courtesy of `boot.s`
+- `0x10000-0x4FFFF`: stage2 `.text`, `0x10000` is the x86_64 entry point from bootloader
+- `0x50000-0x6FFFD`: stage2 `.data` and stack (FIXME where is the stack actually?)
 - `0x6FFFE`: `0x13` (magic)
 - `0x6FFFF`: `0x37` (magic)
-- `0x70000-0x7FFFF`: i don't know, init text
+
+Physical memory map before initial switch to user mode:
+
+[..]
+- `0x09000-0x09FFF`: stage2's IDT
+- `0x70000-0x7FFFF`: text/data segments of init, init entrypoint is near there
+
+Additional mapped virtual memory at this time:
+- (usually) 0x400000 mapped to (always) 0x70000
+
 
 Synopsis
 =========
@@ -29,12 +39,13 @@ Roadmap
 [x] Print something on the serial console
 [x] Set up debugging symbols & stack traces for stage2 kernel code
 [ ] ELF userspace binary loader
-  [-] Make a minimal ELF that uses statically linked kernel functions to print something
+  [x] Make a minimal ELF that uses statically linked kernel functions to print something
   [x] Make a minimal ELF that somehow signals that it's executing (HLT)
-  [ ] Implement MVP ELF loader in stage2
-  [ ] Memory management
+  [x] Implement MVP ELF loader in stage2
+  [x] Load ELF into virtual memory
 [ ] Implement syscall basics (choose INT 0x14 for fun, maybe start with just exit, then write)
 [ ] permanent ring switch when starting init (except for syscalls)
+[ ] Process table / Process memory page table management
 [ ] Create an actual toolchain
   [x] Make a "hello world" binary that runs on host Linux and is as static as it gets (no libc)
   [ ] appropriately mod dietlibc for our syscall semantics

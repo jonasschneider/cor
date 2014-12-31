@@ -39,7 +39,6 @@ struct elf64_sectionheader {
   uint64_t addralign;
   uint64_t entsize;
 };
-
 #pragma pack(pop)
 
 int cor_elf_exec(char *elf, unsigned int len) {

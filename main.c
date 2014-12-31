@@ -40,6 +40,13 @@ void cor_dump_page_table(uint64_t *start, int level) {
 void cor_writec(const char c);
 void (*cor_current_writec)(const char c) = cor_writec;
 
+#pragma pack(push, 1)
+struct {
+  uint16_t limit;
+  uint64_t base;
+} idtr;
+#pragma pack(pop)
+
 void kernel_main(void) {
   if(sizeof(uint8_t) != 1) {
     cor_printk("sizeof(uint8_t) = %d !!", sizeof(uint8_t));
@@ -69,6 +76,24 @@ void kernel_main(void) {
   cor_printk("Switching to serial...\n");
   cor_current_writec = cor_chrdev_serial_write;
   cor_printk("Switched to serial console.\n");
+
+  cor_printk("Initializing interrupts..");
+
+  idtr.base = 0x6000;
+  idtr.limit = 0;
+
+  void *x = (void*)&idtr;
+
+  __asm__ (
+    "lidt (%0)"
+    : : "p" (x)
+  );
+
+  cor_printk("done.\n");
+  __asm__ ( "hlt" );
+
+  cor_printk("Exec'ing init.\n");
+
   //cor_dump_page_table((uint64_t *)0x1000, 1);
   cor_elf_exec(&cor_stage2_init_data, cor_stage2_init_data_len);
 
