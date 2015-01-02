@@ -56,6 +56,10 @@ Roadmap
 [ ] Tiniest VFS implementation possible (read-only single-level?)
 [ ] implement `ls` & `netcat` equivalents
 
+More unicorns:
+
+[ ] SMP support?
+
 Caveats
 =======
 As this is an academic project, I'll try to document things I stumbled over.
@@ -72,6 +76,9 @@ As this is an academic project, I'll try to document things I stumbled over.
 
 - On Yosemite (not sure if relevant), `gdb`'s readline doesn't play nice with iTerm. That means gdb will hang if it asks you a yes/no question, it won't respond to hitting the enter key after typing your answer. This happens both on a Homebrew-installed gdb, and over an SSH connection (via Vagrant). Terminal.app doesn't have this problem.
 
+- QEMU does have some limited tracing support built-in. Running it with something like `-d int,pcall,cpu_reset,ioport,unimp,guest_errors` will spew various potentially helpful info to stderr. However, debugging generic errors like a General Protection fault still proves nontrivial. Using Homebrew's `interactive_shell` command in the qemu formula, qemu was patched to include some printf statements in the interrupt-handler code. This affects `do_interrupt64` (see `target-i386/seg_helper.c` in the qemu tree), for an example see [this gist](https://gist.github.com/315a19081f825583acf7)
+
+- `info mem` in the qemu console will display the virtual memory map.
 
 History
 =======

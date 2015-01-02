@@ -38,6 +38,7 @@ void cor_dump_page_table(uint64_t *start, int level) {
 }
 
 int dummy_isr;
+void testisr();
 
 void cor_1bitpanic() {
   cor_printk("FIRED!\n");
@@ -86,6 +87,10 @@ void kernel_main(void) {
 
   cor_printk("Initializing interrupts..");
 
+  cor_printk("Calling testisr at %p\n",testisr);
+
+  testisr();
+
   // cf. intel_64_software_developers_manual.pdf pg. 1832
   void *target = (void*)&dummy_isr;
 
@@ -99,7 +104,7 @@ void kernel_main(void) {
     void *offset = base+(i*entrysize);
 
     *(uint16_t*)(offset+0) = (uint16_t) ((uint64_t)target >> 0);
-    *(uint16_t*)(offset+2) = (uint16_t) 0; // segment
+    *(uint16_t*)(offset+2) = (uint16_t) 1; // segment
     *(uint8_t*)(offset+4) = (uint8_t) 0; // zero
     *(uint8_t*)(offset+5) = (uint8_t) 1<<7; // flags
     *(uint16_t*)(offset+6) = (uint16_t) ((uint64_t)target >> 16);
@@ -116,7 +121,14 @@ void kernel_main(void) {
   );
 
   cor_printk("done.\n");
-  //__asm__ ( "hlt" );
+
+  __asm__ (
+    "sti"
+  );
+
+  cor_printk("enabled interrupts again. firing one..\n");
+  __asm__ ( "int $35" );
+  __asm__ ( "hlt" );
 
   cor_printk("Exec'ing init.\n");
 
