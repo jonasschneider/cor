@@ -140,7 +140,7 @@ gdt64:
   .byte 0x00, 0b00000000, 0b00000000, 0x00
   # Code Descriptor, this segment is executable, but read-only (Long mode bit set)
   .word 0xffff, 0x0000
-  .byte 0x00, 0b10011010, 0b11101111, 0x00
+  .byte 0x00, 0b10011010, 0b10101111, 0x00
   # Data Descriptor, this segment is writable, but not executable
   .word 0xffff, 0x0000
   .byte 0x00, 0b10010010, 0b11001111, 0x00
