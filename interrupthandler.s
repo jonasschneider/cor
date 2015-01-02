@@ -21,32 +21,3 @@ dummy_isr:
   push %rax
 
   iretq
-
-.globl   testisr
-.globl   before
-testisr:
-setidtr:  lidt idtr
-  movq $dummy_isr, %rax
-  mov %ax, 0x6000+49*16
-  movw $0x8, 0x6000+49*16+2 # segment
-  movw $0x8e00, 0x6000+49*16+4
-  shr $16, %rax
-  mov %ax, 0x6000+49*16+6
-  shr $16, %rax
-  movw %rax, 0x6000+49*16+8
-
-setsp: mov $0x70000, %rsp
-  #sti
-
-pushy: pushq $0x1234
-
-before: int $49
-  hlt
-
-int_handler:
-  call cor_1bitpanic
-  hlt
-
-idtr:
-  .short (52*16)-1
-  .quad 0x6000

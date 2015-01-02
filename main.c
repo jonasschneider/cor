@@ -38,7 +38,6 @@ void cor_dump_page_table(uint64_t *start, int level) {
 }
 
 int dummy_isr;
-void testisr();
 
 void cor_1bitpanic() {
   cor_printk("FIRED!\n");
@@ -87,8 +86,6 @@ void kernel_main(void) {
 
   cor_printk("Initializing interrupts..");
 
-  //testisr();
-
   // cf. intel_64_software_developers_manual.pdf pg. 1832
   void *target = (void*)&dummy_isr;
 
@@ -119,8 +116,9 @@ void kernel_main(void) {
 
   cor_printk("done.\n");
 
-  cor_printk("enabled interrupts again. firing one..\n");
+  cor_printk("Firing test interrupt..");
   __asm__ ( "int $49" );
+  cor_printk("returned.\n");
   __asm__ ( "hlt" );
 
   cor_printk("Exec'ing init.\n");
