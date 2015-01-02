@@ -123,7 +123,7 @@ gdt:
   .byte 0x00, 0b10010010, 0b11001111, 0x00
 
 gdt64_descriptor:
-  .word (3 * 8) - 1 # GDT size in bytes - 1, 3 is the number of entries
+  .word (5 * 8) - 1 # GDT size in bytes - 1, 3 is the number of entries
   .word gdt64 - _start + 0x7c00
 
 gdt64:
@@ -137,6 +137,12 @@ gdt64:
   .word 0xffff, 0x0000
   .byte 0x00, 0b10010010, 0b11001111, 0x00
 
+  # Code descriptor for userspace
+  .word 0xffff, 0x0000
+  .byte 0x00, 0b11111110, 0b10101111, 0x00
+  # Data Descriptor for userspace, actually I don't think this i needed, but qemu gets x86-64 wrong
+  .word 0xffff, 0x0000
+  .byte 0x00, 0b11110010, 0b11001111, 0x00
 
 # This is the first procedure called after completing the switch to protected mode.
 # (Might want to re-enable interrupts again?)

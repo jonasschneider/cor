@@ -116,7 +116,19 @@ int cor_elf_exec(char *elf, unsigned int len) {
 
   cor_printk("will now jump to %x (%x)\n",entry, *(char*)(hdr->entrypoint - shift));
 
-  entry();
+  int codeseg = 24;
+  int segsel = codeseg | 3; // set RPL=3
+
+  // switch segments for the call
+  __asm__ (
+    //"cli" // TODO later
+    "pushq $35\n" // new SS, probably ignored
+    "pushq $0x68000\n" // new RSP
+    "pushf\n"
+    "pushq %1\n" // new Code segment (important!)
+    "pushq %0\n"
+    "iretq\n"
+  : : "entry" (entry), "segsel" (segsel) );
 
   cor_printk("done?!\n");
   return 0;
