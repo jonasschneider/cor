@@ -40,7 +40,7 @@ void cor_dump_page_table(uint64_t *start, int level) {
 int dummy_isr;
 
 void cor_hitmarker() {
-  cor_panic("FIRED!\n");
+  cor_printk("FIRED!\n");
 }
 
 void cor_writec(const char c);
