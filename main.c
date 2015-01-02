@@ -14,8 +14,8 @@ int lawl = 0xdeadbeef;
 
 void console_clear(void);
 
-void cor_panic() {
-  cor_printk("Panicking.\n");
+void cor_panic(const char *msg) {
+  cor_printk("PANIC: %s\n", msg);
   while(1) {};
 }
 
@@ -39,9 +39,8 @@ void cor_dump_page_table(uint64_t *start, int level) {
 
 int dummy_isr;
 
-void cor_1bitpanic() {
-  cor_printk("FIRED!\n");
-  cor_panic();
+void cor_hitmarker() {
+  cor_panic("FIRED!\n");
 }
 
 void cor_writec(const char c);
@@ -57,19 +56,19 @@ struct {
 void kernel_main(void) {
   if(sizeof(uint8_t) != 1) {
     cor_printk("sizeof(uint8_t) = %d !!", sizeof(uint8_t));
-    cor_panic();
+    cor_panic("assertion failure");
   }
   if(sizeof(uint16_t) != 2) {
     cor_printk("sizeof(uint16_t) = %d !!", sizeof(uint16_t));
-    cor_panic();
+    cor_panic("assertion failure");
   }
   if(sizeof(uint32_t) != 4) {
     cor_printk("sizeof(uint32_t) = %d !!", sizeof(uint32_t));
-    cor_panic();
+    cor_panic("assertion failure");
   }
   if(sizeof(uint64_t) != 8) {
     cor_printk("sizeof(uint64_t) = %d !!", sizeof(uint64_t));
-    cor_panic();
+    cor_panic("assertion failure");
   }
 
   console_clear();

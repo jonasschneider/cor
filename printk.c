@@ -73,6 +73,14 @@ int cor_printk(const char *format, ...) {
         } else {
           printk_hex(va_arg(ap, uint));
         }
+      } else if(*format == 's') {
+        char *s = va_arg(ap, char*);
+        while(*s) {
+          (*cor_current_writec)(*s);
+          s++;
+        }
+      } else {
+        cor_printk("[cor_printk: invalid format]");
       }
     } else {
       (*cor_current_writec)(*format);

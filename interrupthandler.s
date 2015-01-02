@@ -10,7 +10,7 @@ dummy_isr:
   push %r10
   push %r11
 
-  call cor_1bitpanic
+  call cor_hitmarker
 
   push %r11
   push %r10
