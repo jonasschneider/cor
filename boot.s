@@ -123,7 +123,7 @@ gdt:
   .byte 0x00, 0b10010010, 0b11001111, 0x00
 
 gdt64_descriptor:
-  .word (5 * 8) - 1 # GDT size in bytes - 1, 3 is the number of entries
+  .word (5 * 8) - 1 # GDT size in bytes - 1, 5 is the number of entries
   .word gdt64 - _start + 0x7c00
 
 gdt64:
@@ -184,12 +184,12 @@ in_prot32:
   # Now write out one page table entry on each level, linking to the next table.
   # Add three to the destination address to set the two lower bits,
   # which cause the page to be Present, Readable, and Writable. (?)
-  movl $0x2003, (%edi)
+  movl $0x2003|4, (%edi)
   add $0x1000, %edi
-  movl $0x3003, (%edi)
+  movl $0x3003|4, (%edi)
   add $0x1000, %edi
-  movl $0x4003, (%edi)
-  movl $0x5003, 16(%edi)
+  movl $0x4003|4, (%edi)
+  movl $0x5003|4, 16(%edi)
   add $0x1000, %edi
 
   # Now all that's left is the innermost level.
@@ -199,7 +199,7 @@ in_prot32:
 
   # This is the page table entry for the first page, it has offset 0 and
   # the same bits as above set.
-  mov $0x00000003, %ebx
+  mov $0x00000003|4, %ebx
 
   # Run the block 512 times.
   mov $512, %ecx
@@ -218,7 +218,7 @@ next_page_entry:
   loop next_page_entry
 
   # write page table entry for stage2.init
-  movl $0x70003, 0x5000
+  movl $0x70003|4, 0x5000
 
 
   # Next, enable PAE (physical address extension).

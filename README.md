@@ -45,6 +45,7 @@ Roadmap
   [x] Load ELF into virtual memory
 [ ] Implement syscall basics (choose INT 0x14 for fun, maybe start with just exit, then write)
 [ ] permanent ring switch when starting init (except for syscalls)
+[ ] Fix page permissions (`|4`s in boot.s)
 [ ] Process table / Process memory page table management
 [ ] Create an actual toolchain
   [x] Make a "hello world" binary that runs on host Linux and is as static as it gets (no libc)

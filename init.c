@@ -1,6 +1,7 @@
 // TODO: .data and .bss sections break (probably anything besides .text)
 void _start() {
-  __asm__ ( "hlt" );
+  while(1);
+  __asm__ ( "int $49" );
   char *str = "Hello, world from init.\nI live at %p, and cor_printk is at %p.\n";
   long *lol = (long *)0x55000;
 
