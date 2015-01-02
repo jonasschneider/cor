@@ -15,7 +15,7 @@ int lawl = 0xdeadbeef;
 void console_clear(void);
 
 void cor_panic(const char *msg) {
-  cor_printk("PANIC: %s\n", msg);
+  cor_printk("\nPANIC: %s\n", msg);
   while(1) {};
 }
 
@@ -113,12 +113,18 @@ void kernel_main(void) {
     : : "p" (x)
   );
 
+  int a = 1337;
+
   cor_printk("done.\n");
 
-  cor_printk("Firing test interrupt..");
+  cor_printk("Firing test interrupt.. ");
   __asm__ ( "int $49" );
-  cor_printk("returned.\n");
-  __asm__ ( "hlt" );
+  cor_printk("returned.. ");
+  if(a == 1337) {
+    cor_printk("OK, stack looks intact.\n");
+  } else {
+    cor_panic("Test interrupt seems to have messed up the stack.");
+  }
 
   cor_printk("Exec'ing init.\n");
 

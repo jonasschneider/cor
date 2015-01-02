@@ -12,12 +12,12 @@ dummy_isr:
 
   call cor_hitmarker
 
-  push %r11
-  push %r10
-  push %r9
-  push %r8
-  push %rdx
-  push %rcx
-  push %rax
+  pop %r11
+  pop %r10
+  pop %r9
+  pop %r8
+  pop %rdx
+  pop %rcx
+  pop %rax
 
   iretq

@@ -63,25 +63,17 @@ _start:
   or $1, %eax # set Protected bit #0
   mov %eax, %cr0
 
-  # Now we are half-way in protected mode - our current segment (CS register) is still 0
-  # though, which is murkily defined to be somewhat illegal.
-  # Before we fix that, though, we have to clear the CPU's instruction pipeline, since
-  # otherwise half-decoded instructions after here will still be executed in Real mode
-  # (a microcode thing, apparently), which isn't really all that cool.
-  # What better way to do that than a no-op jump!
-  jmp after_clear_pipeline
-  after_clear_pipeline:
-
-  # Now we finally get ready to make the jump to our first real segment.
+  # Now we switch over our program counter to one that actually sits within a segment.
   # To do this, we do a long jump. Long jumping means that we're breaking the abstraction of
   # virtual memory by switching segments.
   # The arguments to ljmp are the segment selector, and the offset.
-  # Concatenated, they probably form a virtual memory address.
+  # Concatenated, they seem to form a virtual memory address.
   # Since all our segments map to the entire physical memory, we want to
   # The segment selector is 13 bits of an index into the GDT, 1 bit that is set
   # if we're looking at the LDT, and 2 bits that specify the protection level to access.
   # Since we don't have any Local Descriptor Tables (LDTs) set, we want to look at the GDT,
   # and we want to stay in Protection Level 0, the innermost ring.
+  # (This also means that the segment with the lower 3 bits set to 0 is the offset [in bytes] into the GDT.)
   # Our index into the GDT is 1 (the kernel code segment that comes past the null segment).
   # This will also cause the CPU to switch out of 16-bit mode; the instruction that we'll
   # arrive at after the jump will be decoded as 32-bit.
@@ -150,10 +142,16 @@ gdt64:
 # (Might want to re-enable interrupts again?)
 in_prot32:
 .code32
-  # Actually, we don't do anything fancy in protected mode besides preparing the switch
-  # to long mode. Maybe we could skip protected mode altogether, but meh.
+  # Now we are half-way in protected mode - our various segment selector registers are still 0
+  # though, which is murkily defined to be somewhat illegal.
+  # Set up the stack to be .. somewhere in higher memory. FIXME: Let's just hope this doesn't break anything.
+  mov $0x70000, %eax
+  mov %eax, %esp
 
-  # We're going to set up our page tables starting at 0x1000.
+  # Now, we are in protected mode, but we want to enable paging.
+  # This is because 64-bit mode supports paging only, and paging > segmentation anyhow.
+  # For some reason.
+  # So, we're going to set up our page tables starting at 0x1000.
   # CR3 holds the address to the topmost page directory (there are 4 levels)
   # Nb: it's OK to set this here already (even though nothing's really set up yet)
   # because paging is still disabled.

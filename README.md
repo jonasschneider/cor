@@ -80,6 +80,10 @@ As this is an academic project, I'll try to document things I stumbled over.
 
 - `info mem` in the qemu console will display the virtual memory map.
 
+- Memory below `0x10000` cannot, in fact, belong to any segment, since segment 0 is the null segment. This, for some cases, means you can't have things in this low memory. An example seems to be the stack segment register when returning from an interrupt routine.
+
+- Should maybe file a bug against QEMU because it doesn't check CS/SS register contents right when/somewhere shortly after entering protected mode, if you forget that it'll bite you later.
+
 History
 =======
 I don't have a long history with writing anything low-level. I usually program in Ruby or other dynamic languages with GC, and never really cared about what actually went down inside the computer. UNIX syscalls were my primitive instructions. `gdb` always scared me with its pointers, and how it could crash my entire process so easily. Finding `.S` files in a project repo was always a good sign for me to avoid touching anything with a 200ft pole.
