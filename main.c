@@ -128,6 +128,10 @@ void kernel_main(void) {
 
   cor_printk("Exec'ing init.\n");
 
+  // FIXME PLS
+  unsigned long *printtarget = (void*)0x55000;
+  *printtarget = (unsigned long)cor_printk;
+
   //cor_dump_page_table((uint64_t *)0x1000, 1);
   cor_elf_exec(&cor_stage2_init_data, cor_stage2_init_data_len);
 

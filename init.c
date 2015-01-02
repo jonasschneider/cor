@@ -1,10 +1,14 @@
+// TODO: .data and .bss sections break (probably anything besides .text)
 void _start() {
-  char *str = "Hello, world from kernel-space init\nI am loaded at %x (not even kidding..)\n";
-  int (*cor_printk)(const char *format, ...);
-  cor_printk = (int (* )(const char *format, ...))0x0000000000010641;
+  char *str = "Hello, world from init.\nI live at %p, and cor_printk is at %p.\n";
+  long *lol = (long *)0x55000;
 
-  cor_printk(str, _start);
+  int (*cor_printk)(const char *format, ...) = (int (*)(const char *format, ...))1337;
+  int (**ptr)(const char *format, ...) = (int (**)(const char *format, ...))lol;
+  cor_printk = *ptr;
 
-  __asm__ ( "hlt" : : "a" (str) );
+  cor_printk(str, _start, cor_printk);
+
+  __asm__ ( "hlt" );
   while(1);
 }
