@@ -26,7 +26,7 @@ dummy_isr:
 .globl   before
 testisr:
 setidtr:  lidt idtr
-  movq $int_handler, %rax
+  movq $dummy_isr, %rax
   mov %ax, 0x6000+49*16
   movw $0x8, 0x6000+49*16+2 # segment
   movw $0x8e00, 0x6000+49*16+4

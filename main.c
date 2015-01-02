@@ -87,16 +87,14 @@ void kernel_main(void) {
 
   cor_printk("Initializing interrupts..");
 
-  cor_printk("Calling testisr at %p\n",testisr);
-
-  testisr();
+  //testisr();
 
   // cf. intel_64_software_developers_manual.pdf pg. 1832
   void *target = (void*)&dummy_isr;
 
   void *base = (void*)0x6000;
   const int entrysize = 16; // in bytes
-  const int n_entry = 40;
+  const int n_entry = 55;
   idtr.base = (uint64_t)base;
   idtr.limit = entrysize * n_entry;
 
@@ -104,9 +102,8 @@ void kernel_main(void) {
     void *offset = base+(i*entrysize);
 
     *(uint16_t*)(offset+0) = (uint16_t) ((uint64_t)target >> 0);
-    *(uint16_t*)(offset+2) = (uint16_t) 1; // segment
-    *(uint8_t*)(offset+4) = (uint8_t) 0; // zero
-    *(uint8_t*)(offset+5) = (uint8_t) 1<<7; // flags
+    *(uint16_t*)(offset+2) = (uint16_t) 8; // segment
+    *(uint16_t*)(offset+4) = (uint16_t) 0x8e00; // flags
     *(uint16_t*)(offset+6) = (uint16_t) ((uint64_t)target >> 16);
     *(uint32_t*)(offset+8) = (uint32_t) ((uint64_t)target >> 32);
     *(uint32_t*)(offset+12) = (uint32_t) 0; // reserved
@@ -122,12 +119,8 @@ void kernel_main(void) {
 
   cor_printk("done.\n");
 
-  __asm__ (
-    "sti"
-  );
-
   cor_printk("enabled interrupts again. firing one..\n");
-  __asm__ ( "int $35" );
+  __asm__ ( "int $49" );
   __asm__ ( "hlt" );
 
   cor_printk("Exec'ing init.\n");
