@@ -1,7 +1,7 @@
 .PHONY: all clean
 all: disk.bin
 # TODO: add a real configure script to remove debug options
-CFLAGS=-nostdlib -nostdinc -static -nostartfiles -nodefaultlibs -Wall -Wextra -m64 -Werror -std=c11 -ggdb
+CFLAGS=-nostdlib -nostdinc -static -nostartfiles -nodefaultlibs -Wall -Wextra -m64 -Werror -std=c11 -ggdb -fno-builtin
 CC=./sshwrap gcc
 OBJCOPY=./sshwrap objcopy
 LD=./sshwrap ld
@@ -24,7 +24,7 @@ stage2_entrypoint.o: stage2_entrypoint.s
 	$(CC) $(CFLAGS) -c stage2_entrypoint.s -o stage2_entrypoint.o
 
 interrupthandler.o: interrupthandler.s
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c -x assembler-with-cpp -Iinclude $< -o $@
 
 stage2.o: $(OBJS) linkerscript stage2_entrypoint.o init_static.o
 	echo LONG\(0x$(shell git rev-parse HEAD | cut -c 1-6)\) > versionstamp~

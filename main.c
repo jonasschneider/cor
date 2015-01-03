@@ -44,8 +44,8 @@ void cor_hitmarker() {
   cor_printk("FIRED!\n");
 }
 
-void cor_syscall(unsigned int no) {
-  cor_printk("syscall no=%x\n", no);
+void syscall_exit(int ret) {
+  cor_printk("exit() ret=%x\n", ret);
 }
 
 void cor_writec(const char c);
