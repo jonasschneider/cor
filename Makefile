@@ -6,7 +6,7 @@ CC=./sshwrap gcc
 OBJCOPY=./sshwrap objcopy
 LD=./sshwrap ld
 AS=./sshwrap as
-OBJS=main.o printk.o chrdev_serial.o io.o elf.o interrupthandler.o tss.o
+OBJS=main.o printk.o chrdev_serial.o io.o elf.o interrupthandler.o tss.o mm.o
 
 clean:
 	rm -f *.o *.bin *~ init *.so

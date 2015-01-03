@@ -3,6 +3,7 @@
 #include "chrdev_serial.h"
 #include "elf.h"
 #include "tss.h"
+#include "mm.h"
 
 int my_kernel_subroutine() {
   return 0xbeef;
@@ -93,6 +94,10 @@ void kernel_main(void) {
   cor_printk("Switching to serial...\n");
   cor_current_writec = cor_chrdev_serial_write;
   cor_printk("Switched to serial console.\n");
+
+  cor_printk("Initializing MM.. ");
+  mm_init();
+  cor_printk("OK.\n");
 
   cor_printk("Initializing interrupts..");
 

@@ -1,5 +1,5 @@
 # Tell the assembler to output 16-bit code; x86-compatible CPUs start in the 16-bit Real Mode.
-.code16gcc
+.code16
 
 # Export the _start symbol, which is by convention the entry point for the .text
 # section. Our makefile places the beginning of the text section at the start of
@@ -37,9 +37,56 @@ _start:
 
   int $0x13
 
-  # Let's enter protected mode.
+  # Try to construct a memory map at 0x8000.
+  # http://wiki.osdev.org/Detecting_Memory_(x86)#BIOS_Function:_INT_0x15.2C_EAX_.3D_0xE820
 
-  # Disable interrupts - apparently that's a thing.
+  # For the first call to the function, point ES:DI at the destination buffer
+  # for the list. Clear EBX. Set EDX to the magic number 0x534D4150. Set EAX to
+  # 0xE820 (note that the upper 16-bits of EAX should be set to 0). Set ECX to
+  # 24. Do an INT 0x15.
+  mov $0x0000, %ax
+  mov %ax, %es
+  mov $0x8000, %di
+  mov $0x534d4150, %edx
+  mov $0, %ebx
+  mov $0xe820, %eax
+  mov $24, %ecx
+  int $0x15
+
+  # If the first call to the function is successful, EAX will be set to
+  # 0x534D4150, and the Carry flag will be clear. EBX will be set to some non-zero
+  # value, which must be preserved for the next call to the function. CL will
+  # contain the number of bytes actually stored at ES:DI (probably 20).
+  cmp $0x534d4150, %eax
+  jne failed
+
+  # For the subsequent calls to the function: increment DI by your list entry
+  # size, reset EAX to 0xE820, and ECX to 24. When you reach the end of the
+  # list, EBX may reset to 0. If you call the function again with EBX = 0, the
+  # list will start over. If EBX does not reset to 0, the function will return
+  # with Carry set when you try to access the entry after the last valid entry.
+next:
+  add $32, %di # even though each entry has 24 bytes, align it to 32
+  mov $0xe820, %eax
+  mov $24, %ecx
+  int $0x15
+  jc done
+  cmp $0, %ebx
+  je done
+
+  jmp next
+
+failed: jmp failed # TODO: error message etc
+
+done:
+  movl $0xDEADBEEF, 32(%di) # place a marker so the reader knows we're done. yes, hax.
+
+  # Okay, we created the memory map for the next stage.
+  # (We're not going to make any use of it here.)
+
+  # Now, let's enter protected mode.
+
+  # First things first: disable interrupts -- apparently that's a thing.
   cli
 
   # So protected mode has this thing called segmentation. A table of segments

@@ -1,4 +1,4 @@
-Cor - a hobbyist x86_64 kernel
+Cor -- a hobbyist x86_64 kernel
 ==============================
 
 Synopsis
@@ -62,6 +62,7 @@ Memory map
 Physical memory map at the time of stage2 startup
 
 - `0x01000-0x05FFF`: page tables courtesy of `boot.s`
+- `0x08000-0x08FFF`: Memory map info by boot.s
 - `0x10000-0x4FFFF`: stage2 `.text`, `0x10000` is the x86_64 entry point from bootloader
 - `0x50000-0x6FFFD`: stage2 `.data` and stack (FIXME where is the stack actually?)
 - `0x6FFFE`: `0x13` (magic)
@@ -70,7 +71,7 @@ Physical memory map at the time of stage2 startup
 Physical memory map before initial switch to user mode:
 
 [..]
-- `0x06000-0x09FFF`: stage2's IDT
+- `0x06000-0x06FFF`: stage2's IDT
 - `0x70000-0x7FFFF`: text/data segments of init, init entrypoint is near there
 
 Additional mapped virtual memory at this time:
@@ -104,7 +105,14 @@ As this is an academic project, I'll try to document things I stumbled over.
 - The red zone thingie? (When interrupted in ring0)
 
 The Story
--------
+---------
 I don't have a long history with writing anything low-level. I usually program in Ruby or other dynamic languages with GC, and never really cared about what actually went down inside the computer. UNIX syscalls were my primitive instructions. `gdb` always scared me with its pointers, and how it could crash my entire process so easily. Finding `.S` files in a project repo was always a good sign for me to avoid touching it with a 10ft pole.
 
 Takeaway: For high-level developers like me, the scare factor of low-level assembly programming might be so high because it's combined with the great complexity of a modern OS. If you take one of the factors away, you're back in a fairly comfortable zone; usually, you take away the low-level factor and deal with the complexity. It turns out that taking away the complexity works just as well.
+
+
+Bibliography
+------------
+- http://wiki.osdev.org/Memory_Map_(x86)
+- Intel manual (TODO)
+- AMD manual (TODO)
