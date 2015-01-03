@@ -1,0 +1,1 @@
+void tss_setup();

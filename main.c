@@ -2,6 +2,7 @@
 #include "printk.h"
 #include "chrdev_serial.h"
 #include "elf.h"
+#include "tss.h"
 
 int my_kernel_subroutine() {
   return 0xbeef;
@@ -99,7 +100,7 @@ void kernel_main(void) {
 
     *(uint16_t*)(offset+0) = (uint16_t) ((uint64_t)target >> 0);
     *(uint16_t*)(offset+2) = (uint16_t) 8; // segment
-    *(uint16_t*)(offset+4) = (uint16_t) 0x8e00; // flags
+    *(uint16_t*)(offset+4) = (uint16_t) 0xee00; // flags
     *(uint16_t*)(offset+6) = (uint16_t) ((uint64_t)target >> 16);
     *(uint32_t*)(offset+8) = (uint32_t) ((uint64_t)target >> 32);
     *(uint32_t*)(offset+12) = (uint32_t) 0; // reserved
@@ -125,6 +126,11 @@ void kernel_main(void) {
   } else {
     cor_panic("Test interrupt seems to have messed up the stack.");
   }
+
+  cor_printk("Setting up TSS.. ");
+  tss_setup();
+  cor_printk("OK.\n");
+
 
   cor_printk("Exec'ing init.\n");
 
