@@ -1,4 +1,4 @@
-package integration
+package test
 
 import (
   "testing"
@@ -10,48 +10,11 @@ import (
 )
 
 func TestInitVmem(t *testing.T) {
-  cmd := exec.Command(os.Getenv("ROOT")+"/bin/run")
+  cmd := exec.Command("cucumber")
   cmd.Dir = os.Getenv("ROOT")
-
-  rd, wr := io.Pipe()
-  lines := bufio.NewReader(rd)
-  cmd.Stdout = wr
-
-  err := cmd.Start()
+  err := cmd.Run();
   if err != nil {
     t.Error(err)
-  }
-  defer func() {
-    cmd.Process.Kill()
-  }()
-
-
-  rcv := make(chan string)
-  go func() {
-    for {
-      s, err := lines.ReadBytes('\n')
-      if err != nil {
-        t.Error(err)
-      }
-      rcv <- string(s)
-    }
-  }()
-
-  to := time.After(1000*time.Millisecond)
-  for {
-    select {
-    case msg := <- rcv:
-      needle := "Hello, world from kernel-space init"
-      if len(msg) < len(needle) {
-        continue
-      }
-      match := msg[0:len(needle)]
-      if needle == match {
-        return
-      }
-    case _ = <-to:
-      t.Error("timed out without reading anything")
-    }
   }
 }
 

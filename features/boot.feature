@@ -10,4 +10,4 @@ Feature: Booting /sbin/init
       }
       """
     When I run the machine
-    Then I should see "Hello, world from userspace!\n"
+    Then I should see "Hello, world from userspace!"
