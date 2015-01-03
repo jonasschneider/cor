@@ -1,7 +1,7 @@
 .PHONY: all clean
 all: disk.bin
 # TODO: add a real configure script to remove debug options
-CFLAGS=-nostdlib -nostdinc -static -nostartfiles -nodefaultlibs -Wall -Wextra -m64 -Werror -std=c11 -ggdb -fno-builtin
+CFLAGS=-nostdlib -nostdinc -static -nostartfiles -nodefaultlibs -Wall -Wextra -m64 -Werror -std=c11 -ggdb -fno-builtin -Iinclude -include stddef.h
 CC=./sshwrap gcc
 OBJCOPY=./sshwrap objcopy
 LD=./sshwrap ld
@@ -53,4 +53,4 @@ init_static.c~: init
 	cat $< | ruby -e 'b = $$stdin.read.bytes; puts "int cor_stage2_init_data_len = "+b.count.to_s+"; char cor_stage2_init_data[] = {";puts b.map{|x|"0x#{x.to_s(16)}"}.join(", ");puts "};"' > $@
 
 init: init.c init_lib.c
-	$(CC) $(CFLAGS) -Iinclude -fPIC init.c init_lib.c -o init
+	$(CC) $(CFLAGS) -include stdlib.h -fPIC init.c init_lib.c -o init

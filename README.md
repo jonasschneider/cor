@@ -1,3 +1,64 @@
+Cor - a hobbyist x86_64 kernel
+==============================
+
+Synopsis
+--------
+- Install dependencies: Compilers (XCode CLI tools / `build-essential`), QEMU, Vagrant, xxd, Ruby, Go
+- `$ make`
+- `$ bin/run` to start the system, you'll be connected to the serial console of the machine
+- `$ bin/debug` to debug the kernel, runs qemu and tells you how to attach a `gdb`
+- `$ test/run` to run integration/blackbox tests
+
+- `$ bin/debug_stage1` to debug the bootloader (also see how `bin/debug` skips it)
+
+Roadmap
+-------
+[x] Boot *something*, and show a hello world on the Screen
+[x] Enter 64-bit long mode and never worry about the 80s again
+[x] Print something on the serial console
+[x] Set up debugging symbols & stack traces for stage2 kernel code
+[x] MinimalELF userspace binary loader
+  [x] Make a minimal ELF that uses statically linked kernel functions to print something
+  [x] Make a minimal ELF that somehow signals that it's executing (HLT)
+  [x] Implement MVP ELF loader in stage2
+  [x] Load ELF into virtual memory
+[x] Implement syscall basics (choose INT 0x14 for fun, maybe start with just exit, then write)
+[x] permanent ring switch when starting init (except for syscalls)
+[ ] Actual memory management & protection
+  [ ] Fix page permissions (`|4`s in boot.s)
+  [ ] Move to higher-half kernel
+[ ] Process table / Process memory page table management
+[ ] Create an actual toolchain
+  [x] Make a "hello world" binary that runs on host Linux and is as static as it gets (no libc)
+  [ ] appropriately mod dietlibc for our syscall semantics
+[ ] Make something like a shell over serial (this will be our /sbin/init)
+[ ] Multitasking / Scheduler (make ringswitch non-permanent)
+[ ] PCI device detection (virtio)
+[ ] Networking -> DHCP + TCP/IP
+[ ] Tiniest VFS implementation possible (read-only single-level?)
+[ ] implement `ls` & `netcat` equivalents
+
+More unicorns:
+
+[ ] Page-table-based IPC ("send" a page to another process, zero copy yadda yadda)
+[ ] SMP support
+[ ] Modular implementations of memory manager (?) / FS / Networking, written in Rust (?)
+
+
+Goals
+-----
+- Document well
+- Make interactions between components clear
+- Occasionally introduce additional complexity to prove a point
+
+Non-Goals
+---------
+- Be fast
+- Be secure
+- Be production-ready
+
+Memory map
+----------
 Physical memory map at the time of stage2 startup
 
 - `0x01000-0x05FFF`: page tables courtesy of `boot.s`
@@ -16,53 +77,8 @@ Additional mapped virtual memory at this time:
 - (usually) 0x400000 mapped to (always) 0x70000
 
 
-Synopsis
-=========
-- `$ make`
-- `$ bin/run` to launch the thing in qemu, you'll be connected to the serial console
-- To start debugging the kernel, `$ bin/debug` will run qemu and tell you how to attach a `gdb`
-- To debug the bootloader, look at how `bin/debug` skips it, and play with `$ bin/debug_stage1`
-- To run integration/blackbox tests (requires working Golang instellation), do `$ test/run`
-
-
-The tools
-=========
-- `qemu` is a great emulator. It has an intuitive CLI, does what you'd expect, and even has a nice debugging console.
-- The GNU `binutils` provide great insight into what actually comes out of your compiler/assembler. `objcopy`, `objdump` allowed me to actually mess with the compilation, disassemble things, and shuffle sections around to form the actual boot media.
-- The almighty `gdb`
-
-
-Roadmap
-=====
-[x] Boot *something*, and show a hello world on the Screen
-[x] Enter 64-bit long mode and never worry about the 80s again
-[x] Print something on the serial console
-[x] Set up debugging symbols & stack traces for stage2 kernel code
-[ ] ELF userspace binary loader
-  [x] Make a minimal ELF that uses statically linked kernel functions to print something
-  [x] Make a minimal ELF that somehow signals that it's executing (HLT)
-  [x] Implement MVP ELF loader in stage2
-  [x] Load ELF into virtual memory
-[ ] Implement syscall basics (choose INT 0x14 for fun, maybe start with just exit, then write)
-[ ] permanent ring switch when starting init (except for syscalls)
-[ ] Fix page permissions (`|4`s in boot.s)
-[ ] Process table / Process memory page table management
-[ ] Create an actual toolchain
-  [x] Make a "hello world" binary that runs on host Linux and is as static as it gets (no libc)
-  [ ] appropriately mod dietlibc for our syscall semantics
-[ ] Make something like a shell over serial (this will be our /sbin/init)
-[ ] Multitasking / Scheduler (make ringswitch non-permanent)
-[ ] PCI device detection (virtio)
-[ ] Networking -> DHCP + TCP/IP
-[ ] Tiniest VFS implementation possible (read-only single-level?)
-[ ] implement `ls` & `netcat` equivalents
-
-More unicorns:
-
-[ ] SMP support?
-
 Caveats
-=======
+-------
 As this is an academic project, I'll try to document things I stumbled over.
 
 - `%ax` is the same register as `%ah` and `%al`. That means: don't try to write something into `%ah`, then zero out `%ax` and expect your value in `%ah` to still be present.
@@ -75,7 +91,7 @@ As this is an academic project, I'll try to document things I stumbled over.
 
   I'm not yet sure how to finally solve this. So far, the workaround seems to be to (a) run `gdb` under Linux, and (b) restart it when switching architectures. Meh.
 
-- On Yosemite (not sure if relevant), `gdb`'s readline doesn't play nice with iTerm. That means gdb will hang if it asks you a yes/no question, it won't respond to hitting the enter key after typing your answer. This happens both on a Homebrew-installed gdb, and over an SSH connection (via Vagrant). Terminal.app doesn't have this problem.
+- On Yosemite (not sure if relevant), `gdb`'s readline occasionally doesn't play nice with iTerm2. That means `gdb` will hang if it asks you a yes/no question, it won't respond to hitting the enter key after typing your answer. This happens both on a Homebrew-installed `gdb`, and over an SSH connection to an Ubuntu VM (via Vagrant). Terminal.app doesn't have this problem.
 
 - QEMU does have some limited tracing support built-in. Running it with something like `-d int,pcall,cpu_reset,ioport,unimp,guest_errors` will spew various potentially helpful info to stderr. However, debugging generic errors like a General Protection fault still proves nontrivial. Using Homebrew's `interactive_shell` command in the qemu formula, qemu was patched to include some printf statements in the interrupt-handler code. This affects `do_interrupt64` (see `target-i386/seg_helper.c` in the qemu tree), for an example see [this gist](https://gist.github.com/315a19081f825583acf7)
 
@@ -85,8 +101,10 @@ As this is an academic project, I'll try to document things I stumbled over.
 
 - Should maybe file a bug against QEMU because it doesn't check CS/SS register contents right when/somewhere shortly after entering protected mode, if you forget that it'll bite you later.
 
-History
-=======
-I don't have a long history with writing anything low-level. I usually program in Ruby or other dynamic languages with GC, and never really cared about what actually went down inside the computer. UNIX syscalls were my primitive instructions. `gdb` always scared me with its pointers, and how it could crash my entire process so easily. Finding `.S` files in a project repo was always a good sign for me to avoid touching anything with a 200ft pole.
+- The red zone thingie? (When interrupted in ring0)
+
+The Story
+-------
+I don't have a long history with writing anything low-level. I usually program in Ruby or other dynamic languages with GC, and never really cared about what actually went down inside the computer. UNIX syscalls were my primitive instructions. `gdb` always scared me with its pointers, and how it could crash my entire process so easily. Finding `.S` files in a project repo was always a good sign for me to avoid touching it with a 10ft pole.
 
 Takeaway: For high-level developers like me, the scare factor of low-level assembly programming might be so high because it's combined with the great complexity of a modern OS. If you take one of the factors away, you're back in a fairly comfortable zone; usually, you take away the low-level factor and deal with the complexity. It turns out that taking away the complexity works just as well.
