@@ -17,7 +17,7 @@ Roadmap
 - [x] Enter 64-bit long mode and never worry about the 80s again
 - [x] Print something on the serial console
 - [x] Set up debugging symbols & stack traces for stage2 kernel code
-- [x] MinimalELF userspace binary loader
+- [x] Minimal ELF userspace binary loader
   - [x] Make a minimal ELF that uses statically linked kernel functions to print something
   - [x] Make a minimal ELF that somehow signals that it's executing (HLT)
   - [x] Implement MVP ELF loader in stage2
@@ -25,6 +25,7 @@ Roadmap
 - [x] Implement syscall basics (choose INT 0x14 for fun, maybe start with just exit, then write)
 - [x] permanent ring switch when starting init (except for syscalls)
 - [ ] Actual memory management & protection
+  - [x] Read memory map from BIOS
   - [ ] Fix page permissions (`|4`s in boot.s)
   - [ ] Move to higher-half kernel
 - [ ] Process table / Process memory page table management
