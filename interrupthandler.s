@@ -3,6 +3,7 @@
 
 dummy_isr:
   push %rax
+  push %rbx
   push %rcx
   push %rdx
   push %r8
@@ -10,7 +11,8 @@ dummy_isr:
   push %r10
   push %r11
 
-  call cor_hitmarker
+  mov %rax, %rdi
+  call cor_syscall
 
   pop %r11
   pop %r10
@@ -18,6 +20,7 @@ dummy_isr:
   pop %r8
   pop %rdx
   pop %rcx
+  pop %rbx
   pop %rax
 
   iretq

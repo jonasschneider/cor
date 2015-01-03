@@ -44,6 +44,10 @@ void cor_hitmarker() {
   cor_printk("FIRED!\n");
 }
 
+void cor_syscall(unsigned int no) {
+  cor_printk("syscall no=%x\n", no);
+}
+
 void cor_writec(const char c);
 void (*cor_current_writec)(const char c) = cor_writec;
 
