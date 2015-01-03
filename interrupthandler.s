@@ -18,7 +18,13 @@ dummy_isr:
   # and then rcx, r8 and r9. Only the 7th argument and onwards are passed on the stack.
   mov %rbx, %rdi
   mov %rcx, %rsi
+  #mov %rdx, %rdx
 
+  cmp $SYSCALL_WRITE, %rax
+  jne check_exit
+  call syscall_write
+
+check_exit:
   cmp $SYSCALL_EXIT, %rax
   jne bye
   call syscall_exit

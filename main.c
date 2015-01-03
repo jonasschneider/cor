@@ -44,6 +44,12 @@ void cor_hitmarker() {
   cor_printk("FIRED!\n");
 }
 
+int syscall_write(int fd, const void *buf, size_t count) {
+  cor_printk("write() fd=%x, buf=%x, c=%x\n", fd, buf, count);
+  cor_printk(buf);
+  return 0;
+}
+
 void syscall_exit(int ret) {
   cor_printk("exit() ret=%x\n", ret);
 }

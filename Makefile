@@ -23,7 +23,7 @@ mbr.bin: blank_mbr boot.o
 stage2_entrypoint.o: stage2_entrypoint.s
 	$(CC) $(CFLAGS) -c stage2_entrypoint.s -o stage2_entrypoint.o
 
-interrupthandler.o: interrupthandler.s
+interrupthandler.o: interrupthandler.s include/syscall.h
 	$(CC) $(CFLAGS) -c -x assembler-with-cpp -Iinclude $< -o $@
 
 stage2.o: $(OBJS) linkerscript stage2_entrypoint.o init_static.o
