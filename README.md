@@ -13,39 +13,39 @@ Synopsis
 
 Roadmap
 -------
-[x] Boot *something*, and show a hello world on the Screen
-[x] Enter 64-bit long mode and never worry about the 80s again
-[x] Print something on the serial console
-[x] Set up debugging symbols & stack traces for stage2 kernel code
-[x] MinimalELF userspace binary loader
-  [x] Make a minimal ELF that uses statically linked kernel functions to print something
-  [x] Make a minimal ELF that somehow signals that it's executing (HLT)
-  [x] Implement MVP ELF loader in stage2
-  [x] Load ELF into virtual memory
-[x] Implement syscall basics (choose INT 0x14 for fun, maybe start with just exit, then write)
-[x] permanent ring switch when starting init (except for syscalls)
-[ ] Actual memory management & protection
-  [ ] Fix page permissions (`|4`s in boot.s)
-  [ ] Move to higher-half kernel
-[ ] Process table / Process memory page table management
-[ ] Create an actual toolchain
-  [x] Make a "hello world" binary that runs on host Linux and is as static as it gets (no libc)
-  [ ] appropriately mod dietlibc for our syscall semantics
-[ ] Make something like a shell over serial (this will be our /sbin/init)
-[ ] Multitasking / Scheduler (make ringswitch non-permanent)
-[ ] PCI device detection (virtio)
-[ ] Networking -> DHCP + TCP/IP
-[ ] Tiniest VFS implementation possible (read-only single-level?)
-[ ] implement `ls` & `netcat` equivalents
+- [x] Boot *something*, and show a hello world on the Screen
+- [x] Enter 64-bit long mode and never worry about the 80s again
+- [x] Print something on the serial console
+- [x] Set up debugging symbols & stack traces for stage2 kernel code
+- [x] MinimalELF userspace binary loader
+  - [x] Make a minimal ELF that uses statically linked kernel functions to print something
+  - [x] Make a minimal ELF that somehow signals that it's executing (HLT)
+  - [x] Implement MVP ELF loader in stage2
+  - [x] Load ELF into virtual memory
+- [x] Implement syscall basics (choose INT 0x14 for fun, maybe start with just exit, then write)
+- [x] permanent ring switch when starting init (except for syscalls)
+- [ ] Actual memory management & protection
+  - [ ] Fix page permissions (`|4`s in boot.s)
+  - [ ] Move to higher-half kernel
+- [ ] Process table / Process memory page table management
+- [ ] Create an actual toolchain
+  - [x] Make a "hello world" binary that runs on host Linux and is as static as it gets (no libc)
+  - [ ] appropriately mod dietlibc for our syscall semantics
+- [ ] Make something like a shell over serial (this will be our /sbin/init)
+- [ ] Multitasking / Scheduler (make ringswitch non-permanent)
+- [ ] PCI device detection (virtio)
+- [ ] Networking -> DHCP + TCP/IP
+- [ ] Tiniest VFS implementation possible (read-only single-level?)
+- [ ] implement `ls` & `netcat` equivalents
 
 More unicorns:
 
-[ ] Page-table-based IPC ("send" a page to another process, zero copy yadda yadda)
-[ ] SMP support
-[ ] Isolated kernel modules (maybe in Rust)
-  [ ] Memory manager (unclear if a good idea; maybe just the userspace memory manager)
-  [ ] FS (block device code in C)
-  [ ] Networking (PCI code in C)
+- [ ] Page-table-based IPC ("send" a page to another process, zero copy yadda yadda)
+- [ ] SMP support
+- [ ] Isolated kernel modules (maybe in Rust)
+  - [ ] Memory manager (unclear if a good idea; maybe just the userspace memory manager)
+  - [ ] FS (block device code in C)
+  - [ ] Networking (PCI code in C)
 
 Goals
 -----
