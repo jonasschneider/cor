@@ -42,8 +42,10 @@ More unicorns:
 
 [ ] Page-table-based IPC ("send" a page to another process, zero copy yadda yadda)
 [ ] SMP support
-[ ] Modular implementations of memory manager (?) / FS / Networking, written in Rust (?)
-
+[ ] Isolated kernel modules (maybe in Rust)
+  [ ] Memory manager (unclear if a good idea; maybe just the userspace memory manager)
+  [ ] FS (block device code in C)
+  [ ] Networking (PCI code in C)
 
 Goals
 -----
