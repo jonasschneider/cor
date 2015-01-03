@@ -1,1 +1,1 @@
-void mm_init();
+void mm_init(void);

@@ -1,5 +1,4 @@
 #include "common.h"
-#include "printk.h"
 #include "chrdev_serial.h"
 #include "elf.h"
 #include "tss.h"

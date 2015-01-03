@@ -1,5 +1,5 @@
-#include "printk.h"
 #include "common.h"
+#include "task.h"
 
 #pragma pack(push, 1)
 struct elf64_header {
@@ -74,33 +74,33 @@ int cor_elf_exec(char *elf, unsigned int len) {
     return -1;
   }
 
+  struct task_table_entry *t = task_new();
+
+
   // target position is 0x70000, and the ELF offset seems to be 0x400000
   int shift = 0x400000 - 0x70000;
 
   for(int i = 0; i < hdr->sh_entnum; i++) {
-    void *addr = elf + hdr->sh_offset + hdr->sh_entsize * i;
-    struct elf64_sectionheader *sectionheader = (struct elf64_sectionheader *) addr;
+    void *p = elf + hdr->sh_offset + hdr->sh_entsize * i;
+    struct elf64_sectionheader *sectionheader = (struct elf64_sectionheader *) p;
 
-    char *target_base = (char *)sectionheader->addr - shift;
-
-    cor_printk("segment %x at %x starts at %x shifted to %x, off %x, sz %x\n",i,addr, sectionheader->addr, target_base, sectionheader->offset, sectionheader->size);
     if(sectionheader->addr < 0x400000 || sectionheader->addr > 0x500000-1) {
       // TODO: also check size
       cor_printk(" [!] segment to be placed outside 0x4-----, ignoring\n");
       continue;
     }
-    if(sectionheader->addr > 0) {
-      for(int j = 0; j < sectionheader->size; j++) {
-        char *loadtarget = target_base+j;
-        char *loadsrc = elf + sectionheader->offset + j;
-        if(loadtarget == (char*)0xe010c) {
-          cor_printk("Shoving %x (%x) -> %x (%x) ..", loadsrc, *loadsrc, loadtarget, *loadtarget);
-        }
-        *loadtarget = *loadsrc;
-        if(loadtarget == (char*)0xe010c) {
-          cor_printk(".. now it's %x\n" ,*loadtarget);
-        }
-      }
+
+    struct task_section *s = task_add_section(t, 1, sectionheader->size);
+
+    char *source = elf + sectionheader->offset;
+
+    cor_printk("section %x loaded from %p to %p, target virtual %p (size %x)\n",
+      i, source, s->base, sectionheader->addr, sectionheader->size);
+
+    for(size_t j = 0; j < sectionheader->size; j++) {
+      char *loadtarget = s->base+j;
+      char *loadsrc = source + j;
+      *loadtarget = *loadsrc;
     }
   }
 

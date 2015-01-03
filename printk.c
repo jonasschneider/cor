@@ -1,6 +1,5 @@
 #include "vendor/stdarg.h"
 #include "common.h"
-#include "printk.h"
 
 void (*cor_current_writec)(const char c);
 

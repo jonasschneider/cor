@@ -26,6 +26,8 @@ Roadmap
 - [x] permanent ring switch when starting init (except for syscalls)
 - [ ] Actual memory management & protection
   - [x] Read memory map from BIOS
+  - [x] kalloc
+  - [ ] sbrk
   - [ ] Fix page permissions (`|4`s in boot.s)
   - [ ] Move to higher-half kernel
 - [ ] Process table / Process memory page table management
