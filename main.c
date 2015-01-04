@@ -50,10 +50,14 @@ uint64_t syscall_write(uint64_t fd64, uint64_t buf64, size_t count64) {
   const void *buf = (const void *)buf64;
   size_t count = (size_t)count64;
 
-  cor_printk("write() fd=\n", fd, buf, count);
-
+  cor_printk("write() fd=%x, buf=%p, n=%x\n", fd, buf, count);
+  cor_printk("    | ");
   for(size_t i = 0; i < count; i++) {
-    putc(*((char*)buf+i));
+    char c = *((char*)buf+i);
+    putc(c);
+    if(c == '\n' && i < (count-1)) {
+      cor_printk("    | ");
+    }
   }
   return 0;
 }
