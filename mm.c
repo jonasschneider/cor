@@ -36,24 +36,32 @@ void mm_init() {
     }
   }
 
-  // pretty much the best implementation ever: just ignore all segments but the biggest
-  if(largest_base == 0 || largest_limit < 0x10000) {
+  /*
+    We do pretty much the best implementation ever: just ignore all segments but the biggest.
+  */
+
+  // Check that:
+  // (a) we have found _something_ (base != 0)
+  // (b) the largest region isn' tiny (limit > 0x10000)
+  // (c) the large region is behind the stuff marked on the memory map in README.md
+  // TODO(realhw): Probably breaks
+  if((ptr_t)largest_base < 0x100000 || largest_limit < 0x10000) {
     cor_panic("did not find a valid memory region");
   }
+
   source_region.base = largest_base;
   source_region.limit = largest_limit;
   source_region.used = 0;
 
   // XOR with this so we user the higher-half memory map instead, see boot.s
   source_region.base = PTOK(source_region.base);
-
-  cor_printk(" kalloc region starts at %p, limit %x. ", source_region.base, source_region.limit);
+  cor_printk("kalloc-managed memory region starts at %p, limit %x. ", source_region.base, source_region.limit);
 }
 
 
 void *tkalloc(size_t s, const char *what_for, uint64_t align) {
   if(source_region.used + s > source_region.limit) {
-    cor_printk("OOM: requested %x, but already used %x out of %x\n",s,source_region.used,source_region.limit);
+    cor_printk("kalloc is OOM: requested %x, but already used %x out of %x\n",s,source_region.used,source_region.limit);
     cor_panic("");
     return 0; // fix warning
   }
