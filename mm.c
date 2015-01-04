@@ -44,6 +44,9 @@ void mm_init() {
   source_region.limit = largest_limit;
   source_region.used = 0;
 
+  // XOR with this so we user the higher-half memory map instead, see boot.s
+  source_region.base = PTOK(source_region.base);
+
   cor_printk(" kalloc region starts at %p, limit %x. ", source_region.base, source_region.limit);
 }
 

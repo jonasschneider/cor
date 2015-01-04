@@ -30,7 +30,7 @@ Roadmap
   - [x] Dynamically allocate pages on ELF load
   - [x] sbrk
   - [ ] Fix page permissions (`|4`s in boot.s)
-  - [ ] Move to higher-half kernel
+  - [x] Move to higher-half kernel
 - [ ] Process table / Process memory page table management
 - [ ] Create an actual toolchain
   - [x] Make a "hello world" binary that runs on host Linux and is as static as it gets (no libc)
@@ -65,23 +65,21 @@ Non-Goals
 
 Memory map
 ----------
-Physical memory map at the time of stage2 startup
+Physical memory map at the time of stage2 startup:
 
 - `0x01000-0x05FFF`: page tables courtesy of `boot.s`
 - `0x08000-0x08FFF`: Memory map info by boot.s
-- `0x10000-0x4FFFF`: stage2 `.text`, `0x10000` is the x86_64 entry point from bootloader
-- `0x50000-0x6FFFD`: stage2 `.data` and stack (FIXME where is the stack actually?)
+- `0x10000-0x4FFFF`: stage2 `.text`, `0x10000` contains the x86_64 entry point
+- `0x50000-0x6FFFD`: stage2 `.data` and stack (FIXME is the stack really there?)
 - `0x6FFFE`: `0x13` (magic)
 - `0x6FFFF`: `0x37` (magic)
 
-Physical memory map before initial switch to user mode:
+Additional virtual mapped memory:
+- `0x0000008000000000-0x0000008000200000`: identity map of lower physical memory starting at `0`
+  (this is where we keep & run the stage2 kernel)
 
-[..]
+Additional physical memory used by stage2:
 - `0x06000-0x06FFF`: stage2's IDT
-- `0x70000-0x7FFFF`: text/data segments of init, init entrypoint is near there
-
-Additional mapped virtual memory at this time:
-- (usually) 0x400000 mapped to (always) 0x70000
 
 
 Caveats
@@ -109,6 +107,8 @@ As this is an academic project, I'll try to document things I stumbled over.
 - Should maybe file a bug against QEMU because it doesn't check CS/SS register contents right when/somewhere shortly after entering protected mode, if you forget that it'll bite you later.
 
 - The red zone thingie? (When interrupted in ring0)
+
+- Relocation truncation https://www.technovelty.org/c/relocation-truncated-to-fit-wtf.html
 
 The Story
 ---------

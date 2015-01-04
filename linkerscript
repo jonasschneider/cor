@@ -1,10 +1,10 @@
 SECTIONS
 {
-  .text 0x10000 : {
+  .text 0x8000010000 : {
     stage2_entrypoint.o(entrypoint);
     *(.text);
   }
-  . = 0x50000;
+  . = 0x8000050000;
   .data . : {
     *(.data)
     *(.rodata) /* ummm... */

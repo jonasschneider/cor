@@ -238,6 +238,7 @@ in_prot32:
   # Add three to the destination address to set the two lower bits,
   # which cause the page to be Present, Readable, and Writable. (?)
   movl $0x2003|4, (%edi)
+  movl $0x2003|4, 8(%edi) # map the kernel here again
   add $0x1000, %edi
   movl $0x3003|4, (%edi)
   add $0x1000, %edi
@@ -318,7 +319,7 @@ in_long64:
 
   # Jump to stage 2!
   # For some reason, I can't do an absolute jump with an immediate operand.
-  mov $0x10000, %rax
+  mov $0x10000|0x0000008000000000, %rax
   jmp *%rax
 
 broken:

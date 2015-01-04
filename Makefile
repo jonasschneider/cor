@@ -11,7 +11,7 @@ clean:
 	make -C userspace clean
 
 %.o: %.c
-	$(CC) $(CCFLAGS) $< -c -o $@
+	$(CC) $(KCCFLAGS) $< -c -o $@
 
 boot.o: boot.s
 	$(AS) boot.s -o boot.o
@@ -23,10 +23,10 @@ mbr.bin: blank_mbr boot.o
 	rm mbr_contents.bin
 
 stage2_entrypoint.o: stage2_entrypoint.s
-	$(CC) $(CCFLAGS) -c stage2_entrypoint.s -o stage2_entrypoint.o
+	$(CC) $(KCFLAGS) -c stage2_entrypoint.s -o stage2_entrypoint.o
 
 interrupthandler.o: interrupthandler.s include/cor/syscall.h
-	$(CC) $(CFLAGS) -c -x assembler-with-cpp -Iinclude $< -o $@
+	$(CC) $(KCFLAGS) -c -x assembler-with-cpp -Iinclude $< -o $@
 
 stage2.o: $(OBJS) linkerscript stage2_entrypoint.o init_static.o
 	echo LONG\(0x$(shell git rev-parse HEAD | cut -c 1-6)\) > versionstamp~
@@ -49,7 +49,7 @@ disk.bin: mbr.bin stage2.o Makefile
 	mv disk.bin~ disk.bin
 
 init_static.o: init_static.c~
-	$(CC) $(CCFLAGS) -c -x c $< -o $@
+	$(CC) $(KCCFLAGS) -c -x c $< -o $@
 
 init_static.c~:
 	make -C userspace
