@@ -1,3 +1,5 @@
 .globl _start
 _start:
-  jmp main
+  mov $0x7fffffffe000, %rsp
+  jmp cmod_main
+

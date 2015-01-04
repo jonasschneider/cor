@@ -1,40 +1,31 @@
-#![crate_type="rlib"]
+#![crate_type="staticlib"]
 #![no_std]
-#![feature(globs, phase)]
+#![feature(globs,lang_items)]
 #![allow(unused_attribute)]
 
 extern crate core;
 
-#[phase(plugin, link)]
-extern crate syscall;
-
 use core::prelude::*;
-use core::{mem, raw, intrinsics};
+use core::panicking::panic;
 
-fn exit(n: uint) -> ! {
-    unsafe {
-        syscall!(EXIT, n);
-        intrinsics::unreachable()
-    }
+
+#[link(name = "cor")]
+extern {
+  fn cor_hitmarker() -> ();
 }
 
-fn write(fd: uint, buf: &[u8]) {
-    unsafe {
-        syscall!(WRITE, fd, buf.as_ptr(), buf.len());
-    }
-}
-
+#[start]
 #[no_mangle]
-pub unsafe fn main() {
-    exit(123);
-    // Make a Rust value representing the string constant we stashed
-    // in the ELF file header.
-    let slice_repr: raw::Slice<u8> = raw::Slice {
-        data: 0x00400008 as *const u8,
-        len: 7,
-    };
-    let message: &'static [u8] = mem::transmute(slice_repr);
+pub unsafe fn cmod_main() {
 
-    write(1, message);
-    exit(0);
+  let x = 5i;
+
+  if x == 5i {
+    cor_hitmarker();
+  }
 }
+
+#[lang = "stack_exhausted"] extern fn stack_exhausted() {}
+#[lang = "eh_personality"] extern fn eh_personality() {}
+#[lang = "panic_fmt"] fn panic_fmt() -> ! { loop {} }
+#[lang = "fail_fmt"] fn fail_fmt() -> ! { loop {} }

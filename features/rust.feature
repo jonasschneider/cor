@@ -19,7 +19,7 @@ Feature: Rust kernel modules
       }
       """
     When I run the machine
-    Then I should see "Hello, world from my Rust module!"
+    Then I should see "FIRED"
 
   @wip
   Scenario: Hello World using cor crate
