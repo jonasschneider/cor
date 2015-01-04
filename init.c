@@ -1,10 +1,6 @@
 #include <stdio.h>
 
 int main() {
-
-  printf("The number is ->%u<-\n", 15);
-
-  //free(ptr_one);
-
+  printf("Hello, world from userspace!\n");
   return 0;
 }

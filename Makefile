@@ -1,12 +1,16 @@
 .PHONY: all clean
 all: disk.bin
 # TODO: add a real configure script to remove debug options
-CFLAGS=-nostdlib -nostdinc -static -nostartfiles -nodefaultlibs -Wall -Wextra -m64 -Werror -std=c11 -ggdb -fno-builtin -Iinclude -include stddef.h
+CFLAGS=-nostdlib -nostdinc -static -nostartfiles -nodefaultlibs -Wall -Wextra -m64 -Werror -std=c11 -ggdb -fno-builtin -Iinclude
+CCFLAGS=$(CFLAGS) -include stddef.h
 CC=./sshwrap gcc
 OBJCOPY=./sshwrap objcopy
 LD=./sshwrap ld
 AS=./sshwrap as
 OBJS=main.o printk.o chrdev_serial.o io.o elf.o interrupthandler.o tss.o mm.o task.o
+
+%.o: %.c
+	$(CC) $(CCFLAGS) $< -c -o $@
 
 clean:
 	rm -f *.o *.bin *~ init *.so
@@ -21,7 +25,7 @@ mbr.bin: blank_mbr boot.o
 	rm mbr_contents.bin
 
 stage2_entrypoint.o: stage2_entrypoint.s
-	$(CC) $(CFLAGS) -c stage2_entrypoint.s -o stage2_entrypoint.o
+	$(CC) $(CCFLAGS) -c stage2_entrypoint.s -o stage2_entrypoint.o
 
 interrupthandler.o: interrupthandler.s include/syscall.h
 	$(CC) $(CFLAGS) -c -x assembler-with-cpp -Iinclude $< -o $@
@@ -47,10 +51,10 @@ disk.bin: mbr.bin stage2.o Makefile
 	mv disk.bin~ disk.bin
 
 init_static.o: init_static.c~
-	$(CC) $(CFLAGS) -c -x c $< -o $@
+	$(CC) $(CCFLAGS) -c -x c $< -o $@
 
 init_static.c~: init
 	cat $< | ruby -e 'b = $$stdin.read.bytes; puts "int cor_stage2_init_data_len = "+b.count.to_s+"; char cor_stage2_init_data[] = {";puts b.map{|x|"0x#{x.to_s(16)}"}.join(", ");puts "};"' > $@
 
 init: init.c init_lib.c
-	$(CC) $(CFLAGS) -include stdlib.h -fPIC init.c init_lib.c -o init
+	$(CC) $(CCFLAGS) -include stdlib.h -fPIC init.c init_lib.c -o init

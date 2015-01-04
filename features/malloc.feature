@@ -5,6 +5,7 @@ Feature: Allocating memory
   TODO: This is pretty unconvincing, are there reasons
   for not doing alloc-on-page-fault [besides that sounding completely insane]?
 
+  @wip
   Scenario: Basic arithmetic on heap memory
     Given the following code for /sbin/init:
       """

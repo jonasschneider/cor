@@ -48,15 +48,17 @@ void mm_init() {
 }
 
 
-void *tkalloc(size_t s, const char *what_for) {
-  cor_printk("- tkalloc: %s (%x)\n", what_for, s);
+void *tkalloc(size_t s, const char *what_for, uint64_t align) {
   if(source_region.used + s > source_region.limit) {
     cor_printk("OOM: requested %x, but already used %x out of %x\n",s,source_region.used,source_region.limit);
     cor_panic("");
     return 0; // fix warning
   }
+  source_region.used = ALIGN(source_region.used, align);
   void *p = source_region.base + source_region.used;
   source_region.used += s;
+
+  cor_printk("- tkalloc: %s (%x) --> %p\n", what_for, s, p);
 
   return p;
 }

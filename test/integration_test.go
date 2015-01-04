@@ -10,7 +10,7 @@ import (
 )
 
 func TestInitVmem(t *testing.T) {
-  cmd := exec.Command("cucumber")
+  cmd := exec.Command("cucumber", "--tags", "~@wip")
   cmd.Dir = os.Getenv("ROOT")
   err := cmd.Run();
   if err != nil {

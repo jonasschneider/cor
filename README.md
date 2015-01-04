@@ -27,6 +27,7 @@ Roadmap
 - [ ] Actual memory management & protection
   - [x] Read memory map from BIOS
   - [x] kalloc
+  - [x] Dynamically allocate pages on ELF load
   - [ ] sbrk
   - [ ] Fix page permissions (`|4`s in boot.s)
   - [ ] Move to higher-half kernel

@@ -80,25 +80,57 @@ int cor_elf_exec(char *elf, unsigned int len) {
   // target position is 0x70000, and the ELF offset seems to be 0x400000
   int shift = 0x400000 - 0x70000;
 
+  void *addr_space_start = (void*)-1;
+  void *addr_space_end = 0;
+
   for(int i = 0; i < hdr->sh_entnum; i++) {
     void *p = elf + hdr->sh_offset + hdr->sh_entsize * i;
     struct elf64_sectionheader *sectionheader = (struct elf64_sectionheader *) p;
 
-    if(sectionheader->addr < 0x400000 || sectionheader->addr > 0x500000-1) {
-      // TODO: also check size
-      cor_printk(" [!] segment to be placed outside 0x4-----, ignoring\n");
+    // TODO: is it allowed to have LMA=0 for non-debug-aux sections?
+    if(sectionheader->addr == 0 || sectionheader->size == 0) {
       continue;
     }
 
-    struct task_section *s = task_add_section(t, 1, sectionheader->size);
+    if((void*)sectionheader->addr < addr_space_start) {
+      addr_space_start = (void*)sectionheader->addr;
+    }
 
+    if((void*)sectionheader->addr + sectionheader->size > addr_space_end) {
+      addr_space_end = (void*)sectionheader->addr + sectionheader->size;
+    }
+  }
+
+  cor_printk("ELF used address space is: %p -- %p\n", addr_space_start, addr_space_end);
+
+  void *lowpage = (void*)((uint64_t)addr_space_start & ~0xfff);
+  void *highpage = (void*)ALIGN((uint64_t)addr_space_start, 0x1000);
+  cor_printk("This means we need to make pages from %p -- %p\n", lowpage, highpage);
+
+  for(void *page = lowpage; lowpage < highpage; lowpage += 0x1000) {
+    cor_printk("Adding page at %p\n", page);
+    task_addpage(t, page);
+  }
+
+  task_enter_memspace(t);
+
+  for(int i = 0; i < hdr->sh_entnum; i++) {
+    void *p = elf + hdr->sh_offset + hdr->sh_entsize * i;
+    struct elf64_sectionheader *sectionheader = (struct elf64_sectionheader *) p;
+
+    // TODO: see above
+    if(sectionheader->addr == 0 || sectionheader->size == 0) {
+      continue;
+    }
+
+    //struct task_section *s = task_add_section(t, 1, sectionheader->size);
     char *source = elf + sectionheader->offset;
 
-    cor_printk("section %x loaded from %p to %p, target virtual %p (size %x)\n",
-      i, source, s->base, sectionheader->addr, sectionheader->size);
+    cor_printk("section %x loading from %p to %p (size %x)\n",
+      i, source, sectionheader->addr, sectionheader->size);
 
     for(size_t j = 0; j < sectionheader->size; j++) {
-      char *loadtarget = s->base+j;
+      char *loadtarget = (char*)sectionheader->addr + j;
       char *loadsrc = source + j;
       *loadtarget = *loadsrc;
     }
@@ -106,7 +138,7 @@ int cor_elf_exec(char *elf, unsigned int len) {
 
   // check memory map correctness: these should be equal.
   // 0x70000 is the physical location, 0x400000 is the ELF starting thingie
-  if(*((int *)0x07010c) != *((int *)0x40010c)) {
+  if(*((int *)0x10610c) != *((int *)0x40010c)) {
     cor_printk("Virtual memory sanity check failed\n");
     return -1;
   }
