@@ -76,17 +76,23 @@ Physical memory map at the time of stage2 startup:
 - `0x01000-0x05FFF`: page tables courtesy of `boot.s`
 - `0x08000-0x08FFF`: Memory map info by boot.s
 - `0x10000-0x4FFFF`: stage2 `.text`, `0x10000` contains the x86_64 entry point
-- `0x50000-0x6FFFD`: stage2 `.data` and stack (FIXME is the stack really there?)
+- `0x50000-0x6FFFD`: stage2 `.data`
 - `0x6FFFE`: `0x13` (magic)
 - `0x6FFFF`: `0x37` (magic)
+- `0x70000-0x9FFFF`: stage2's Stack (TODO: should make some kind of protection against overflow)
+- (I just realized that 0xa0000 - 0xfffff is still free, fuu base16)
+- After that there are likely some memory holes
 
 Additional virtual mapped memory:
 - `0x0000008000000000-0x0000008000200000`: identity map of lower physical memory starting at `0`
   (this is where we keep & run the stage2 kernel)
 
 Additional physical memory used by stage2:
-- `0x06000-0x06FFF`: stage2's IDT
+- `0x06000-0x06FFF`: stage2's IDT (TODO: replace with kalloc)
 
+All the other kernel data structures, including (for now) memory pages for user tasks,
+are allocated in `mm.c` by `kalloc`, which uses the BIOS memory map provided by boot.s to place
+them in higher memory.
 
 Caveats
 -------
