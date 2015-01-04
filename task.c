@@ -32,33 +32,32 @@ struct task_table_entry *task_new() {
 }
 
 int task_addpage(struct task_table_entry *t, void *offset) {
-  // this gives us the page in kernel memory space
-  void *kpage = tkalloc(0x1000, "task page", 0x1000);
-
-  // this gives us its physical address
-  void *phys = KTOP(kpage);
-
-  if(t->page_table_useddir != 0) {
-    if(t->page_table_useddir != (void*)((ptr_t)offset&0xffffff)) {
-      cor_printk("Attempted to add pageoffset %p to task table entry with dir=%p", offset, t->page_table_useddir);
-      return -1;
-    }
-    cor_panic("lolbranch");
-    return -1;
-  }
-
   uint16_t whichpage = (ptr_t)offset >> 12 & ((1<<9)-1);
   uint16_t whichtbl = (ptr_t)offset >> 21 & ((1<<9)-1);
   cor_printk("Mapping page %x in table %x\n", whichpage, whichtbl);
 
   uint64_t *pdloc = (uint64_t *)((ptr_t)t->page_table_base + 0x2000 + whichtbl*8);
   uint64_t pdentry = (uint64_t)KTOP(t->page_table_base + 0x3000) | 3 | 4;
-  cor_printk("Page directory entry %p --> %p\n", pdloc, pdentry);
+  cor_printk("Adding page directory entry %p --> %p\n", pdloc, pdentry);
   *pdloc = pdentry;
 
   uint64_t *ptloc = (uint64_t *)((ptr_t)t->page_table_base + 0x3000 + whichpage*8);
+
+  if(*ptloc != 0) {
+    // abort if we have already mapped this page.
+    // TODO: is it OK to have the above pointer set before this check?
+    cor_printk("[!] tried to remap page, aborting.\n");
+    return -1;
+  }
+
+  // this gives us the page in kernel memory space
+  void *kpage = tkalloc(0x1000, "task page", 0x1000);
+  // this gives us its physical address
+  void *phys = KTOP(kpage);
+  // construct the page table entry from this address
   uint64_t ptentry = (ptr_t)phys | 3 | 4;
-  cor_printk("Page table entry %p --> %p\n", ptloc, ptentry);
+  cor_printk("Adding page table entry %p --> %p\n", ptloc, ptentry);
+
   *ptloc = ptentry;
 
   return 0;
