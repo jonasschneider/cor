@@ -1,4 +1,4 @@
-Feature: Memory management
+Feature: Userland memory management
   As a userland developer,
   I want to be able to allocate memory for my program
   So that I don't dereference invalid pointers
@@ -7,27 +7,27 @@ Feature: Memory management
 
   Scenario: Loading executable at standard address
     Given the following code for /sbin/init:
-    """
+      """
       #include <stdio.h>
 
       int main() {
         printf("I am at ->%p<-\n", ((unsigned long)main)&(~(0x1000-1)));
       }
-    """
+      """
     When I run the machine
     Then I should see "I am at ->0x400000<-"
 
   Scenario: Dynamic page allocation on low-memory executable load
     Given the following code for /sbin/init:
-    """
+      """
       #include <stdio.h>
 
       int main() {
         printf("I am at ->%p<-\n", ((unsigned long)main)&(~(0x1000-1)));
       }
-    """
+      """
     And I use the following linker script for init:
-    """
+      """
       SECTIONS
       {
         . = 0x10000;
@@ -35,7 +35,7 @@ Feature: Memory management
         .data : { *(.data) }
         .bss : { *(.bss) }
       }
-    """
+      """
     When I run the machine
     Then I should see "I am at ->0x10000<-"
     # . = 0x8000000;

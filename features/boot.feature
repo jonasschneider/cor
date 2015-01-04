@@ -1,4 +1,4 @@
-Feature: Booting /sbin/init
+Feature: Getting started
   Scenario: Booting Hello, World
     Given the following code for /sbin/init:
       """
