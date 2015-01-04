@@ -51,6 +51,12 @@ More unicorns:
   - [ ] FS (block device code in C)
   - [ ] Networking (PCI code in C)
 
+Practical goals:
+
+- compile with `-O`
+  - correctly declare inline ASM memory barriers/volatility
+
+
 Goals
 -----
 - Document well
@@ -109,6 +115,21 @@ As this is an academic project, I'll try to document things I stumbled over.
 - The red zone thingie? (When interrupted in ring0)
 
 - Relocation truncation https://www.technovelty.org/c/relocation-truncated-to-fit-wtf.html
+
+- To investigate: ELF sizes --
+
+      SECTIONS
+      {
+        . = 0x10000;
+        .text : { *(.text) }
+        . = 0x8000000;
+        .data : { *(.data) }
+        .bss : { *(.bss) }
+      }
+
+  is tiny, while swapping the addresses gives a huge one
+
+
 
 The Story
 ---------

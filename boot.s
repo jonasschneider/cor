@@ -169,10 +169,7 @@ gdt:
   .word 0xffff, 0x0000
   .byte 0x00, 0b10010010, 0b11001111, 0x00
 
-gdt64_descriptor:
-  .word (7 * 8) - 1 # GDT size in bytes - 1, 6 is the number of entries
-  .word gdt64 - _start + 0x7c00
-
+.align 8 # TODO: unclear whether we actually need these
 gdt64:
   # Null Descriptor that just does nothing
   .word 0x0000, 0x0000
@@ -191,11 +188,22 @@ gdt64:
   .word 0xffff, 0x0000
   .byte 0x00, 0b11110010, 0b11001111, 0x00
 
-  # TSS descriptor (we only have a single TSS)
-  # Place the TSS itself at 0x80000, btw (idc if anyone is using this)
+  # TSS descriptor (there is only one TSS in 64-bit)
+  # Place the TSS itself at 0x80000|0x0000008000000000 (tss.c cares)
   .word 0x67, 0x0000
   .byte 0x08, 0b11101001, 0b00000000, 0x00
-  .word 0x00, 0x00, 0x00, 0x00
+  .quad 0x0000008000000000>>32
+  .word 0x00, 0x00
+
+.align 4 # TODO: unclear whether we actually need these
+gdt64_descriptor:
+  .word (7 * 8) - 1 # GDT size in bytes - 1, 6 is the number of entries
+  .int gdt64 - _start + 0x7c00
+
+gdt64_highhalfdescriptor:
+  .word (7 * 8) - 1 # GDT size in bytes - 1, 6 is the number of entries
+  .quad (gdt64 - _start + 0x7c00)|0x0000008000000000
+
 
 # This is the first procedure called after completing the switch to protected mode.
 # (Might want to re-enable interrupts again?)
@@ -203,9 +211,8 @@ in_prot32:
 .code32
   # Now we are half-way in protected mode - our various segment selector registers are still 0
   # though, which is murkily defined to be somewhat illegal.
-  # Set up the stack to be .. somewhere in higher memory. FIXME: Let's just hope this doesn't break anything.
-  mov $0x70000, %eax
-  mov %eax, %esp
+
+  # However, we'll set up the stack for stage2 once we get into 64 bit mode.
 
   # Now, we are in protected mode, but we want to enable paging.
   # This is because 64-bit mode supports paging only, and paging > segmentation anyhow.
@@ -311,11 +318,19 @@ will_enter_longmode64:
 
 in_long64:
 .code64
+  # Now load the second gdt64 descriptor that references the higher-half GDT
+  lgdt (gdt64_highhalfdescriptor - _start + 0x7c00)
+
   # Check if we successfully loaded the next stage by checking the magic bytes
   xor %ax, %ax
   movw 0x6fffe, %ax
   cmp $0x3713, %ax
   jne broken
+
+  # Set up the 64-bit stack to be .. somewhere in higher memory.
+  # FIXME!! let's just hope this doesn't break anything for now
+  mov $0x70000|0x0000008000000000, %rax
+  mov %rax, %rsp
 
   # Jump to stage 2!
   # For some reason, I can't do an absolute jump with an immediate operand.
@@ -323,37 +338,8 @@ in_long64:
   jmp *%rax
 
 broken:
-  mov $(startup_message_broken - _start + 0x7c00), %eax
-  call print_str_eax
-
   # It's unclear what the processor will do when we just stop doing anything here.
   # It'll probably start executing null byte instructions or something else silly.
   # So, just busy loop here.
 hang:
   jmp hang
-
-startup_message_broken:
-.string "Failed to load stage 2.\0"
-
-# Print the null-terminated string starting at %eax on the first line of the screen.
-print_str_eax:
-  # Apparently, once we're out of real mode, we can use all the registers however we want.
-  mov $0, %ebx
-char:
-  movb (%eax, %ebx), %cl
-  test %cl, %cl
-  jz print_done
-
-  # Thank god we don't have to actually mess with pixels.
-  # The system provides a video buffer that starts at 0xB8000. For each character (40x25?),
-  # 2 bytes are stored; the first byte is the ASCII code, and the second byte is formatting.
-  # I read somewhere that the formatting is 4 bits each for foreground and background color,
-  # and a value of 7 is grey on black.
-  movb %cl, 0xB8000(,%ebx,2)
-  movb $7, 0xB8001(,%ebx,2)
-
-  inc %ebx
-  jmp char
-
-print_done:
-  ret

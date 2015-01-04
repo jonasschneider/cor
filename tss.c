@@ -23,8 +23,9 @@ struct tss
 
 void tss_setup()
 {
-   struct tss *my_tss = (struct tss *)0x80000;
-   my_tss->rsp0 = 0x55000;
+   // The corresponding GDT entry is set up by boot.s
+   struct tss *my_tss = (struct tss *)(0x80000|0x0000008000000000);
+   my_tss->rsp0 = 0x55000|0x0000008000000000;
    // TODO: IST whatup?
 
    __asm__ (

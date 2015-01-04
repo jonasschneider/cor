@@ -149,21 +149,26 @@ int cor_elf_exec(char *elf, unsigned int len) {
   void (*entry)() = (void(*)(void *))(hdr->entrypoint);
   cor_printk("entry = %x\n", entry);
 
-  cor_printk("will now jump to %x\n",entry);
-
   int codeseg = 24;
   int segsel = codeseg | 3; // set RPL=3
 
+  // FIXME FIXME: this is superbad; better than overwriting kernel code, but still bad
+  uint64_t rsp = (uint64_t)t->brk;
+
+  cor_printk("Hacked task's stack be at %p\n",rsp);
+
+  cor_printk("Trampolining to userspace at %x\n",entry);
+
   // switch segments for the call
-  __asm__ (
+  __asm__ volatile (
     //"cli" // TODO later
     "pushq $35\n" // new SS, probably ignored
-    "pushq $0x68000\n" // new RSP
+    "pushq %2\n" // new RSP, really have to fix this
     "pushf\n"
     "pushq %1\n" // new Code segment (important!)
     "pushq %0\n"
     "iretq\n"
-  : : "entry" (entry), "segsel" (segsel) );
+  : : "g"(entry), "g"(segsel), "p"(rsp) : "memory", "rax" );
 
   cor_printk("done?!\n");
   return 0;

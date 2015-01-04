@@ -3,5 +3,3 @@
 *.o
 *.so
 *~
-init
-init.ld

@@ -38,14 +38,19 @@ void cor_dump_page_table(uint64_t *start, int level) {
   }
 }
 
-int dummy_isr;
+void dummy_isr();
 
 void cor_hitmarker() {
   cor_printk("FIRED!\n");
 }
 
-int syscall_write(int fd, const void *buf, size_t count) {
-  cor_printk("write() fd=%x, buf=%x, c=%x\n", fd, buf, count);
+uint64_t syscall_write(uint64_t fd64, uint64_t buf64, size_t count64) {
+  // TODO: make sure these are harmless
+  int fd = (int)fd64;
+  const void *buf = (const void *)buf64;
+  size_t count = (size_t)count64;
+
+  cor_printk("write() fd=\n", fd, buf, count);
 
   for(size_t i = 0; i < count; i++) {
     putc(*((char*)buf+i));
@@ -53,8 +58,10 @@ int syscall_write(int fd, const void *buf, size_t count) {
   return 0;
 }
 
-void syscall_exit(int ret) {
+void syscall_exit(uint64_t ret64) {
+  int ret = (int)ret64;
   cor_printk("exit() ret=%x\n", ret);
+  cor_panic("init exited");
 }
 
 void cor_writec(const char c);
@@ -104,9 +111,11 @@ void kernel_main(void) {
   cor_printk("Initializing interrupts..");
 
   // cf. intel_64_software_developers_manual.pdf pg. 1832
-  void *target = (void*)&dummy_isr;
+  void *target = (void*)(((ptr_t)&dummy_isr) | 0x0000008000000000);
 
-  void *base = (void*)0x6000;
+  cor_printk("ISR target is %p\n", target);
+
+  void *base = (void*)(0x6000|0x0000008000000000);
   const int entrysize = 16; // in bytes
   const int n_entry = 55;
   idtr.base = (uint64_t)base;

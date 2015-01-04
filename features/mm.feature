@@ -17,8 +17,7 @@ Feature: Memory management
     When I run the machine
     Then I should see "I am at ->0x400000<-"
 
-  @wip
-  Scenario: Dynamic page allocation on executable load
+  Scenario: Dynamic page allocation on low-memory executable load
     Given the following code for /sbin/init:
     """
       #include <stdio.h>
@@ -31,15 +30,15 @@ Feature: Memory management
     """
       SECTIONS
       {
-        . = 0x13000;
+        . = 0x10000;
         .text : { *(.text) }
-        . = 0x14000;
         .data : { *(.data) }
         .bss : { *(.bss) }
       }
     """
     When I run the machine
-    Then I should see "I am at ->0x13000<-"
+    Then I should see "I am at ->0x10000<-"
+    # . = 0x8000000;
 
   Scenario: Basic arithmetic on heap memory
     Given the following code for /sbin/init:

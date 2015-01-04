@@ -5,7 +5,7 @@ include ../Makefile.conf
 all: init
 
 clean:
-	rm -fr dietlibc-0.33{,.tar.bz2} init
+	rm -fr dietlibc-0.33{,.tar.bz2} init init.ld
 
 init: init.c init_lib.c init.ld ../include/cor/*.h
 	$(CC) $(CCFLAGS) -include stdlib.h init.c init_lib.c -T init.ld -o init

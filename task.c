@@ -10,8 +10,15 @@ struct task_table_entry *task_new() {
   the_task->brk = 0;
 
   // fill page table
-  the_task->page_table_base = tkalloc(0x5000, "task page table", 0x1000);
-  for(size_t j = 0; j < 0x5000; j++) { // TODO: memcpy
+  the_task->page_table_base = tkalloc(0x4000, "task page table", 0x1000);
+
+  for(size_t j = 0; j < 0x4000; j++) { // TODO: memzero
+    char *t = the_task->page_table_base + j;
+    *t = 0;
+  }
+
+  // copy over the topmost page table level, so that we copy the higher-half kernel mapping
+  for(size_t j = 0; j < 0x1000; j++) { // TODO: memcpy
     char *loadsrc = initial_pagetable + j;
     char *loadtarget = the_task->page_table_base + j;
     *loadtarget = *loadsrc;
@@ -20,11 +27,6 @@ struct task_table_entry *task_new() {
   *(ptr_t*)(the_task->page_table_base+0x0000) = (ptr_t)KTOP((ptr_t)the_task->page_table_base+0x1003)|4;
   *(ptr_t*)(the_task->page_table_base+0x1000) = (ptr_t)KTOP((ptr_t)the_task->page_table_base+0x2003)|4;
 
-  // memzero out the inner page table
-  for(size_t j = 0x3000; j < 0x4000; j++) { // TODO: memzero
-    char *t = the_task->page_table_base + j;
-    *t = 0;
-  }
 
   return the_task;
 }

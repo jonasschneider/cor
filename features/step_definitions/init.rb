@@ -8,12 +8,12 @@ Given(/^the following code for \/sbin\/init:$/) do |string|
 end
 
 Given(/^I use the following linker script for init:$/) do |string|
-  File.write("init.ld", string)
-  Subprocess.check_call(["touch", "init.ld"]) # to trigger make
+  File.write("userspace/init.ld", string)
+  Subprocess.check_call(["touch", "userspace/init.ld"]) # to trigger make
 end
 
 When(/^I run the machine$/) do
-  Subprocess.check_call(%w(make clean all))
+  Subprocess.check_call(%w(make all))
   @process = Subprocess.popen(["bin/run"], stdout: Subprocess::PIPE)
 end
 
@@ -34,6 +34,10 @@ Then(/^I should see "(.*?)"$/) do |needle|
       assert @out.include?(needle), "expected to find \"#{needle}\" in \"#{@out}\""
     end
   end
+end
+
+Before do
+  Subprocess.check_call(%w(make clean))
 end
 
 After do
