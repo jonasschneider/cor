@@ -9,10 +9,11 @@ end
 
 Given(/^I use the following linker script for init:$/) do |string|
   File.write("init.ld", string)
+  Subprocess.check_call(["touch", "init.ld"]) # to trigger make
 end
 
 When(/^I run the machine$/) do
-  Subprocess.check_call(["make"])
+  Subprocess.check_call(%w(make clean all))
   @process = Subprocess.popen(["bin/run"], stdout: Subprocess::PIPE)
 end
 

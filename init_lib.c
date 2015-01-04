@@ -21,9 +21,26 @@ int write(int fd, const void *buf, size_t count) {
             "int $49"
           :
           : "r"((uint64_t)SYSCALL_WRITE), "r"((uint64_t)fd), "r"((uint64_t)buf), "r"((uint64_t)count)
-          : "rax", "rbx"
+          : "rax", "rbx", "rcx", "rdx"
           );
   return 0;
+}
+
+void *moremem(size_t size) {
+  void *ret;
+  __asm__ ( "movq %1, %%rax\n"
+            "movq %2, %%rbx\n"
+            "int $49\n"
+            "movq %%rax, %0\n"
+          : "=r"(ret)
+          : "r"((uint64_t)SYSCALL_MOREMEM), "r"((uint64_t)size)
+          : "rax", "rbx"
+          );
+  return ret;
+}
+
+void *malloc(size_t size) {
+  return moremem(size);
 }
 
 size_t strlen(const char *str) {
@@ -44,7 +61,7 @@ void writec(char c) {
   }
 }
 
-int print(const char *str) {
+int _printf_print(const char *str) {
   while(*str) {
     writec(*str);
     str++;
@@ -67,10 +84,10 @@ static void print_itoa(unsigned long value, const uint base, const char *alphabe
     value /= base;
   }
   if(overflow)
-    print("ERR"); // at least indicate the error
+    _printf_print("ERR"); // at least indicate the error
   buffer[i] = alphabet[(value % base)];
 
-  print(buffer+i);
+  _printf_print(buffer+i);
 }
 
 static void printk_uint(uint value) {
@@ -102,7 +119,7 @@ int vprintf(const char *format, va_list ap) {
         format++;
       }
       if(*format == 'p') {
-        print("0x");
+        _printf_print("0x");
         printk_lhex(va_arg(ap, unsigned long));
       } else if(*format == 'u') {
         printk_uint(va_arg(ap, uint));
@@ -111,7 +128,7 @@ int vprintf(const char *format, va_list ap) {
         if(*(format+1) == 'x') {
           format++;
         } else {
-          print("0x");
+          _printf_print("0x");
         }
 
         if(islong) {
@@ -126,7 +143,7 @@ int vprintf(const char *format, va_list ap) {
           s++;
         }
       } else {
-        print("[_printf: invalid format]");
+        _printf_print("[_printf: invalid format]");
       }
     } else {
       writec(*format);
@@ -154,6 +171,7 @@ void main();
 
 // TODO: .data and .bss sections break (probably anything besides .text)
 void _start() {
+  printf("Hello from _start.\n");
   main();
   exit(0xBABE);
 

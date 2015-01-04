@@ -8,3 +8,4 @@ cd $DIR/..
 make clean all
 ROOT=$DIR/.. go test ./test
 cucumber --tags ~@wip
+echo "OK"

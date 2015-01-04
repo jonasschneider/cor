@@ -114,6 +114,14 @@ int cor_elf_exec(char *elf, unsigned int len) {
       continue;
     }
 
+    if(sectionheader->type == 0x8 && sectionheader->flags == 0x3) {
+      // this seems to be a/the data section
+      void *brk = (void *)ALIGN(sectionheader->addr+sectionheader->size, 0x1000);
+      t->brk = brk;
+      cor_printk("found data section at %p+%p; setting brk to %p\n",
+        sectionheader->addr, sectionheader->size, brk);
+    }
+
     //struct task_section *s = task_add_section(t, 1, sectionheader->size);
     char *source = elf + sectionheader->offset;
 
@@ -125,6 +133,10 @@ int cor_elf_exec(char *elf, unsigned int len) {
       char *loadsrc = source + j;
       *loadtarget = *loadsrc;
     }
+  }
+
+  if(t->brk == 0) {
+    cor_panic("could not determine brk for init");
   }
 
   // memory sanity check; this is the "push rbp" opcode that should (always?) be the entry point

@@ -3,7 +3,6 @@
 .align   4
 
 dummy_isr:
-  push %rax
   push %rbx
   push %rcx
   push %rdx
@@ -26,8 +25,13 @@ dummy_isr:
 
 check_exit:
   cmp $SYSCALL_EXIT, %rax
-  jne bye
+  jne check_moremem
   call syscall_exit
+
+check_moremem:
+  cmp $SYSCALL_MOREMEM, %rax
+  jne bye
+  call syscall_moremem
 
 bye:
   pop %r11
@@ -37,6 +41,5 @@ bye:
   pop %rdx
   pop %rcx
   pop %rbx
-  pop %rax
 
   iretq

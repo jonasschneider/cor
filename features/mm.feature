@@ -17,6 +17,7 @@ Feature: Memory management
     When I run the machine
     Then I should see "I am at ->0x400000<-"
 
+  @wip
   Scenario: Dynamic page allocation on executable load
     Given the following code for /sbin/init:
     """
@@ -40,16 +41,15 @@ Feature: Memory management
     When I run the machine
     Then I should see "I am at ->0x13000<-"
 
-  @wip
   Scenario: Basic arithmetic on heap memory
     Given the following code for /sbin/init:
       """
       #include <stdio.h>
 
       int main() {
-        int *ptr_one;
+        unsigned int *ptr_one;
 
-        ptr_one = (int *)malloc(sizeof(int));
+        ptr_one = (unsigned int *)malloc(sizeof(unsigned int));
 
         if (ptr_one == 0) {
           printf("malloc 1 failed\n");
@@ -58,7 +58,7 @@ Feature: Memory management
 
         *ptr_one = 25;
 
-        printf("The number is ->%d<-\n", *ptr_one);
+        printf("The number is ->%u<-\n", *ptr_one);
 
         //free(ptr_one);
 

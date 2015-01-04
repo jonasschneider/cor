@@ -28,7 +28,7 @@ Roadmap
   - [x] Read memory map from BIOS
   - [x] kalloc
   - [x] Dynamically allocate pages on ELF load
-  - [ ] sbrk
+  - [x] sbrk
   - [ ] Fix page permissions (`|4`s in boot.s)
   - [ ] Move to higher-half kernel
 - [ ] Process table / Process memory page table management
