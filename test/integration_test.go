@@ -9,15 +9,6 @@ import (
   "io"
 )
 
-func TestInitVmem(t *testing.T) {
-  cmd := exec.Command("cucumber", "--tags", "~@wip")
-  cmd.Dir = os.Getenv("ROOT")
-  err := cmd.Run();
-  if err != nil {
-    t.Error(err)
-  }
-}
-
 func TestStartupSerialMessage(t *testing.T) {
   cmd := exec.Command(os.Getenv("ROOT")+"/bin/run")
   cmd.Dir = os.Getenv("ROOT")

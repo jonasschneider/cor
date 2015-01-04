@@ -76,13 +76,6 @@ int cor_elf_exec(char *elf, unsigned int len) {
 
   struct task_table_entry *t = task_new();
 
-
-  // target position is 0x70000, and the ELF offset seems to be 0x400000
-  int shift = 0x400000 - 0x70000;
-
-  void *addr_space_start = (void*)-1;
-  void *addr_space_end = 0;
-
   for(int i = 0; i < hdr->sh_entnum; i++) {
     void *p = elf + hdr->sh_offset + hdr->sh_entsize * i;
     struct elf64_sectionheader *sectionheader = (struct elf64_sectionheader *) p;
@@ -92,25 +85,23 @@ int cor_elf_exec(char *elf, unsigned int len) {
       continue;
     }
 
-    if((void*)sectionheader->addr < addr_space_start) {
-      addr_space_start = (void*)sectionheader->addr;
-    }
+    void *addr_space_start = (void*)sectionheader->addr;
+    void *addr_space_end = (void*)sectionheader->addr + sectionheader->size;
+    cor_printk("Section-used address space is: %p -- %p\n", addr_space_start, addr_space_end);
 
-    if((void*)sectionheader->addr + sectionheader->size > addr_space_end) {
-      addr_space_end = (void*)sectionheader->addr + sectionheader->size;
+    void *lowpage = (void*)((uint64_t)addr_space_start & ~0xfff);
+    void *highpage = (void*)ALIGN((uint64_t)addr_space_end, 0x1000);
+    cor_printk("This means we need to make pages from %p -- %p\n", lowpage, highpage);
+
+    for(void *page = lowpage; page < highpage; page += 0x1000) {
+      cor_printk("Adding page at %p\n", page);
+
+      // FIXME: we massively leak pages here by adding the same page multiple times
+      task_addpage(t, page);
     }
   }
 
-  cor_printk("ELF used address space is: %p -- %p\n", addr_space_start, addr_space_end);
 
-  void *lowpage = (void*)((uint64_t)addr_space_start & ~0xfff);
-  void *highpage = (void*)ALIGN((uint64_t)addr_space_start, 0x1000);
-  cor_printk("This means we need to make pages from %p -- %p\n", lowpage, highpage);
-
-  for(void *page = lowpage; lowpage < highpage; lowpage += 0x1000) {
-    cor_printk("Adding page at %p\n", page);
-    task_addpage(t, page);
-  }
 
   task_enter_memspace(t);
 
@@ -136,17 +127,17 @@ int cor_elf_exec(char *elf, unsigned int len) {
     }
   }
 
-  // check memory map correctness: these should be equal.
-  // 0x70000 is the physical location, 0x400000 is the ELF starting thingie
-  if(*((int *)0x10610c) != *((int *)0x40010c)) {
-    cor_printk("Virtual memory sanity check failed\n");
+  // memory sanity check; this is the "push rbp" opcode that should (always?) be the entry point
+  // not really a good marker, but meh
+  if(0x4855 != *((uint16_t *)(hdr->entrypoint))) {
+    cor_printk("Virtual memory sanity check failed %x\n", *((uint16_t *)(hdr->entrypoint)));
     return -1;
   }
 
   void (*entry)() = (void(*)(void *))(hdr->entrypoint);
   cor_printk("entry = %x\n", entry);
 
-  cor_printk("will now jump to %x (%x)\n",entry, *(char*)(hdr->entrypoint - shift));
+  cor_printk("will now jump to %x\n",entry);
 
   int codeseg = 24;
   int segsel = codeseg | 3; // set RPL=3

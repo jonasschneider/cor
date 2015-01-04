@@ -1,6 +1,5 @@
-#include <stdio.h>
+  #include <stdio.h>
 
-int main() {
-  printf("Hello, world from userspace!\n");
-  return 0;
-}
+  int main() {
+    printf("I am at ->%p<-\n", ((unsigned long)main)&(~(0x1000-1)));
+  }

@@ -13,7 +13,7 @@ OBJS=main.o printk.o chrdev_serial.o io.o elf.o interrupthandler.o tss.o mm.o ta
 	$(CC) $(CCFLAGS) $< -c -o $@
 
 clean:
-	rm -f *.o *.bin *~ init *.so
+	rm -f *.o *.bin *~ init *.so init.ld
 
 boot.o: boot.s
 	$(AS) boot.s -o boot.o
@@ -56,5 +56,9 @@ init_static.o: init_static.c~
 init_static.c~: init
 	cat $< | ruby -e 'b = $$stdin.read.bytes; puts "int cor_stage2_init_data_len = "+b.count.to_s+"; char cor_stage2_init_data[] = {";puts b.map{|x|"0x#{x.to_s(16)}"}.join(", ");puts "};"' > $@
 
-init: init.c init_lib.c
-	$(CC) $(CCFLAGS) -include stdlib.h -fPIC init.c init_lib.c -o init
+init: init.c init_lib.c init.ld
+	$(CC) $(CCFLAGS) -include stdlib.h -fPIC init.c init_lib.c -T init.ld -o init
+	rm init.ld
+
+init.ld: init.ld_default
+	cp $< $@
