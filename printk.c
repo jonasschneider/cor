@@ -3,6 +3,10 @@
 
 void (*cor_current_writec)(const char c);
 
+void putc(const char c) {
+  (*cor_current_writec)(c);
+}
+
 static void print_itoa(unsigned long value, const uint base, const char *alphabet) {
   const int max_digits = 20;
   char buffer[max_digits+1]; // FIXME: yeah, this is never going to break, ever

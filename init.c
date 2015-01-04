@@ -1,5 +1,7 @@
   #include <stdio.h>
 
+  int lol = 0xbeef;
+
   int main() {
-    printf("I am at ->%p<-\n", ((unsigned long)main)&(~(0x1000-1)));
+    printf("lol is %x\n", lol);
   }

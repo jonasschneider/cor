@@ -35,10 +35,13 @@ size_t strlen(const char *str) {
   return i;
 }
 
+#define WRITEC_BUF 256
 static char writec_buf[256];
 static int writec_buf_i = 0;
 void writec(char c) {
-  writec_buf[writec_buf_i++] = c;
+  if(writec_buf_i < WRITEC_BUF) {
+    writec_buf[writec_buf_i++] = c;
+  }
 }
 
 int print(const char *str) {
