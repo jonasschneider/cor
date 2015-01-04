@@ -1,4 +1,4 @@
-#include "syscall.h"
+#include "cor/syscall.h"
 .globl   dummy_isr
 .align   4
 

@@ -1,17 +1,23 @@
-all: date
+ROOT=..
+include ../Makefile.conf
+.PHONY: all clean
+
+all: init
 
 clean:
-	rm -fr date date.o dietlibc-0.33{,.tar.bz2}
+	rm -fr dietlibc-0.33{,.tar.bz2} init
 
-CFLAGS=-nostdlib -nostdinc -Idietlibc-0.33/include -nodefaultlibs -Wall -Wextra -m64 -Werror -std=c11 -ggdb -c
-CC=./sshwrap gcc
-LD=./sshwrap ld
+init: init.c init_lib.c init.ld ../include/cor/*.h
+	$(CC) $(CCFLAGS) -include stdlib.h init.c init_lib.c -T init.ld -o init
 
-date.o: date.c dietlibc-0.33/include
-	$(CC) $(CFLAGS) date.c -o date.o
+init.ld: init.ld_default
+	cp $< $@
 
-date: date.o dietlibc-0.33/bin-x86_64
-	$(LD) $< dietlibc-0.33/bin-x86_64/start.o -Ldietlibc-0.33/bin-x86_64 -ldietc -o $@
+# date.o: date.c dietlibc-0.33/include
+# 	$(CC) $(CFLAGS) date.c -o date.o
+
+# date: date.o dietlibc-0.33/bin-x86_64
+# 	$(LD) $< dietlibc-0.33/bin-x86_64/start.o -Ldietlibc-0.33/bin-x86_64 -ldietc -o $@
 
 dietlibc-0.33/bin-x86_64: dietlibc-0.33
 	./sshwrap 'cd dietlibc-0.33 && make && mv bin-x86_64/{dietlibc.a,libdietc.a}'

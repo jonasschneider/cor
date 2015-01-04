@@ -3,8 +3,8 @@ require 'timeout'
 require 'minitest'
 
 Given(/^the following code for \/sbin\/init:$/) do |string|
-  File.write("init.c", string)
-  Subprocess.check_call(["touch", "init.c"]) # to trigger make
+  File.write("userspace/init.c", string)
+  Subprocess.check_call(["touch", "userspace/init.c"]) # to trigger make
 end
 
 Given(/^I use the following linker script for init:$/) do |string|

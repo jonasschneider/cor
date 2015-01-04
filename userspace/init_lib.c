@@ -1,6 +1,6 @@
-#include "syscall.h"
-#include "common.h"
-#include "vendor/stdarg.h"
+#include <cor/syscall.h>
+#include <vendor/stdarg.h>
+#include <stdint.h>
 
 int exit(int ret) {
   __asm__ ( "movq %0, %%rax\n"
@@ -69,7 +69,7 @@ int _printf_print(const char *str) {
   return 0;
 }
 
-static void print_itoa(unsigned long value, const uint base, const char *alphabet) {
+static void print_itoa(unsigned long value, const unsigned int base, const char *alphabet) {
   const int max_digits = 20;
   char buffer[max_digits+1]; // FIXME: yeah, this is never going to break, ever
   buffer[max_digits] = '\0';
@@ -90,11 +90,11 @@ static void print_itoa(unsigned long value, const uint base, const char *alphabe
   _printf_print(buffer+i);
 }
 
-static void printk_uint(uint value) {
+static void printk_uint(unsigned int value) {
   print_itoa((unsigned long)value, 10, "0123456789");
 }
 
-static void printk_hex(uint value) {
+static void printk_hex(unsigned int value) {
   print_itoa((unsigned long)value, 16, "0123456789abcdef");
 }
 
@@ -122,7 +122,7 @@ int vprintf(const char *format, va_list ap) {
         _printf_print("0x");
         printk_lhex(va_arg(ap, unsigned long));
       } else if(*format == 'u') {
-        printk_uint(va_arg(ap, uint));
+        printk_uint(va_arg(ap, unsigned int));
       } else if(*format == 'x') {
         // another x allows you to skip the "0x" part
         if(*(format+1) == 'x') {
@@ -134,7 +134,7 @@ int vprintf(const char *format, va_list ap) {
         if(islong) {
           printk_lhex(va_arg(ap, unsigned long));
         } else {
-          printk_hex(va_arg(ap, uint));
+          printk_hex(va_arg(ap, unsigned int));
         }
       } else if(*format == 's') {
         char *s = va_arg(ap, char*);
