@@ -57,7 +57,7 @@ TODOs:
 - compile with `-O`
   - correctly declare inline ASM memory barriers/volatility
 - Fix relative addressing in `boot.s`
-
+- Redzone thing
 
 
 Goals
