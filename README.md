@@ -24,13 +24,14 @@ Roadmap
   - [x] Load ELF into virtual memory
 - [x] Implement syscall basics (choose INT 0x14 for fun, maybe start with just exit, then write)
 - [x] permanent ring switch when starting init (except for syscalls)
-- [ ] Actual memory management & protection
+- [x] Actual memory management & protection
   - [x] Read memory map from BIOS
   - [x] kalloc
   - [x] Dynamically allocate pages on ELF load
   - [x] sbrk
-  - [ ] Fix page permissions (`|4`s in boot.s)
+  - [x] Fix page permissions (`|4`s in boot.s)
   - [x] Move to higher-half kernel
+- [ ] Nontrivial `malloc`
 - [ ] Process table / Process memory page table management
 - [ ] Create an actual toolchain
   - [x] Make a "hello world" binary that runs on host Linux and is as static as it gets (no libc)
@@ -51,10 +52,12 @@ More unicorns:
   - [ ] FS (block device code in C)
   - [ ] Networking (PCI code in C)
 
-Practical goals:
+TODOs:
 
 - compile with `-O`
   - correctly declare inline ASM memory barriers/volatility
+- Fix relative addressing in `boot.s`
+
 
 
 Goals
