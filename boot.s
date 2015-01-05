@@ -424,10 +424,10 @@ in_long64:
   cmp $0x3713, %ax
   jne broken
 
-  # Set up the 64-bit stack to start at 0x9ff0 and grow downwards.
-  # Our memory map (see README.md) says that the stack starts at 0x9fff, but we
+  # Set up the 64-bit stack to start at 0x9fff0 and grow downwards.
+  # Our memory map (see README.md) says that the stack starts at 0x9ffff, but we
   # align to the lower 16-byte boundary. I guess that makes sense.
-  mov $0x9ff0|0x0000008000000000, %rax
+  mov $0x9fff0|0x0000008000000000, %rax
   mov %rax, %rsp
 
   # Finally, go on and jump to stage 2! (Way at the beginning, loaded it from
