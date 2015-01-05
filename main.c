@@ -8,7 +8,7 @@ int my_kernel_subroutine() {
   return 0xbeef;
 }
 
-void hello_main();
+unsigned int hello_main();
 
 extern char cor_stage2_init_data;
 extern int cor_stage2_init_data_len;
@@ -164,7 +164,11 @@ void kernel_main(void) {
   cor_printk("OK.\n");
 
 
-  //hello_main();
+  unsigned int rr = hello_main();
+  cor_printk("Rust returned: %u\n", rr);
+  if(rr != 1337) {
+    cor_panic("Rust failed to return magic.\n");
+  }
 
 
   cor_printk("Exec'ing init.\n");

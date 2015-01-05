@@ -1,11 +1,14 @@
 #include "../common.h"
 
-void *malloc(size_t siz) {
-  return tkalloc(siz, "rust malloc()", 1);
+// TODO: rust actually has these as uint, not size_t... bad?
+void *rust_allocate(size_t size, size_t align) {
+  return tkalloc(size, "rust_allocate()", align);
 }
 
-void free(void *what) {
+void rust_deallocate(void *what, size_t old_size, size_t align) {
   // TODO
+  old_size = old_size;
+  align = align;
   what = what;
 }
 
@@ -13,7 +16,11 @@ void abort() {
   while(1);
 }
 
+// What follows is stuff that's needed when we don't --gc-sections out all
+// the parts of the rust object file that we don't use.
+// Since we do that, I'll just keep them here for reference.
 
+/*
 // http://linux.die.net/man/3/memset
 
 // TODO: i think we should just make all of these be bottom
@@ -81,3 +88,4 @@ void _Unwind_SetGR() {
 void _Unwind_SetIP() {
 
 }
+*/
