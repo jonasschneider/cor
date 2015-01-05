@@ -30,8 +30,13 @@ unsafe fn deallocate(ptr: *mut u8, _size: uint, _align: uint) {
 
 #[start]
 #[no_mangle]
-pub fn hello_main() {
+pub unsafe fn hello_main() {
   let x = box 1i;
+
+  let v = *x;
+  if v == 1i {
+    abort();
+  }
 }
 
 #[lang = "stack_exhausted"] extern fn stack_exhausted() {}

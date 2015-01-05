@@ -9,6 +9,10 @@ void free(void *what) {
   what = what;
 }
 
+void abort() {
+  while(1);
+}
+
 
 // http://linux.die.net/man/3/memset
 
@@ -17,10 +21,6 @@ void free(void *what) {
 // TODO: __thread is going to break hard, actually.
 __thread int errno;
 
-
-void cor_hitmarker() {
-  while(1);
-}
 
 void fwrite() {
 
@@ -48,9 +48,7 @@ void *memset(void *s, int c, size_t n) {
   return __builtin_memset(s,c,n);
 }
 
-void abort() {
 
-}
 void fflush() {
 
 }
