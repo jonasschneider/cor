@@ -20,7 +20,7 @@ void console_clear(void);
 
 void cor_panic(const char *msg) {
   cor_printk("\nPANIC: %s\n", msg);
-  while(1) {};
+  __asm__ ( "hlt" );
 }
 
 void cor_dump_page_table(uint64_t *start, int level) {
@@ -115,10 +115,6 @@ void kernel_main(void) {
   mm_init();
   cor_printk("OK.\n");
 
-  cor_printk("Initializing PCI.. ");
-  pci_init();
-  cor_printk("OK.\n");
-
   cor_printk("Initializing interrupts..");
 
   // cf. intel_64_software_developers_manual.pdf pg. 1832
@@ -163,10 +159,19 @@ void kernel_main(void) {
   } else {
     cor_panic("Test interrupt seems to have messed up the stack.");
   }
+  __asm__ ( "sti" );
+  cor_printk("Interrupts look OK.\n");
+
 
   cor_printk("Setting up TSS.. ");
   tss_setup();
   cor_printk("OK.\n");
+
+
+  cor_printk("Initializing PCI.. ");
+  pci_init();
+  cor_printk("OK.\n");
+
 
 
   unsigned int rr = hello_main();

@@ -122,18 +122,16 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
   uint16_t io_base = bar0 & 0xFFFFFFFC;
 
   cor_printk("And here is its virtio I/O space:\n");
-  for(int i = 0; i < 15; i++) {
+  for(int i = 0; i < 6; i++) {
     uint32_t state2 = sysInLong(io_base+i*4);
     cor_printk("%x: %x\n", i*4, state2);
-  }
-  cor_printk("Now by cor_inb:\n");
-  for(int i = 0; i < 20; i++) {
-    uint32_t state2 = (uint32_t)cor_inb(io_base+i);
-    cor_printk("%x: %x\n", i, state2);
   }
 
   uint32_t dflags = sysInLong(io_base);
   cor_printk("The device offers these feature bits: %x\n", dflags);
+
+  // TODO: don't just blindly accept those
+  sysOutLong(io_base+4, dflags);
 
   // Now for the init sequence,
   // c.f. http://ozlabs.org/~rusty/virtio-spec/virtio-0.9.5.pdf
@@ -177,7 +175,7 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
   cor_printk("used        at %p\n", used);
 
   // tell the device where we placed it
-  sysOutLong (io_base+8, (uint32_t)(((uint64_t)buf) >> 12));
+  sysOutLong (io_base+8, (uint32_t)(((uint64_t)KTOP(buf)) /4096));
 
 
   // Optional MSI-X?
@@ -185,6 +183,8 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
   // Done
   state |= VIRTIO_STATUS_DRIVER_OK;
   cor_outb(state, io_base+18);
+
+  cor_printk("Device state set to: %x\n", state);
 
 
   // now fire off a test request
@@ -220,10 +220,20 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
   // notify
   iowrite16(io_base+16, 0);
 
+
+  cor_printk("before: %x\n", used->idx);
+
   for(int i = 0; i < 100000000; i++);
   // ...
 
-  if(*done != 17) {
+  cor_printk("And here is its virtio I/O space:\n");
+  for(int i = 0; i < 6; i++) {
+    uint32_t state2 = sysInLong(io_base+i*4);
+    cor_printk("%x: %x\n", i*4, state2);
+  }
+
+  cor_printk("after: %x\n", used->idx);
+  if(used->idx != 0) {
     cor_panic("SOMETHING HAPPENED");
   } else {
     cor_panic("surprisingly, nothing happened");
