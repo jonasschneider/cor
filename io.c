@@ -1,7 +1,7 @@
 unsigned char cor_inb(unsigned short int port) {
   char res;
   __asm__ (
-    "inb %%dx, %%al"
+    "in %%dx, %%ax"
     : "=a" (res): "d" (port)
   );
   return res;

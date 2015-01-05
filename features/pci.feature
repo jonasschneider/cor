@@ -5,9 +5,9 @@ Feature: PCI device detection
 
   Background:
     When I run the machine
-    Then I don't see "this is a virtio device"
+    Then I don't see "this is a virtio NIC"
 
   Scenario: Detecting a Virtio NIC
     Given I attach a virtio network interface to the machine
     When I run the machine
-    Then I should see "this is a virtio device"
+    Then I should see "this is a virtio NIC"

@@ -175,6 +175,7 @@ void kernel_main(void) {
     cor_panic("Rust failed to return magic.\n");
   }
 
+  //cor_panic("ok");
 
   cor_printk("Exec'ing init.\n");
 

@@ -1,4 +1,4 @@
 #!/bin/sh
 # Start qemu without the qemu console, connects stdin/stdout to serial.
 # Still starts the gdb server for you to attach to.
-exec qemu-system-x86_64 -s disk.bin -nographic -serial stdio -monitor null $QEMUOPT
+exec qemu-system-x86_64 -s -nographic -serial stdio -monitor null disk.bin -drive file=disk.bin,if=virtio $QEMUOPT
