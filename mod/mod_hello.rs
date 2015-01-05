@@ -1,15 +1,10 @@
 #![crate_type="staticlib"]
 #![no_std]
 #![feature(globs,lang_items)]
-#![allow(unused_attribute)]
+#![allow(unused_attributes)]
 
 extern crate core;
 
-use core::prelude::*;
-use core::panicking::panic;
-
-
-#[link(name = "cor")]
 extern {
   fn cor_hitmarker() -> ();
 }
@@ -28,4 +23,3 @@ pub unsafe fn cmod_main() {
 #[lang = "stack_exhausted"] extern fn stack_exhausted() {}
 #[lang = "eh_personality"] extern fn eh_personality() {}
 #[lang = "panic_fmt"] fn panic_fmt() -> ! { loop {} }
-#[lang = "fail_fmt"] fn fail_fmt() -> ! { loop {} }
