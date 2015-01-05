@@ -1,3 +1,15 @@
+#include "../common.h"
+
+void *malloc(size_t siz) {
+  return tkalloc(siz, "rust malloc()", 1);
+}
+
+void free(void *what) {
+  // TODO
+  what = what;
+}
+
+
 // http://linux.die.net/man/3/memset
 
 // TODO: i think we should just make all of these bottom
