@@ -164,7 +164,7 @@ void kernel_main(void) {
   cor_printk("OK.\n");
 
 
-  hello_main();
+  //hello_main();
 
 
   cor_printk("Exec'ing init.\n");

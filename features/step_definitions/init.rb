@@ -13,7 +13,8 @@ Given(/^I use the following linker script for init:$/) do |string|
 end
 
 When(/^I run the machine$/) do
-  Subprocess.check_call(%w(make all))
+  mk = ENV["MAKE"].split(" ") || ["make"]
+  Subprocess.check_call(mk)
   @process = Subprocess.popen(["bin/run"], stdout: Subprocess::PIPE)
 end
 
@@ -37,7 +38,8 @@ Then(/^I should see "(.*?)"$/) do |needle|
 end
 
 Before do
-  Subprocess.check_call(%w(make clean))
+  mk = ENV["MAKE"].split(" ") || ["make"]
+  Subprocess.check_call(mk.concat(["clean"]))
 end
 
 After do

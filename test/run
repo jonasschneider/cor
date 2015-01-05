@@ -5,7 +5,7 @@ set -eux
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 cd $DIR/..
 
-make clean all
+${MAKE-make} clean all
 ROOT=$DIR/.. go test ./test
 cucumber --tags ~@wip
 echo "OK"

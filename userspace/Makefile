@@ -20,7 +20,7 @@ init.ld: init.ld_default
 # 	$(LD) $< dietlibc-0.33/bin-x86_64/start.o -Ldietlibc-0.33/bin-x86_64 -ldietc -o $@
 
 dietlibc-0.33/bin-x86_64: dietlibc-0.33
-	./sshwrap 'cd dietlibc-0.33 && make && mv bin-x86_64/{dietlibc.a,libdietc.a}'
+	cd dietlibc-0.33 && make && mv bin-x86_64/{dietlibc.a,libdietc.a}
 
 dietlibc-0.33/include: dietlibc-0.33
 dietlibc-0.33:

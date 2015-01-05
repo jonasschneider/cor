@@ -1,2 +1,0 @@
-#!/bin/bash
-ssh -p 2222 vagrant@localhost -t "cd /vagrant/userspace; $@"
