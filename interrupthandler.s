@@ -43,11 +43,3 @@ bye:
   pop %rbx
 
   iretq
-
-
-.global lolin
-lolin:
-  # %rdi, %rsi
-  movw %di, %dx
-  in %dx, %al
-  ret
