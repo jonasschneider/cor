@@ -1,9 +1,24 @@
 Cor -- a hobbyist x86_64 kernel
-==============================
+===============================
+
+Cor is a completely fresh start in kernel architecture. Created by someone with no experience in this field whatsoever, its goals are:
+
+- Be a living document on what's needed to build something that runs on today's metal (or, right now, QEMU)
+- Make interactions between kernel- and userspace and between kernel components clear
+- Clarify where & how one would implement "smart" policies and algorithms
+- Occasionally introduce unneeded complexity (read: Rust kernel modules) to prove a point
+
+Also, build a robust kernel. Explicit non-goals are:
+
+- Be fast (if we optimize, we're doing it to make sure that nothing breaks)
+- Be secure (you wouldn't attach this to your network at work)
+- Be, by any definition, production-ready
+- Implement smart policies and algorithms, where not crucial
+- [Compile all the bad parts of Windows, Linux, and OS X to form the platform for 21st century computing.](http://upload.wikimedia.org/wikipedia/en/a/ae/BeOS_Desktop.png)
 
 Synopsis
 --------
-- Install dependencies: Compilers (XCode CLI tools / `build-essential`), QEMU, Vagrant, xxd, Ruby, Go
+- Install dependencies: Compilers (XCode CLI tools / `build-essential`), QEMU, Vagrant, xxd, Ruby, Go, Rust
 - `$ make`
 - `$ bin/run` to start the system, you'll be connected to the serial console of the machine
 - `$ bin/debug` to debug the kernel, runs qemu and tells you how to attach a `gdb`
@@ -31,16 +46,24 @@ Roadmap
   - [x] sbrk
   - [x] Fix page permissions (`|4`s in boot.s)
   - [x] Move to higher-half kernel
-- [ ] Nontrivial `malloc`
-- [ ] Process table / Process memory page table management
-- [ ] Create an actual gcc toolchain for userspace (or maybe clang, actually?)
+- [ ] Kernel modules
+  - [x] Simple static module (Rust)
+  - [ ] Definition of core <-> module interface
+- [x] Userspace page table management
+- [ ] Concurrency
+  - [ ] Process lifecycle / identity management, Process table
+  - [ ] fork
+  - [ ] Timer-based scheduler
+- [ ] Make a userspace toolchain
   - [x] Make a "hello world" binary that runs on host Linux and is as static as it gets (no libc)
-  - [ ] appropriately mod dietlibc for our syscall semantics
+  - [ ] Mod dietlibc to fit our syscall semantics
+  - [ ] Package that as libcorc or something
 - [ ] Make something like a shell over serial (this will be our /sbin/init)
-- [ ] Multitasking / Scheduler (make ringswitch non-permanent)
-- [ ] PCI device detection (virtio)
-- [ ] Networking -> DHCP + TCP/IP
-- [ ] Tiniest VFS implementation possible (read-only single-level?)
+- [ ] Filesystem (in Rustland?)
+  - [ ] virtio-blk device detection
+  - [ ] block device abstraction
+  - [ ] tiniest filesystem imaginable (read-only single-level?)
+- [ ] Networking -> DHCP + UDP/IP, then TCP
 - [ ] implement `ls` & `netcat` equivalents
 
 More unicorns:
@@ -51,6 +74,10 @@ More unicorns:
   - [ ] Memory manager (unclear if a good idea; maybe just the userspace memory manager)
   - [ ] FS (block device code in C)
   - [ ] Networking (PCI code in C)
+- [ ] Smarter kalloc (something like Linux' slab allocator?)
+- [ ] Smarter userspace `malloc` that allocates contiguous sections for a single task
+- [ ] FS: Journalling
+- [ ] Real hardware
 
 TODOs:
 
@@ -59,18 +86,6 @@ TODOs:
 - Fix relative addressing in `boot.s`
 - Redzone thing
 
-
-Goals
------
-- Document well
-- Make interactions between components clear
-- Occasionally introduce additional complexity to prove a point
-
-Non-Goals
----------
-- Be fast
-- Be secure
-- Be production-ready
 
 Memory map
 ----------
@@ -82,7 +97,7 @@ Physical memory map at the time of stage2 startup:
 - `0x50000-0x6FFFD`: stage2 `.data`
 - `0x6FFFE`: `0x13` (magic)
 - `0x6FFFF`: `0x37` (magic)
-- `0x70000-0x9FFFF`: stage2's Stack (TODO: should make some kind of protection against overflow)
+- `0x70000-0x9FFFF`: stage2's Stack (TODO: guard page)
 - (I just realized that 0xa0000 - 0xfffff is still free, fuu base16)
 - After that there are likely some memory holes
 
@@ -93,9 +108,9 @@ Additional virtual mapped memory:
 Additional physical memory used by stage2:
 - `0x06000-0x06FFF`: stage2's IDT (TODO: replace with kalloc)
 
-All the other kernel data structures, including (for now) memory pages for user tasks,
-are allocated in `mm.c` by `kalloc`, which uses the BIOS memory map provided by boot.s to place
-them in higher memory.
+All other memory is allocated in `mm.c` by `kalloc`, which uses the BIOS
+ memory map provided by boot.s to place things into higher memory (usually,
+ `phys >= 0x100000`.)
 
 Caveats
 -------
