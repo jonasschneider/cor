@@ -1,5 +1,10 @@
 // http://linux.die.net/man/3/memset
 
+// TODO: i think we should just make all of these bottom
+
+// TODO: __thread is going to break hard, actually.
+__thread int errno;
+
 typedef unsigned long long size_t;
 
 void cor_hitmarker() {
@@ -46,9 +51,6 @@ void fputs() {
 }
 
 void __get_cpu_features() {
-
-}
-void _GLOBAL_OFFSET_TABLE_() {
 
 }
 

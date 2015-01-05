@@ -20,7 +20,7 @@ pub unsafe fn cmod_main() {
 
   let x = 5i;
 
-  if x == 5i {
+  if x % 2 == 1i {
     cor_hitmarker();
   }
 }
