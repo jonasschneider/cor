@@ -33,7 +33,7 @@ Roadmap
   - [x] Move to higher-half kernel
 - [ ] Nontrivial `malloc`
 - [ ] Process table / Process memory page table management
-- [ ] Create an actual toolchain
+- [ ] Create an actual gcc toolchain for userspace (or maybe clang, actually?)
   - [x] Make a "hello world" binary that runs on host Linux and is as static as it gets (no libc)
   - [ ] appropriately mod dietlibc for our syscall semantics
 - [ ] Make something like a shell over serial (this will be our /sbin/init)
