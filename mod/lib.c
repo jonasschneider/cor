@@ -1,33 +1,72 @@
 // http://linux.die.net/man/3/memset
-__assert_fail
-errno
-fwrite
+
+typedef unsigned long long size_t;
 
 void cor_hitmarker() {
   while(1);
 }
 
-void memset(void *s, int c, int n) {
-  __builtin_memset(s,c,n);
+void fwrite() {
+
 }
 
-memcmp
-memcpy
-memmove
+void __assert_fail() {
+
+}
 
 
-abort
-fflush
-fprintf
-fputs
+void *memchr(const void *a, int b, size_t c) {
+  return __builtin_memchr(a, b, c);
+}
+int      memcmp(const void *a, const void *b, size_t c) {
+  return __builtin_memcmp(a, b, c);
+}
+void *memcpy(void *a, const void *b, size_t c) {
+  return __builtin_memcpy(a, b, c);
+}
+void *memmove(void *a, const void *b, size_t c) {
+  return __builtin_memmove(a, b, c);
+}
 
-__get_cpu_features
-_GLOBAL_OFFSET_TABLE_
+void *memset(void *s, int c, size_t n) {
+  return __builtin_memset(s,c,n);
+}
 
-_start
-stderr
-_Unwind_GetIP
-_Unwind_GetLanguageSpecificData
-_Unwind_GetRegionStart
-_Unwind_SetGR
-_Unwind_SetIP
+void abort() {
+
+}
+void fflush() {
+
+}
+void fprintf() {
+
+}
+void fputs() {
+
+}
+
+void __get_cpu_features() {
+
+}
+void _GLOBAL_OFFSET_TABLE_() {
+
+}
+
+void stderr() {
+
+}
+void _Unwind_GetIP() {
+
+}
+void _Unwind_GetLanguageSpecificData() {
+
+}
+void _Unwind_GetRegionStart() {
+
+}
+void _Unwind_SetGR() {
+
+}
+void _Unwind_SetIP() {
+
+}
