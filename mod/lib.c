@@ -12,12 +12,11 @@ void free(void *what) {
 
 // http://linux.die.net/man/3/memset
 
-// TODO: i think we should just make all of these bottom
+// TODO: i think we should just make all of these be bottom
 
 // TODO: __thread is going to break hard, actually.
 __thread int errno;
 
-typedef unsigned long long size_t;
 
 void cor_hitmarker() {
   while(1);
