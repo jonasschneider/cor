@@ -2,7 +2,7 @@ ROOT=.
 include Makefile.conf
 .PHONY: all clean
 
-OBJS=main.o printk.o chrdev_serial.o io.o elf.o interrupthandler.o tss.o mm.o task.o
+OBJS=main.o printk.o chrdev_serial.o io.o elf.o interrupthandler.o tss.o mm.o task.o pci.o
 
 all: disk.bin
 

@@ -3,4 +3,4 @@
 # but we deliberately want to skip past the error, and explicitly disconnect without resuming.
 # FIXME: the race condition in case qemu is slow. But i think gdb retries.
 (sleep 1; gdb < ./scripts/advance_qemu_to_64bit.gdb; echo; echo "You are now in the qemu shell here. Run this to attach a gdb:\n\n\t$ gdb --command scripts/stage2.gdb") &
-exec qemu-system-x86_64 -d int,pcall,cpu_reset,ioport,unimp,guest_errors -s disk.bin -S -nographic -monitor stdio -serial stdio
+exec qemu-system-x86_64 -d int,pcall,cpu_reset,ioport,unimp,guest_errors -s disk.bin -S -nographic -monitor stdio -serial stdio $QEMUOPT

@@ -52,17 +52,20 @@ Roadmap
 - [x] Userspace page table management
 - [ ] Concurrency
   - [ ] Process lifecycle / identity management, Process table
-  - [ ] fork
+  - [ ] Kernel worker & I/O threads
   - [ ] Timer-based scheduler
+  - [ ] fork()
 - [ ] Make a userspace toolchain
   - [x] Make a "hello world" binary that runs on host Linux and is as static as it gets (no libc)
-  - [ ] Mod dietlibc to fit our syscall semantics
+  - [ ] Mod dietlibc to fit our syscall mechanism
   - [ ] Package that as libcorc or something
 - [ ] Make something like a shell over serial (this will be our /sbin/init)
-- [ ] Filesystem (in Rustland?)
-  - [ ] virtio-blk device detection
-  - [ ] block device abstraction
-  - [ ] tiniest filesystem imaginable (read-only single-level?)
+- [ ] Filesystem
+  - [ ] Attach virtio (virtio-scsi, or preferredly virtio-blk) to QEMU
+  - [x] PCI device detection
+  - [ ] virtio PCI block device driver
+  - [ ] block device abstraction (likely in C land, or maybe the scheduler in Rust)
+  - [ ] tiniest filesystem imaginable (read-only single-level?) -> tar format, FS state in rust
 - [ ] Networking -> DHCP + UDP/IP, then TCP
 - [ ] implement `ls` & `netcat` equivalents
 
@@ -85,6 +88,7 @@ TODOs:
   - correctly declare inline ASM memory barriers/volatility
 - Fix relative addressing in `boot.s`
 - Redzone thing
+
 
 
 Memory map
@@ -153,6 +157,8 @@ As this is an academic project, I'll try to document things I stumbled over.
 
   is tiny, while swapping the addresses gives a huge one
 
+- Design goal should probably "as little resident/permanent state in C-land as possible",
+  given entropy and all that
 
 
 The Story

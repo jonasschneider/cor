@@ -15,6 +15,10 @@ end
 When(/^I run the machine$/) do
   mk = ENV["MAKE"].split(" ") || ["make"]
   Subprocess.check_call(mk)
+  if @process
+    @process.terminate
+    @process.wait
+  end
   @process = Subprocess.popen(["bin/run"], stdout: Subprocess::PIPE)
 end
 
@@ -38,10 +42,13 @@ Then(/^I should see "(.*?)"$/) do |needle|
 end
 
 Before do
-  mk = ENV["MAKE"].split(" ") || ["make"]
+  mk = (ENV["MAKE"]||"make").split(" ")
   Subprocess.check_call(mk.concat(["clean"]))
 end
 
 After do
-  @process.terminate if @process
+  if @process
+    @process.terminate
+    @process.wait
+  end
 end

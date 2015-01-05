@@ -3,6 +3,7 @@
 #include "elf.h"
 #include "tss.h"
 #include "mm.h"
+#include "pci.h"
 
 int my_kernel_subroutine() {
   return 0xbeef;
@@ -112,6 +113,10 @@ void kernel_main(void) {
 
   cor_printk("Initializing MM.. ");
   mm_init();
+  cor_printk("OK.\n");
+
+  cor_printk("Initializing PCI.. ");
+  pci_init();
   cor_printk("OK.\n");
 
   cor_printk("Initializing interrupts..");
