@@ -30,6 +30,7 @@ interrupthandler.o: interrupthandler.s include/cor/syscall.h
 
 stage2.o: $(OBJS) linkerscript stage2_entrypoint.o init_static.o mod/hello.kmo
 	echo LONG\(0x$(shell git rev-parse HEAD | cut -c 1-6)\) > versionstamp~
+	# -x here removes local symbols (like those from hello.kmo from the file -- maybe for "production"?)
 	$(LD) $(OBJS) stage2_entrypoint.o init_static.o mod/hello.kmo -T linkerscript -o stage2.o
 
 stage2.bin: stage2.o
