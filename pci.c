@@ -101,11 +101,13 @@ void pciConfigWriteLong (uint8_t bus, uint8_t slot,
 #define VIRTIO_STATUS_DRIVER_OK 4
 #define VIRTIO_STATUS_FAILED 128
 
+#pragma pack(push, 1)
 struct virtio_blk_outhdr {
   uint32_t type;
   uint32_t ioprio;
   uint64_t sector;
-} __packed;
+};
+#pragma pack(pop)
 
 void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
   cor_printk("Found a virtio block device!\nThis is its configuration space:\n");
@@ -155,6 +157,10 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
   // c.f. "Virtqueue Configuration"
   // also, http://ozlabs.org/~rusty/virtio-spec/virtio-paper.pdf
   iowrite16(io_base+14, 0); // select first queue
+  if(ioread16(io_base+14) != 0) {
+    cor_panic("Failed to select queue0");
+  }
+
   uint16_t qsz = ioread16(io_base+12);
   cor_printk("virtqueue has sizenum=%x\n", qsz);
   size_t rsize = vring_size(qsz, 0x1000);
@@ -197,6 +203,8 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
   hdr->ioprio = 1; // prio
   hdr->sector = 0; // should be the MBR
 
+  cor_printk("Telling virtio that target is at %p\n", (uint64_t)KTOP(payload));
+
   descriptors[0].addr = (uint64_t)KTOP(hdr);
   descriptors[0].len = sizeof(struct virtio_blk_outhdr);
   descriptors[0].flags = VRING_DESC_F_NEXT;
@@ -212,10 +220,8 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
   descriptors[2].flags = VRING_DESC_F_WRITE;
 
   avail->ring[0] = 0;
-  avail->ring[1] = 1;
-  avail->ring[2] = 2;
   __asm__ volatile ( "" : : : "memory"); // TODO: make sure this actually works
-  avail->idx = 3;
+  avail->idx = 1;
 
   // notify
   iowrite16(io_base+16, 0);
