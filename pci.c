@@ -240,7 +240,8 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
 
   cor_printk("after: %x\n", used->idx);
   if(used->idx != 0) {
-    cor_panic("SOMETHING HAPPENED");
+    cor_printk("virtio read ret=%u, firstq=%lx\n", *done, *((uint64_t*)payload));
+    cor_panic("ds");
   } else {
     cor_panic("surprisingly, nothing happened");
   }
