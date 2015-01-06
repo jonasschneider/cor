@@ -5,5 +5,6 @@ Feature: Disk access
 
   Scenario: Reading from a virtio block device
     Given I have a disk image with a sector full of "OHAI THERE"
-    When I run the machine with this disk image attached as a virtio block device
+    And I attach this image as a virtio block device
+    When I run the machine
     Then I should see "OHAI THERE"

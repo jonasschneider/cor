@@ -13,7 +13,7 @@ Given(/^I use the following linker script for init:$/) do |string|
 end
 
 When(/^I run the machine$/) do
-  mk = ENV["MAKE"].split(" ") || ["make"]
+  mk = (ENV["MAKE"]||"make").split(" ")
   Subprocess.check_call(mk)
   if @process
     @process.terminate

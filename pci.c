@@ -240,8 +240,15 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
 
   cor_printk("after: %x\n", used->idx);
   if(used->idx != 0) {
-    cor_printk("virtio read ret=%u, firstq=%lx\n", *done, *((uint64_t*)payload));
-    cor_panic("ds");
+    cor_printk("virtio call completed, ret=%u\n", *done);
+    if(*done == 0) {
+      char tbuf[21];
+      for(int i = 0; i < 20; i++) {
+        tbuf[i] = *(char*)(payload+i);
+      }
+      tbuf[20] = '\0';
+      cor_printk("ascii=%s\n", tbuf);
+    }
   } else {
     cor_panic("surprisingly, nothing happened");
   }
