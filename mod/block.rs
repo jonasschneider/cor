@@ -15,9 +15,10 @@ struct Kio {
   lol: int,
 }
 
+
 impl core::fmt::Writer for Kio {
   fn write_str(&mut self, s: &str) -> Result<(), core::fmt::Error> {
-    //unsafe { rust_printk(s); }
+    unsafe { rust_printk(s); rust_printk("\n"); }
     Ok(()) // yes, we're lying
   }
 }
@@ -51,9 +52,12 @@ extern {
   fn rust_printk(txt : &str) -> ();
 }
 
+const OS_DEFAULT_STACK_ESTIMATE: uint = 2 * (1 << 20);
 #[no_mangle]
 pub fn virtio_init() {
+
 /*  unsafe { rust_printk("hai from rust\n"); }
+
 
   // apparently, anything modifying global mutable state is considered unsafe...
   unsafe { state = Some(State { number: 1337, string: "" }); }

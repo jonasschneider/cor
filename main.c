@@ -111,6 +111,19 @@ void kernel_main(void) {
   cor_current_writec = cor_chrdev_serial_write;
   cor_printk("Switched to serial console.\n");
 
+
+  uint64_t res = 1;
+  __asm__ (
+    "mov %0, %%fs:0x70"
+    : : "a" (res)
+    );
+  __asm__ (
+    "mov %%fs:0x70, %0"
+    : "=a" (res)
+    );
+  cor_printk("XXX fs:70=%x\n",res);
+  //cor_panic("a");
+
   cor_printk("Initializing MM.. ");
   mm_init();
   cor_printk("OK.\n");

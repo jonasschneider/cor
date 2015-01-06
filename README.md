@@ -82,6 +82,12 @@ More unicorns:
 - [ ] Smarter userspace `malloc` that allocates contiguous sections for a single task
 - [ ] FS: Journalling
 - [ ] Real hardware
+- [ ] Thread-local storage setup for Rustland
+
+    <nathan7> jonasschneider: but figure out some place to put your F-segment, and stick the address in the GDT
+    <nathan7> jonasschneider: (and do an LGDT and all)
+    <nathan7> jonasschneider: and mov 0, %fs:0x70 if you're lazy
+    <nathan7> jonasschneider: or figure out some better place to put your stack
 
 TODOs:
 
