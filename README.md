@@ -61,8 +61,9 @@ Roadmap
   - [ ] Package that as libcorc or something
 - [ ] Make something like a shell over serial (this will be our /sbin/init)
 - [ ] Filesystem
-  - [ ] Attach virtio (virtio-scsi, or preferredly virtio-blk) to QEMU
+  - [x] Attach virtio (virtio-scsi, or preferredly virtio-blk) to QEMU
   - [x] PCI device detection
+  - [x] virtio PCI block device driver POC
   - [ ] virtio PCI block device driver
   - [ ] block device abstraction (likely in C land, or maybe the scheduler in Rust)
   - [ ] tiniest filesystem imaginable (read-only single-level?) -> tar format, FS state in rust
