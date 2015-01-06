@@ -6,9 +6,9 @@ SECTIONS
   }
   . = 0x8000050000;
   .data . : {
-    *(.data)
-    *(.rodata) /* ummm... */
-    *(.bss) /* yeeeah... */
+    *(.data*)
+    *(.rodata*) /* ummm... */
+    *(.bss*) /* yeeeah... */
     . = 0x1FFFA;
     INCLUDE versionstamp~;
     . = 0x1FFFE;

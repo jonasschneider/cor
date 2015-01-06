@@ -12,6 +12,10 @@ void rust_deallocate(void *what, size_t old_size, size_t align) {
   what = what;
 }
 
+void rust_printk(const char *str) {
+  cor_printk(str);
+}
+
 void abort() {
   while(1);
 }

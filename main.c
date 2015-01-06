@@ -174,11 +174,11 @@ void kernel_main(void) {
 
 
 
-  unsigned int rr = hello_main();
+  /*unsigned int rr = hello_main();
   cor_printk("Rust returned: %u\n", rr);
   if(rr != 1337) {
     cor_panic("Rust failed to return magic.\n");
-  }
+  }*/
 
   cor_printk("Exec'ing init.\n");
 

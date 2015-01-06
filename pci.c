@@ -109,6 +109,8 @@ struct virtio_blk_outhdr {
 };
 #pragma pack(pop)
 
+void virtio_init();
+
 void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
   cor_printk("Found a virtio block device!\nThis is its configuration space:\n");
   for(int i = 0; i < 0x3c; i+=4) {
@@ -122,6 +124,8 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
   // but we won't use it here.
   uint32_t bar0 = pciConfigReadLong(bus, slot, function, 0x10);
   uint16_t io_base = bar0 & 0xFFFFFFFC;
+
+  virtio_init();
 
   cor_printk("And here is its virtio I/O space:\n");
   for(int i = 0; i < 6; i++) {
@@ -229,7 +233,7 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
 
   cor_printk("before: %x\n", used->idx);
 
-  for(int i = 0; i < 100000000; i++);
+  //for(int i = 0; i < 100000000; i++);
   // ...
 
   cor_printk("And here is its virtio I/O space:\n");

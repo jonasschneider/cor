@@ -32,10 +32,10 @@ stage2_entrypoint.o: stage2_entrypoint.s
 interrupthandler.o: interrupthandler.s include/cor/syscall.h
 	$(CC) $(KCFLAGS) -c -x assembler-with-cpp -Iinclude $< -o $@
 
-stage2.o: $(OBJS) linkerscript stage2_entrypoint.o init_static.o mod/hello.kmo
+stage2.o: $(OBJS) linkerscript stage2_entrypoint.o init_static.o mod/block.kmo
 	echo LONG\(0x$(shell git rev-parse HEAD | cut -c 1-6)\) > versionstamp~
 	# -x here removes local symbols (like those from hello.kmo from the file -- maybe for "production"?)
-	$(LD) $(OBJS) stage2_entrypoint.o init_static.o mod/hello.kmo -T linkerscript -o stage2.o
+	$(LD) $(OBJS) stage2_entrypoint.o init_static.o mod/block.kmo -T linkerscript -o stage2.o
 
 stage2.bin: stage2.o
 	$(OBJCOPY) --only-section=.text -O binary stage2.o stage2.bin
