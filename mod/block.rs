@@ -1,18 +1,42 @@
 #![crate_type="staticlib"]
 #![no_std]
-#![feature(globs,lang_items)]
-
+#![feature(globs,lang_items,macro_rules)]
 //extern crate alloc;
 extern crate core;
 extern crate libc;
+//extern crate std;
 
-use core::option::Option;
-use core::option::Option::None;
-use core::option::Option::Some;
+use core::prelude::*;
+use core::fmt::write;
 
 //use alloc::boxed;
+
+struct Kio {
+  lol: int,
+}
+
+impl core::fmt::Writer for Kio {
+  fn write_str(&mut self, s: &str) -> Result<(), core::fmt::Error> {
+    unsafe { rust_printk(s); }
+    Ok(()) // yes, we're lying
+  }
+}
+
+static klog : Kio = Kio { lol: 1337 };
+
+// std-module-trick to have the compiler emit correct expansions of `format_args!`
+mod std { pub use core::fmt; }
+macro_rules! println {
+    ($($arg:tt)*) => (
+      write(&mut  klog, format_args!($($arg)*))
+    )
+}
+/*let mut w = Vec::new();
+write!(&mut w, "test");*/
+
+
+// fix allocations
 mod myheap;
-//use core::prelude::*;
 
 extern {
   fn abort() -> !;
@@ -43,6 +67,15 @@ pub fn virtio_init() {
       None => (),
     }
   }
+
+  let num = 3;
+
+  println!("easy life");
+/*
+  let args = format_args!("now the state is");
+  unsafe {
+    write(1, args);
+  }*/
 }
 
 
