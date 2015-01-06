@@ -17,18 +17,16 @@ struct Kio {
 
 impl core::fmt::Writer for Kio {
   fn write_str(&mut self, s: &str) -> Result<(), core::fmt::Error> {
-    unsafe { rust_printk(s); }
+    //unsafe { rust_printk(s); }
     Ok(()) // yes, we're lying
   }
 }
-
-static klog : Kio = Kio { lol: 1337 };
 
 // std-module-trick to have the compiler emit correct expansions of `format_args!`
 mod std { pub use core::fmt; }
 macro_rules! println {
     ($($arg:tt)*) => (
-      write(&mut  klog, format_args!($($arg)*))
+      write(&mut Kio { lol: 1337 }, format_args!($($arg)*))
     )
 }
 /*let mut w = Vec::new();
@@ -50,12 +48,12 @@ struct State {
 static mut state : Option<State> = None;
 
 extern {
-  fn rust_printk(txt : &'static str) -> ();
+  fn rust_printk(txt : &str) -> ();
 }
 
 #[no_mangle]
 pub fn virtio_init() {
-  unsafe { rust_printk("hai from rust\n"); }
+/*  unsafe { rust_printk("hai from rust\n"); }
 
   // apparently, anything modifying global mutable state is considered unsafe...
   unsafe { state = Some(State { number: 1337, string: "" }); }
@@ -69,7 +67,7 @@ pub fn virtio_init() {
   }
 
   let num = 3;
-
+*/
   println!("easy life");
 /*
   let args = format_args!("now the state is");
