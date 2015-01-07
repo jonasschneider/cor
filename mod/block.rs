@@ -39,12 +39,20 @@ struct Kio {
 
 impl core::fmt::Writer for Kio {
   fn write_str(&mut self, s: &str) -> Result<(), core::fmt::Error> {
+    let sl = s.as_bytes();
+    let len = s.len();
+
     unsafe {
       // FIXME: s is a Rust string here, but we need a C string
-      rust_printk(s);
+      rust_writek(sl, len);
     }
     Ok(()) // yes, we're lying
   }
+}
+
+
+extern {
+  fn rust_writek(txt : &[u8], len: uint) -> ();
 }
 
 // std-module-trick to have the compiler emit correct expansions of `format_args!`

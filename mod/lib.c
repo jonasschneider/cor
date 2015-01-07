@@ -16,6 +16,13 @@ void rust_printk(const char *str) {
   cor_printk(str);
 }
 
+// this is not a null-terminated c string, but an u8 array of length `len`.
+void rust_writek(const char *str, size_t len) {
+  for(size_t i = 0; i < len; i++) {
+    putc(str[i]);
+  }
+}
+
 void abort() {
   while(1);
 }
