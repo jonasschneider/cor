@@ -125,8 +125,6 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
   uint32_t bar0 = pciConfigReadLong(bus, slot, function, 0x10);
   uint16_t io_base = bar0 & 0xFFFFFFFC;
 
-  virtio_init();
-
   cor_printk("And here is its virtio I/O space:\n");
   for(int i = 0; i < 6; i++) {
     uint32_t state2 = sysInLong(io_base+i*4);

@@ -8,26 +8,50 @@ extern crate libc;
 
 use core::prelude::*;
 use core::fmt::write;
-
 //use alloc::boxed;
+use core::fmt::Arguments;
+
+
+macro_rules! mywrite {
+    ($dst:expr, $($arg:tt)*) => ((&mut *$dst).write_fmt(format_args!($($arg)*)))
+}
+
+macro_rules! mywriteln {
+    ($dst:expr, $fmt:expr $($arg:tt)*) => (
+        mywrite!($dst, concat!($fmt, "\n") $($arg)*)
+    )
+}
+
+
+pub fn myprintln_args(fmt: Arguments) -> Result<(), core::fmt::Error>  {
+  let kio = &mut ::Kio { lol: 1337 };
+  let io = kio as &mut core::fmt::Writer;
+  mywriteln!(io, "{}", fmt)
+}
+
+macro_rules! newprint {
+    ($($arg:tt)*) => (myprintln_args(format_args!($($arg)*)))
+}
 
 struct Kio {
   lol: int,
 }
 
-
 impl core::fmt::Writer for Kio {
   fn write_str(&mut self, s: &str) -> Result<(), core::fmt::Error> {
-    unsafe { rust_printk(s); rust_printk("\n"); }
+    unsafe {
+      // FIXME: s is a Rust string here, but we need a C string
+      rust_printk(s);
+    }
     Ok(()) // yes, we're lying
   }
 }
 
 // std-module-trick to have the compiler emit correct expansions of `format_args!`
 mod std { pub use core::fmt; }
-macro_rules! println {
+macro_rules! print {
     ($($arg:tt)*) => (
-      write(&mut Kio { lol: 1337 }, format_args!($($arg)*))
+      write(&mut Kio { lol: 1337 }, format_args!($($arg)*));
     )
 }
 /*let mut w = Vec::new();
@@ -72,7 +96,7 @@ pub fn virtio_init() {
 */
   let num = 3;
 
-  println!("the number is {}", num);
+  newprint!("the number is {} lol\n", num);
 /*
   let args = format_args!("now the state is");
   unsafe {

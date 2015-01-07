@@ -23,6 +23,8 @@ void cor_panic(const char *msg) {
   __asm__ ( "hlt" );
 }
 
+void virtio_init();
+
 void cor_dump_page_table(uint64_t *start, int level) {
   for(uint64_t *page_table_entry = start; page_table_entry < start+512; page_table_entry++) {
     if(*page_table_entry != 0) {
@@ -172,7 +174,7 @@ void kernel_main(void) {
   } else {
     cor_panic("Test interrupt seems to have messed up the stack.");
   }
-  __asm__ ( "sti" );
+  //__asm__ ( "sti" );
   cor_printk("Interrupts look OK.\n");
 
 
@@ -186,6 +188,9 @@ void kernel_main(void) {
   cor_printk("OK.\n");
 
 
+  virtio_init();
+
+  cor_panic("hi");
 
   /*unsigned int rr = hello_main();
   cor_printk("Rust returned: %u\n", rr);
