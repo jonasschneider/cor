@@ -1,6 +1,6 @@
 #![crate_type="staticlib"]
 #![no_std]
-#![feature(globs,lang_items,macro_rules)]
+#![feature(lang_items)]
 //extern crate alloc;
 extern crate core;
 extern crate libc;
@@ -9,24 +9,24 @@ extern crate libc;
 use core::prelude::*;
 use core::fmt::write;
 //use alloc::boxed;
-use core::fmt::Arguments;
+use core::fmt;
 
 
-macro_rules! mywrite {
+macro_rules! write {
     ($dst:expr, $($arg:tt)*) => ((&mut *$dst).write_fmt(format_args!($($arg)*)))
 }
 
-macro_rules! mywriteln {
+macro_rules! writeln {
     ($dst:expr, $fmt:expr $($arg:tt)*) => (
-        mywrite!($dst, concat!($fmt, "\n") $($arg)*)
+        write!($dst, concat!($fmt, "\n") $($arg)*)
     )
 }
 
 
-pub fn myprintln_args(fmt: Arguments) -> Result<(), core::fmt::Error>  {
+pub fn myprintln_args(fmt: fmt::Arguments) -> Result<(), core::fmt::Error>  {
   let kio = &mut ::Kio { lol: 1337 };
   let io = kio as &mut core::fmt::Writer;
-  mywriteln!(io, "{}", fmt)
+  writeln!(io, "{}", fmt)
 }
 
 macro_rules! newprint {
@@ -78,18 +78,26 @@ struct State {
     string: &'static str
 }
 
+impl fmt::Show for State {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // The `f` value implements the `Writer` trait, which is what the
+        // write! macro is expecting. Note that this formatting ignores the
+        // various flags provided to format strings.
+        write!(f, "(num:{}, s:{})", self.number, self.string)
+    }
+}
+
 static mut state : Option<State> = None;
 
 extern {
   fn rust_printk(txt : &str) -> ();
 }
 
+
+
 const OS_DEFAULT_STACK_ESTIMATE: uint = 2 * (1 << 20);
 #[no_mangle]
 pub fn virtio_init() {
-
-/*  unsafe { rust_printk("hai from rust\n"); }
-
 
   // apparently, anything modifying global mutable state is considered unsafe...
   unsafe { state = Some(State { number: 1337, string: "" }); }
@@ -101,15 +109,8 @@ pub fn virtio_init() {
       None => (),
     }
   }
-*/
-  let num = 3;
 
-  newprint!("the number is {} lol\n", num);
-/*
-  let args = format_args!("now the state is");
-  unsafe {
-    write(1, args);
-  }*/
+  unsafe { newprint!("the state is now {} lol\n", state); }
 }
 
 
