@@ -174,7 +174,7 @@ void kernel_main(void) {
   } else {
     cor_panic("Test interrupt seems to have messed up the stack.");
   }
-  //__asm__ ( "sti" );
+  __asm__ ( "sti" );
   cor_printk("Interrupts look OK.\n");
 
 
@@ -187,10 +187,10 @@ void kernel_main(void) {
   pci_init();
   cor_printk("OK.\n");
 
-
+  cor_printk("Doing rust call thingie\n");
   virtio_init();
 
-  cor_panic("hi");
+  //cor_panic("hi");
 
   /*unsigned int rr = hello_main();
   cor_printk("Rust returned: %u\n", rr);

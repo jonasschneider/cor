@@ -11,7 +11,6 @@ use core::fmt::write;
 //use alloc::boxed;
 use core::fmt;
 
-
 macro_rules! write {
     ($dst:expr, $($arg:tt)*) => ((&mut *$dst).write_fmt(format_args!($($arg)*)))
 }
@@ -23,6 +22,12 @@ macro_rules! writeln {
 }
 
 
+pub fn myprint_args(fmt: fmt::Arguments) -> Result<(), core::fmt::Error>  {
+  let kio = &mut ::Kio { lol: 1337 };
+  let io = kio as &mut core::fmt::Writer;
+  write!(io, "{}", fmt)
+}
+
 pub fn myprintln_args(fmt: fmt::Arguments) -> Result<(), core::fmt::Error>  {
   let kio = &mut ::Kio { lol: 1337 };
   let io = kio as &mut core::fmt::Writer;
@@ -30,6 +35,10 @@ pub fn myprintln_args(fmt: fmt::Arguments) -> Result<(), core::fmt::Error>  {
 }
 
 macro_rules! newprint {
+    ($($arg:tt)*) => (myprint_args(format_args!($($arg)*)))
+}
+
+macro_rules! newprintln {
     ($($arg:tt)*) => (myprintln_args(format_args!($($arg)*)))
 }
 
@@ -110,7 +119,7 @@ pub fn virtio_init() {
     }
   }
 
-  unsafe { newprint!("the state is now {} lol\n", state); }
+  unsafe { newprintln!("the state is now {}, lol", state); }
 }
 
 
