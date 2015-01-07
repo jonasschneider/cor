@@ -69,10 +69,10 @@ pub fn virtio_init() {
       None => (),
     }
   }
-
-  let num = 3;
 */
-  println!("easy life");
+  let num = 3;
+
+  println!("the number is {}", num);
 /*
   let args = format_args!("now the state is");
   unsafe {

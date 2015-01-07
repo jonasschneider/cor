@@ -430,6 +430,13 @@ in_long64:
   mov $0x9fff0|0x0000008000000000, %rax
   mov %rax, %rsp
 
+  # Another thing you normally would never even think about disabling, so we'll set
+  # it here for you: Set bit 9 of CR4, the OSFXSR bit, to enable SSE instructions
+  # and access to the XMM registers.
+  mov %cr4, %rax
+  or $(1<<9), %rax
+  mov %rax, %cr4
+
   # Finally, go on and jump to stage 2! (Way at the beginning, loaded it from
   # disk and placed its entrypoint at 0x10000.) For some reason, I can't do an
   # absolute jump with an immediate operand. Our job here is done, we'll go
