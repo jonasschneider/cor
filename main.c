@@ -4,6 +4,7 @@
 #include "tss.h"
 #include "mm.h"
 #include "pci.h"
+#include "timer.h"
 
 int my_kernel_subroutine() {
   return 0xbeef;
@@ -44,6 +45,7 @@ void cor_dump_page_table(uint64_t *start, int level) {
 }
 
 void dummy_isr();
+void timer_isr();
 
 void cor_hitmarker() {
   cor_printk("FIRED!\n");
@@ -84,6 +86,8 @@ struct {
 #pragma pack(pop)
 
 void kernel_main(void) {
+  unsigned long *timer = (unsigned long*)(0x80000|0x0000008000000000);
+
   if(sizeof(uint8_t) != 1) {
     cor_printk("sizeof(uint8_t) = %d !!", sizeof(uint8_t));
     cor_panic("assertion failure");
@@ -113,6 +117,9 @@ void kernel_main(void) {
   cor_current_writec = cor_chrdev_serial_write;
   cor_printk("Switched to serial console.\n");
 
+  *timer = 0;
+  cor_printk("timer start: %lx\n", *timer);
+
 
   uint64_t res = 1;
   __asm__ (
@@ -132,20 +139,22 @@ void kernel_main(void) {
 
   cor_printk("Initializing interrupts..");
 
-  // cf. intel_64_software_developers_manual.pdf pg. 1832
-  void *target = (void*)(((ptr_t)&dummy_isr) | 0x0000008000000000);
-
-  cor_printk("ISR target is %p\n", target);
-
   void *base = (void*)(0x6000|0x0000008000000000);
   const int entrysize = 16; // in bytes
-  const int n_entry = 55;
+  const int n_entry = 0x80; // 128
   idtr.base = (uint64_t)base;
   idtr.limit = entrysize * n_entry;
 
   for(int i = 0; i < n_entry; i++) {
     void *offset = base+(i*entrysize);
+    void *target;
+    if(i == 0x20) {
+      target = (void*)(((ptr_t)&dummy_isr) | 0x0000008000000000);
+    } else {
+      target = (void*)(((ptr_t)&timer_isr) | 0x0000008000000000);
+    }
 
+    // cf. intel_64_software_developers_manual.pdf pg. 1832
     *(uint16_t*)(offset+0) = (uint16_t) ((uint64_t)target >> 0);
     *(uint16_t*)(offset+2) = (uint16_t) 8; // segment
     *(uint16_t*)(offset+4) = (uint16_t) 0xee00; // flags
@@ -177,18 +186,22 @@ void kernel_main(void) {
   __asm__ ( "sti" );
   cor_printk("Interrupts look OK.\n");
 
-
-  cor_printk("Setting up TSS.. ");
-  tss_setup();
-  cor_printk("OK.\n");
+  // Now that we have interrupts, we can set up the timer on IRQ 0x20
+  timer_init(0x20);
 
 
-  cor_printk("Initializing PCI.. ");
-  pci_init();
-  cor_printk("OK.\n");
 
-  cor_printk("Doing rust call thingie\n");
-  virtio_init();
+  // cor_printk("Setting up TSS.. ");
+  // tss_setup();
+  // cor_printk("OK.\n");
+
+
+  // cor_printk("Initializing PCI.. ");
+  // pci_init();
+  // cor_printk("OK.\n");
+
+  // cor_printk("Doing rust call thingie\n");
+  // virtio_init();
 
   //cor_panic("hi");
 
@@ -197,6 +210,14 @@ void kernel_main(void) {
   if(rr != 1337) {
     cor_panic("Rust failed to return magic.\n");
   }*/
+
+  while(1) {
+    cor_printk("timer: %lx\n", *timer);
+    __asm__ ("hlt");
+  }
+
+  cor_panic("lolz");
+
 
   cor_printk("Exec'ing init.\n");
 

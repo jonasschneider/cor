@@ -43,3 +43,17 @@ bye:
   pop %rbx
 
   iretq
+
+.global timer_isr
+timer_isr:
+  # increment our timer
+  mov 0x80000|0x0000008000000000, %rax
+  add $1, %rax
+  mov %rax, 0x80000|0x0000008000000000
+
+  # re-enable interrupt
+  mov $0x20, %al # EOI command
+  mov $0x20, %dx # command port of PIC1
+  outb %al, %dx
+
+  iretq

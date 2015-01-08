@@ -147,6 +147,27 @@ done:
   # (We won't ever reenable them ourselves.)
   cli
 
+  ## asdf
+
+  # channel 0, lobyte/hibyte, rate generator
+  mov 0b00110100, %al                  ;
+  out %al, $0x43
+
+  # set reload value
+  mov $0x8080, %ax
+  out %al, $0x40 # set low byte
+  rol $8, %ax # swap low/high bytes (you can't output %ah, apparently)
+  out %al, $0x40 # set high byte
+
+
+  ## disable the APIC, enable the PIC
+  mov $0x1B, %ecx
+  mov $0, %eax
+  wrmsr
+
+  sti
+
+
   # So protected mode has this thing called segmentation. A table of segments
   # contains a list of segment descriptors. These are blobs of virtual memory
   # of arbitrary size that are mapped to physical memory by the MMU.
@@ -427,7 +448,7 @@ in_long64:
   # Set up the 64-bit stack to start at 0x9fff0 and grow downwards.
   # Our memory map (see README.md) says that the stack starts at 0x9ffff, but we
   # align to the lower 16-byte boundary. I guess that makes sense.
-  mov $0x9fff0|0x0000008000000000, %rax
+  mov $0x7fff0|0x0000008000000000, %rax
   mov %rax, %rsp
 
   # Another thing you normally would never even think about disabling, so we'll set

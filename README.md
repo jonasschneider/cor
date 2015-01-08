@@ -100,6 +100,7 @@ TODOs:
 
 Memory map
 ----------
+TODO: Make this entire map part of the linker script
 Physical memory map at the time of stage2 startup:
 
 - `0x01000-0x05FFF`: page tables courtesy of `boot.s`
@@ -108,7 +109,7 @@ Physical memory map at the time of stage2 startup:
 - `0x50000-0x6FFFD`: stage2 `.data`
 - `0x6FFFE`: `0x13` (magic)
 - `0x6FFFF`: `0x37` (magic)
-- `0x70000-0x9FFFF`: stage2's Stack (TODO: guard page)
+- `0x70000-0x7FFFF`: stage2's Stack (TODO: guard page)
 - (I just realized that 0xa0000 - 0xfffff is still free, fuu base16)
 - After that there are likely some memory holes
 
