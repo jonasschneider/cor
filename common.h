@@ -17,3 +17,5 @@ void *tkalloc(size_t sz, const char *what_for, uint64_t align);
 */
 #define PTOK(x) ((void*)((uint64_t)(x) | 0x0000008000000000))
 #define KTOP(x) ((void*)((uint64_t)(x) & (0x0000008000000000-1)))
+
+#define debug(x, ...)

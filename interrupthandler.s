@@ -49,11 +49,16 @@ timer_isr:
   push %rax
 
   # increment our timer
-  mov 0x80000|0x0000008000000000, %eax
-  inc %eax
-  mov %eax, 0x80000|0x0000008000000000
+  mov 0x81000|0x0000008000000000, %rax
+  inc %rax
+  mov %rax, 0x81000|0x0000008000000000
 
-  # re-enable interrupt
+  call cor_hitmarker
+
+  # tell the PIC that we've handled the interrupt and it can send the next one
+  # (see http://wiki.osdev.org/8259_PIC#End_of_Interrupt)
+  # TODO: Isn't this a race condition? Do we need to cli here first and then sti
+  # before the iretq?
   mov $0x20, %al # command port of PIC1
   outb %al, $0x20
 

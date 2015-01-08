@@ -1,1 +1,1 @@
-void timer_init(char irq);
+void timer_init();

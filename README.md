@@ -119,6 +119,7 @@ Additional virtual mapped memory:
 
 Additional physical memory used by stage2:
 - `0x06000-0x06FFF`: stage2's IDT (TODO: replace with kalloc)
+- `0x81000` System timer jiffies counter (please don't ask)
 
 All other memory is allocated in `mm.c` by `kalloc`, which uses the BIOS
  memory map provided by boot.s to place things into higher memory (usually,
