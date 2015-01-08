@@ -51,7 +51,7 @@ void PIC_remap(char offset1, char offset2)
   outb(PIC1_DATA, 4);                       // ICW3: tell Master PIC that there is a slave PIC at IRQ2 (0000 0100)
   outb(PIC2_DATA, 2);                       // ICW3: tell Slave PIC its cascade identity (0000 0010)
 
-  outb(PIC1_DATA, ICW4_AUTO);
+  outb(PIC1_DATA, ICW4_8086);
   outb(PIC2_DATA, ICW4_8086);
 
   outb(PIC1_DATA, a1);   // restore saved masks.

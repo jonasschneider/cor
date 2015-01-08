@@ -149,7 +149,7 @@ void kernel_main(void) {
   for(int i = 0; i < n_entry; i++) {
     void *offset = base+(i*entrysize);
     void *target;
-    if(i == 0x20) {
+    if(i != 0x20) {
       target = (void*)(((ptr_t)&dummy_isr) | 0x0000008000000000);
     } else {
       target = (void*)(((ptr_t)&timer_isr) | 0x0000008000000000);

@@ -47,19 +47,15 @@ bye:
 .global timer_isr
 timer_isr:
   push %rax
-  push %rdx
+
   # increment our timer
   mov 0x80000|0x0000008000000000, %eax
   inc %eax
   mov %eax, 0x80000|0x0000008000000000
 
-  call cor_hitmarker
-
   # re-enable interrupt
-  mov $0x20, %al # EOI command
-  mov $0x20, %dx # command port of PIC1
+  mov $0x20, %al # command port of PIC1
   outb %al, $0x20
 
-  pop %rdx
   pop %rax
   iretq
