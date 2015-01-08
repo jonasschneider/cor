@@ -6,6 +6,7 @@ void *rust_allocate(size_t size, size_t align) {
 }
 
 void rust_deallocate(void *what, size_t old_size, size_t align) {
+  cor_printk("bro, do you even free %p\n", what);
   // TODO
   old_size = old_size;
   align = align;
@@ -25,6 +26,10 @@ void rust_writek(const char *str, size_t len) {
 
 void abort() {
   while(1);
+}
+
+void _Unwind_Resume() {
+  cor_panic("rust's _Unwind_Resume() got called!");
 }
 
 // What follows is stuff that's needed when we don't --gc-sections out all

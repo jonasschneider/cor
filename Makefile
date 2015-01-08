@@ -17,7 +17,7 @@ clean:
 boot.o: boot.s
 	$(AS) boot.s -o boot.o
 
-mod/%.kmo: mod/*.rs mod/*.c
+mod/%.kmo: mod/**/*.rs mod/*.c
 	$(MAKE) -C mod
 
 mbr.bin: blank_mbr boot.o

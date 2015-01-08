@@ -1,6 +1,6 @@
 #![crate_type="staticlib"]
 #![no_std]
-#![feature(lang_items)]
+#![feature(lang_items,unsafe_destructor,asm)]
 
 extern crate core;
 
@@ -13,6 +13,18 @@ mod std { pub use core::fmt; } // std-module-trick to fix expansion of `format_a
 
 // Provide the compiler with implementations for heap data structures via kalloc
 mod myheap;
+mod boxed;
+
+// cpuio library
+mod cpuio;
+
+// import submodules
+mod block {
+  pub mod virtio;
+}
+
+
+
 
 /*let mut w = Vec::new();
 write!(&mut w, "test");*/
@@ -54,6 +66,9 @@ pub fn virtio_init() {
   }
 
   unsafe { println!("the state is now {}, lol", state); }
+  let id = &1;
+  let a_device = block::virtio::init(id);
+  println!("my device is: {}", a_device);
 }
 
 #[lang = "stack_exhausted"] extern fn stack_exhausted() {}

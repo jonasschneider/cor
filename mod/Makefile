@@ -9,7 +9,7 @@ all: $(KMOS)
 clean:
 	rm -f $(KMOS)
 
-block.kmo: block.rs lib.c
+block.kmo: *.rs **/*.rs lib.c
 	rustc block.rs -C no-stack-check -C relocation-model=static -g --cfg external_funcs -C code-model=large
 	gcc -o lib.o lib.c -c $(KCCFLAGS)
 	gcc lib.o -o block.kmo~ -e virtio_init -Wl,--gc-sections,-lm,-L.,-lblock,-r $(KCCFLAGS)
