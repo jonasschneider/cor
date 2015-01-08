@@ -162,7 +162,9 @@ void kernel_main(void) {
   // that occasionally (predictibly) fires interrupts so we know that time has
   // passed.
   *timer = 0;
+  cor_printk("Starting timer.. ");
   timer_init();
+  cor_printk("OK.\n");
 
   cor_printk("Setting up TSS.. ");
   tss_setup();
@@ -176,6 +178,10 @@ void kernel_main(void) {
   virtio_init();
 
   cor_printk("Exec'ing init.\n");
+
+  while(1) {
+    cor_panic("done");
+  }
 
   //cor_dump_page_table((uint64_t *)0x1000, 1);
   cor_elf_exec(&cor_stage2_init_data, cor_stage2_init_data_len);

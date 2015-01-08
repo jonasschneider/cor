@@ -1,4 +1,6 @@
+#include "common.h"
 #include "io.h"
+#include "timer.h"
 
 void timer_init() {
   // Reference: http://wiki.osdev.org/Programmable_Interval_Timer
@@ -8,8 +10,10 @@ void timer_init() {
 
   // Now set the reload value. This determines the length of the interval between
   // the timer firing. (That means 0xffff is the slowest)
-  unsigned short int reload = 0xffff;
+  uint16_t reload = TIMER_RELOAD;
 
-  cor_outb((char)reload, 0x40);
-  cor_outb((char)(reload>>8), 0x40);
+  cor_outb((unsigned char)reload, 0x40);
+  cor_outb((unsigned char)(reload>>8), 0x40);
+
+  cor_printk("ticking at ~%u hz.. ",(uint32_t)TIMER_HZ); // print doesn't support floats yet
 }

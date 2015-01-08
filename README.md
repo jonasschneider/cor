@@ -53,6 +53,7 @@ Roadmap
 - [ ] Concurrency
   - [ ] Process lifecycle / identity management, Process table
   - [ ] Kernel worker & I/O threads
+  - [x] Enable PIT chip
   - [ ] Timer-based scheduler
   - [ ] fork()
 - [ ] Make a userspace toolchain
