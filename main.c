@@ -28,8 +28,6 @@ void cor_panic(const char *msg) {
   }
 }
 
-void virtio_init();
-
 void cor_dump_page_table(uint64_t *start, int level) {
   for(uint64_t *page_table_entry = start; page_table_entry < start+512; page_table_entry++) {
     if(*page_table_entry != 0) {
@@ -173,9 +171,6 @@ void kernel_main(void) {
   cor_printk("Initializing PCI.. ");
   pci_init();
   cor_printk("OK.\n");
-
-  cor_printk("Doing rust call thingie\n");
-  virtio_init();
 
   cor_printk("Exec'ing init.\n");
 

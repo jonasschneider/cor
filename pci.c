@@ -4,6 +4,8 @@
 
 // ref: http://wiki.osdev.org/PCI
 
+void virtio_init(unsigned int ioport);
+
 uint32_t sysInLong(uint16_t port) {
   uint32_t res;
   __asm__ (
@@ -125,6 +127,10 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
   uint32_t bar0 = pciConfigReadLong(bus, slot, function, 0x10);
   uint16_t io_base = bar0 & 0xFFFFFFFC;
 
+  cor_printk("Doing rust call thingie\n");
+  virtio_init(io_base);
+
+
   // This is pretty much all we actually interface with PCI; once we have the
   // I/O base port, we're golden. We can now talk to the actual virtio device
   // via the CPU's I/O pins directly. A couple of helpful references:
@@ -147,6 +153,8 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
     uint32_t state2 = sysInLong(io_base+i*4);
     cor_printk("%x: %x\n", i*4, state2);
   }
+
+  cor_printk("Initial state for us: %u\n", cor_inb(io_base+18));
 
   // Now, initialize the virtio device (this isn't block-device-specific yet)
   cor_printk("Initializing the virtio block device..\n");

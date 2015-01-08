@@ -52,7 +52,7 @@ impl core::fmt::Show for State {
 
 
 #[no_mangle]
-pub fn virtio_init() {
+pub fn virtio_init(ioport : u16) {
 
   // apparently, anything modifying global mutable state is considered unsafe...
   unsafe { state = Some(State { number: 1337, string: "" }); }
@@ -66,8 +66,7 @@ pub fn virtio_init() {
   }
 
   unsafe { println!("the state is now {}, lol", state); }
-  let id = &1;
-  let a_device = block::virtio::init(id);
+  let a_device = block::virtio::init(&ioport);
   println!("my device is: {}", a_device);
 }
 

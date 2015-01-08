@@ -42,48 +42,40 @@ mod common_virtio {
 }
 
 struct virtio_blkdev<'dev_life> {
+  io_base: cpuio::Port,
   q:  common_virtio::virtqueue<'dev_life>
 }
 
 
-pub fn init<'devlife>(id : &'devlife uint) -> Box<virtio_blkdev> {
+pub fn init<'devlife>(io_base : &'devlife u16) -> Box<virtio_blkdev> {
+  let io = *io_base;
+
   let mybuf = bytebuf::new("a buffer");
   let theq = common_virtio::virtqueue{buf: mybuf};
   let dev = box virtio_blkdev{
-    q: theq
+    q: theq,
+    io_base: io
   };
 
-  let io_base = 10; // TODO
-  //unsafe { cpuio::write8(io_base+18, 0); }
-  unsafe { cpuio::putc('X') }
-  unsafe { cpuio::putc('X') }
 
-  return dev
-}
+  let mut state = 0;
+  println!("Initializing virtio block device...");
+  unsafe { cpuio::write8(io+18, state); }
 
-//   cor_printk("Initializing the virtio block device..\n");
-//   // Reset
-//   char state = 0;
-//   cor_outb(state, io_base+18);
+  // ack
+  state = state | 1;
+  unsafe { cpuio::write8(io+18, state); }
 
-//   // Ack
-//   state |= VIRTIO_STATUS_ACKNOWLEDGE;
-//   cor_outb(state, io_base+18);
+  // drive
+  state = state | 2;
+  unsafe { cpuio::write8(io+18, state); }
 
-//   // Drive
-//   state |= VIRTIO_STATUS_DRIVER;
-//   cor_outb(state, io_base+18);
-
-//   // Now comes the block-device-specific setup.
-//   // (The configuration of a single virtqueue isn't device-specific though; it's the same
-//   // for i.e. the virtio network controller)
-
-//   // Feature negotiation
-//   uint32_t offered_featureflags = sysInLong(io_base);
-//   cor_printk("The device offers these feature bits: %x\n", offered_featureflags);
-//   // In theory, we'd do `negotiated = offered & supported`; we don't actually
-//   // support any flags, so we can just set 0.
-//   sysOutLong(io_base+4, 0);
+  // Feature negotiation
+  let offered_featureflags = unsafe { cpuio::read16(io+0) };
+  println!("The device offered us these feature bits: {}", offered_featureflags);
+  // In theory, we'd do `negotiated = offered & supported`; we don't actually
+  // support any flags, so we can just set 0.
+  unsafe {cpuio::write16(io+4, 0); }
 
 //   // Discover virtqueues; the block devices only has one
 //   iowrite16(io_base+14, 0); // select first queue
@@ -244,6 +236,9 @@ pub fn init<'devlife>(id : &'devlife uint) -> Box<virtio_blkdev> {
 
 //   cor_printk("Done initializing the virtio block device\n");
 // }
+
+  return dev
+}
 
 
 impl<'a> fmt::Show for virtio_blkdev<'a> {
