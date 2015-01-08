@@ -48,7 +48,8 @@ void dummy_isr();
 void timer_isr();
 
 void cor_hitmarker() {
-  cor_printk("FIRED!\n");
+  unsigned long *timer = (unsigned long*)(0x80000|0x0000008000000000);
+  cor_printk("FIRED! timer=%x\n", *timer);
 }
 
 uint64_t syscall_write(uint64_t fd64, uint64_t buf64, size_t count64) {
