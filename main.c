@@ -7,6 +7,7 @@
 #include "pic.h"
 #include "timer.h"
 #include "interrupt.h"
+#include "sched.h"
 
 extern char cor_stage2_init_data;
 extern int cor_stage2_init_data_len;
@@ -170,6 +171,10 @@ void kernel_main(void) {
 
   cor_printk("Initializing PCI.. ");
   pci_init();
+  cor_printk("OK.\n");
+
+  cor_printk("Setting up scheduler.. ");
+  sched_init();
   cor_printk("OK.\n");
 
   cor_printk("Exec'ing init.\n");

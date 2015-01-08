@@ -1,0 +1,1 @@
+void sched_init();
