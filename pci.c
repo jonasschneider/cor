@@ -324,7 +324,12 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
         tbuf[i] = *(char*)(payload+i);
       }
       tbuf[20] = '\0';
-      cor_printk("ascii=%s\n", tbuf);
+      if(tbuf[0] >= 'A' && tbuf[0] <= 'z') {
+        cor_printk("ascii=%s\n", tbuf);
+      } else {
+        cor_printk("doesn't look like ascii though\n");
+      }
+
     }
   } else {
     // this could still just be a race condition
