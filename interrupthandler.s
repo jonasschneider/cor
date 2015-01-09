@@ -2,7 +2,7 @@
 .globl   dummy_isr
 .align   4
 
-dummy_isr:
+isr_dispatcher:
   push %rbx
   push %rcx
   push %rdx
@@ -15,25 +15,16 @@ dummy_isr:
   # According to the ABI, the first 6 integer or pointer arguments to a function are
   # passed in registers. The first is placed in rdi, the second in rsi, the third in rdx,
   # and then rcx, r8 and r9. Only the 7th argument and onwards are passed on the stack.
-  mov %rbx, %rdi
-  mov %rcx, %rsi
-  #mov %rdx, %rdx
+  mov 7*8(%rsp), %rdi #interrupt no
 
-  cmp $SYSCALL_WRITE, %rax
-  jne check_exit
-  call syscall_write
+  # TODO: should probably optimize these to only do this lifting on syscall interrupts, cycles everywhea!
+  mov %rax, %rsi # arg1 (if syscall)
+  mov %rdx, %r8 # arg4 (if syscall)
+  mov %rbx, %rdx # arg2 (if syscall)
+  mov %rcx, %rcx # arg3 (if syscall)
 
-check_exit:
-  cmp $SYSCALL_EXIT, %rax
-  jne check_moremem
-  call syscall_exit
+  call interrupt
 
-check_moremem:
-  cmp $SYSCALL_MOREMEM, %rax
-  jne bye
-  call syscall_moremem
-
-bye:
   pop %r11
   pop %r10
   pop %r9
@@ -41,6 +32,9 @@ bye:
   pop %rdx
   pop %rcx
   pop %rbx
+
+  # pop the interrupt number
+  add $8, %rsp
 
   iretq
 
@@ -53,8 +47,6 @@ timer_isr:
   inc %rax
   mov %rax, 0x81000|0x0000008000000000
 
-  call cor_hitmarker
-
   # tell the PIC that we've handled the interrupt and it can send the next one
   # (see http://wiki.osdev.org/8259_PIC#End_of_Interrupt)
   # TODO: Isn't this a race condition? Do we need to cli here first and then sti
@@ -64,3 +56,5 @@ timer_isr:
 
   pop %rax
   iretq
+
+#include "intstubs.s~"

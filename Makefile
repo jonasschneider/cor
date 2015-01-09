@@ -29,7 +29,7 @@ mbr.bin: blank_mbr boot.o
 stage2_entrypoint.o: stage2_entrypoint.s
 	$(CC) $(KCFLAGS) -c stage2_entrypoint.s -o stage2_entrypoint.o
 
-interrupthandler.o: interrupthandler.s include/cor/syscall.h
+interrupthandler.o: interrupthandler.s include/cor/syscall.h intstubs.s~
 	$(CC) $(KCFLAGS) -c -x assembler-with-cpp -Iinclude $< -o $@
 
 stage2.o: $(OBJS) linkerscript stage2_entrypoint.o init_static.o mod/block.kmo
@@ -59,3 +59,6 @@ init_static.o: init_static.c~
 init_static.c~: userspace/*.c
 	$(MAKE) -C userspace
 	cat userspace/init | ruby -e 'b = $$stdin.read.bytes; puts "int cor_stage2_init_data_len = "+b.count.to_s+"; char cor_stage2_init_data[] = {";puts b.map{|x|"0x#{x.to_s(16)}"}.join(", ");puts "};"' > $@
+
+intstubs.s~:
+	ruby -e '0.upto(255) { |i| puts ".align 16\n.global intrstub_#{i}\nintrstub_#{i}:\n  push $$#{i}\n  jmp isr_dispatcher\n\n" }' > $@

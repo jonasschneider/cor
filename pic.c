@@ -43,6 +43,7 @@ void PIC_remap(char offset1, char offset2)
   unsigned char a1, a2;
   a1 = cor_inb(PIC1_DATA);                        // save masks
   a2 = cor_inb(PIC2_DATA);
+  a1 = a2 = 0; // TODO: unmask all interrupts for now
 
   outb(PIC1_COMMAND, ICW1_INIT+ICW1_ICW4);  // starts the initialization sequence (in cascade mode)
   outb(PIC2_COMMAND, ICW1_INIT+ICW1_ICW4);

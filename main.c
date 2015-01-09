@@ -66,10 +66,11 @@ uint64_t syscall_write(uint64_t fd64, uint64_t buf64, size_t count64) {
   return 0;
 }
 
-void syscall_exit(uint64_t ret64) {
+uint64_t syscall_exit(uint64_t ret64) {
   int ret = (int)ret64;
   cor_printk("exit() ret=%x\n", ret);
   cor_panic("init exited");
+  return 0; // not really meaningful, but by convention, syscalls always return one 64-bit val
 }
 
 void (*cor_current_writec)(const char c) = chrdev_console_writec;

@@ -263,7 +263,6 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
   //   check" will in practice be delivered to us via an interrupt. (I think)
   iowrite16(io_base+16, 0);
 
-
   // Now, in reality, we'd wait until we receive the aforementioned
   // interrupt. However, I haven't set up anything using interrupts yet. A
   // cringeworthy "alternative" is just to busy loop for a while.

@@ -1,7 +1,8 @@
 #include "common.h"
+#include "cor/syscall.h"
 
 // see interrupthandler.s
-void dummy_isr();
+void intrstub_0();
 void timer_isr();
 
 #pragma pack(push, 1)
@@ -22,7 +23,8 @@ void interrupt_init() {
     void *offset = base+(i*entrysize);
     void *target;
     if(i != 0x20) {
-      target = (void*)(((ptr_t)&dummy_isr) | 0x0000008000000000);
+      void *t = (void*)&intrstub_0 + 0x10*i; // this is horrible
+      target = (void*)(((ptr_t)t) | 0x0000008000000000);
     } else {
       target = (void*)(((ptr_t)&timer_isr) | 0x0000008000000000);
     }
@@ -64,4 +66,25 @@ void interrupt_init() {
 
   // Okay, from now on, we'll be able to sort-of-meaningfully handle interrupts.
   __asm__ ( "sti" );
+}
+
+// TODO: header file for these
+uint64_t syscall_write(uint64_t fd64, uint64_t buf64, size_t count64);
+uint64_t syscall_exit(uint64_t ret64);
+uint64_t syscall_moremem(uint64_t insize);
+
+uint64_t interrupt(char no, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4) {
+  cor_printk("oh god interrupt %x, 1=%lx, 2=%lx, 3=%lx, 4=%lx\n", (int)no, arg1, arg2, arg3, arg4);
+  if(no==0x31) {
+    if(arg1 == SYSCALL_WRITE) {
+      return syscall_write(arg2, arg3, arg4);
+    }
+    if(arg1 == SYSCALL_EXIT) {
+      return syscall_exit(arg2);
+    }
+    if(arg1 == SYSCALL_MOREMEM) {
+      return syscall_moremem(arg2);
+    }
+  }
+  return 0; // TODO: wat
 }
