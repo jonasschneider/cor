@@ -81,24 +81,13 @@ void cor_writec(const char c);
 void (*cor_current_writec)(const char c) = cor_writec;
 void init_task();
 
-void kernel_main(void) {
-  if(sizeof(uint8_t) != 1) {
-    cor_printk("sizeof(uint8_t) = %d !!", sizeof(uint8_t));
-    cor_panic("assertion failure");
-  }
-  if(sizeof(uint16_t) != 2) {
-    cor_printk("sizeof(uint16_t) = %d !!", sizeof(uint16_t));
-    cor_panic("assertion failure");
-  }
-  if(sizeof(uint32_t) != 4) {
-    cor_printk("sizeof(uint32_t) = %d !!", sizeof(uint32_t));
-    cor_panic("assertion failure");
-  }
-  if(sizeof(uint64_t) != 8) {
-    cor_printk("sizeof(uint64_t) = %d !!", sizeof(uint64_t));
-    cor_panic("assertion failure");
-  }
+// some compile-time sanity checks go here
+CASSERT(sizeof(uint8_t) == 1);
+CASSERT(sizeof(uint16_t) == 2);
+CASSERT(sizeof(uint32_t) == 4);
+CASSERT(sizeof(uint64_t) == 8);
 
+void kernel_main(void) {
   console_clear();
   uint32_t revision = *((uint32_t*)0x6fffa);
   cor_printk("\n   Cor rev. %xx\n\n",revision);
@@ -176,22 +165,19 @@ void kernel_main(void) {
 
   cor_printk("Setting up scheduler.. ");
   sched_init();
+  sched_add(init_task, "PID EINS");
   cor_printk("OK.\n");
 
-  cor_printk("Exec'ing init.\n");
-
-  sched_add(init_task, "PID EINS");
-
+  cor_printk("Passing control to scheduler loop.. ");
   sched_exec();
 
-  cor_printk("reached the unreachable");
-  while(1) {
-    cor_printk(".");
-    for(int i = 0; i < 1000000; i++);
-  }
+  // we'll never return... if everything goes right
+
+  cor_panic("reached the unreachable");
 }
 
 void init_task() {
+  cor_printk("Exec'ing init from task..\n");
   cor_elf_exec(&cor_stage2_init_data, cor_stage2_init_data_len);
 }
 
