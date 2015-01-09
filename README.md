@@ -70,6 +70,10 @@ Roadmap
   - [ ] tiniest filesystem imaginable (read-only single-level?) -> tar format, FS state in rust
 - [ ] Networking -> DHCP + UDP/IP, then TCP
 - [ ] implement `ls` & `netcat` equivalents
+- [ ] Litmus test for a complete operating system:
+
+    $ ping 8.8.8.8 | sed -l 's/.*/ping/' | xargs -n1 say
+
 
 More unicorns:
 

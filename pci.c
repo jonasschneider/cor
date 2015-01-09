@@ -127,48 +127,11 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
   uint32_t bar0 = pciConfigReadLong(bus, slot, function, 0x10);
   uint16_t io_base = bar0 & 0xFFFFFFFC;
 
+  // This is pretty much all we actually interface with PCI; once we have the
+  // I/O base port, we're golden.
+
   cor_printk("Doing rust call thingie\n");
   virtio_init(io_base);
-
-
-  // This is pretty much all we actually interface with PCI; once we have the
-  // I/O base port, we're golden. We can now talk to the actual virtio device
-  // via the CPU's I/O pins directly. A couple of helpful references:
-  //
-  // http://ozlabs.org/~rusty/virtio-spec/virtio-0.9.5.pdf
-  //     This is the actual virtio spec.
-  //
-  // http://ozlabs.org/~rusty/virtio-spec/virtio-paper.pdf
-  //     This is an academic paper describing the virtio design and architecture,
-  //     and how a virtqueue works and is implemented.
-  //
-  // https://www.freebsd.org/cgi/man.cgi?query=virtio&sektion=4
-  //     This is actually a FreeBSD manpage that gives a pretty good high-
-  //     level overview of how the guest kernel usually interacts with the
-  //     virtio interfaces and how it presents them to the guest OS's file
-  //     system.
-
-  cor_printk("And here is its virtio I/O space:\n");
-  for(int i = 0; i < 6; i++) {
-    uint32_t state2 = sysInLong(io_base+i*4);
-    cor_printk("%x: %x\n", i*4, state2);
-  }
-
-  cor_printk("Initial state for us: %u\n", cor_inb(io_base+18));
-
-  // Now, initialize the virtio device (this isn't block-device-specific yet)
-  cor_printk("Initializing the virtio block device..\n");
-  // Reset
-  char state = 0;
-  cor_outb(state, io_base+18);
-
-  // Ack
-  state |= VIRTIO_STATUS_ACKNOWLEDGE;
-  cor_outb(state, io_base+18);
-
-  // Drive
-  state |= VIRTIO_STATUS_DRIVER;
-  cor_outb(state, io_base+18);
 
   // Now comes the block-device-specific setup.
   // (The configuration of a single virtqueue isn't device-specific though; it's the same
@@ -219,9 +182,9 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
   // TODO: The spec says that we can do something with MSI-X here, whatever
 
   // Tell the device we're done setting it up
-  state |= VIRTIO_STATUS_DRIVER_OK;
-  cor_outb(state, io_base+18);
-  cor_printk("Device state set to: %x\n", state); // this should be 7 now
+  // state |= VIRTIO_STATUS_DRIVER_OK;
+  // cor_outb(state, io_base+18);
+  // cor_printk("Device state set to: %x\n", state); // this should be 7 now
 
   // This completes the init sequence; we can know use the virtio device!
 

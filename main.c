@@ -79,6 +79,7 @@ void syscall_exit(uint64_t ret64) {
 
 void cor_writec(const char c);
 void (*cor_current_writec)(const char c) = cor_writec;
+void init_task();
 
 void kernel_main(void) {
   if(sizeof(uint8_t) != 1) {
@@ -179,9 +180,9 @@ void kernel_main(void) {
 
   cor_printk("Exec'ing init.\n");
 
-  //cor_dump_page_table((uint64_t *)0x1000, 1);
-  cor_elf_exec(&cor_stage2_init_data, cor_stage2_init_data_len);
+  sched_add(init_task, "PID EINS");
 
+  sched_exec();
 
   cor_printk("reached the unreachable");
   while(1) {
@@ -189,6 +190,11 @@ void kernel_main(void) {
     for(int i = 0; i < 1000000; i++);
   }
 }
+
+void init_task() {
+  cor_elf_exec(&cor_stage2_init_data, cor_stage2_init_data_len);
+}
+
 
 const int console_width = 80;
 const int console_height = 25;

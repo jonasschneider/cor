@@ -3,6 +3,7 @@
 typedef unsigned int uint;
 
 typedef unsigned long ptr_t;
+typedef unsigned long pid_t;
 
 void cor_panic(const char *msg);
 int cor_printk(const char *format, ...);

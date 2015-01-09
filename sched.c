@@ -7,40 +7,40 @@ struct t {
   struct t *next;
   const char *desc;
   int ran;
+  pid_t pid;
 };
-struct t *head;
+struct t *head = 0;
 struct t *current;
+pid_t next_pid = 0;
 
 void kyield();
 void thread1();
 void thread2();
 
 void sched_init() {
-  // t1 is a special thread, I think
-  struct t *t1 = (struct t*)tkalloc(sizeof(struct t), "struct t for t1", 0x1000);
-  t1->rsp = t1->rbp = tkalloc(0x1000, "stack for t1", 0x1000);
-  t1->entry = thread1;
+
+}
+
+pid_t sched_add(void (*entry)(), const char *desc) {
+  // fill in the identity parts
+  struct t *t1 = (struct t*)tkalloc(sizeof(struct t), "struct t", 0x10);
+  t1->pid = next_pid++;
+  t1->desc = desc;
+
+  // Set up the scheduling info
+  t1->rsp = t1->rbp = tkalloc(0x1000, "task stack", 0x10); // 4k by default
+  t1->entry = entry;
   t1->ran = 0;
-  t1->desc = "t1";
 
-  struct t *t2 = (struct t*)tkalloc(sizeof(struct t), "struct t for t2", 0x1000);
-  t2->rsp = t2->rbp = tkalloc(0x1000, "stack for t2", 0x1000);
-  t2->entry = thread2;
-  t2->desc = "t2";
-  t2->ran = 0;
-
+  // Insert it into the list
+  t1->next = head;
   head = t1;
-  t1->next = t2;
-  t2->next = 0;
 
-  /**
-    An idea here is that we actually don't need to store the RIP of each
-    thread. As ridiculous as it sounds, this is possibly OK if we assume that
-    every thread that is not the current thread is stuck in a call to kyield.
-    (which is awesome, I think)
-  */
+  return t1->pid;
+}
 
-  // GOOO
+void sched_exec() {
+  // This one's actually surprisingly easy
   kyield();
 }
 
@@ -105,7 +105,9 @@ void kyield() {
 
 void thread1() {
   while(1) {
-    cor_printk("Hello from t1! working..\n");
+    void *stack;
+    __asm__ ("mov %%rsp, %0":"=r"(stack));
+    cor_printk("Hello from t1! My stack is at %p.\n", stack);
     for(int i=0;i<100000000;i++); // we can't really sleep yet
     cor_printk("t1 yielding now.\n");
     kyield();
@@ -115,7 +117,9 @@ void thread1() {
 
 void thread2() {
   while(1) {
-    cor_printk("Hello from t2! working..\n");
+    void *stack;
+    __asm__ ("mov %%rsp, %0":"=r"(stack));
+    cor_printk("Hello from t2! My stack is at %p.\n", stack);
     for(int i=0;i<100000000;i++); // we can't really sleep yet
     cor_printk("t2 yielding now.\n");
     kyield();
