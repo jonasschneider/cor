@@ -1,4 +1,5 @@
 #include "common.h"
+#include "chrdev_console.h"
 #include "chrdev_serial.h"
 #include "elf.h"
 #include "tss.h"
@@ -11,10 +12,6 @@
 
 extern char cor_stage2_init_data;
 extern int cor_stage2_init_data_len;
-
-int lawl = 0xdeadbeef;
-
-void console_clear(void);
 
 unsigned long *timer = (unsigned long*)(0x81000|0x0000008000000000);
 
@@ -47,8 +44,6 @@ void cor_dump_page_table(uint64_t *start, int level) {
   }
 }
 
-
-
 void cor_hitmarker() {
   cor_printk("FIRED! timer=%x\n", *timer);
 }
@@ -77,8 +72,7 @@ void syscall_exit(uint64_t ret64) {
   cor_panic("init exited");
 }
 
-void cor_writec(const char c);
-void (*cor_current_writec)(const char c) = cor_writec;
+void (*cor_current_writec)(const char c) = chrdev_console_writec;
 void init_task();
 
 // some compile-time sanity checks go here
@@ -88,7 +82,7 @@ CASSERT(sizeof(uint32_t) == 4);
 CASSERT(sizeof(uint64_t) == 8);
 
 void kernel_main(void) {
-  console_clear();
+  chrdev_console_init();
   uint32_t revision = *((uint32_t*)0x6fffa);
   cor_printk("\n   Cor rev. %xx\n\n",revision);
   cor_printk("Hello from the kernel.\nYes, we can multiline.\n");
@@ -179,29 +173,4 @@ void kernel_main(void) {
 void init_task() {
   cor_printk("Exec'ing init from task..\n");
   cor_elf_exec(&cor_stage2_init_data, cor_stage2_init_data_len);
-}
-
-
-const int console_width = 80;
-const int console_height = 25;
-int console_line = 0;
-int console_col = 0;
-
-void console_clear(void) {
-  console_line = 0;
-  console_col = 0;
-  for(int i = 0; i < (console_width*console_height); i++)
-    *((unsigned char*)0xB8000+i*2) = ' ';
-}
-
-void cor_writec(const char c) {
-  if(console_col == console_width-1 || c == '\n') {
-    console_line++;
-    console_col = 0;
-    if(c == '\n') return;
-  }
-
-  int grid_index = (console_col++) + console_line*console_width;
-
-  *((unsigned char*)0xB8000+grid_index*2) = c;
 }
