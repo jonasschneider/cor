@@ -2,10 +2,11 @@
 
 struct t {
   void *rsp;
-  void *rip;
+  void (*entry)();
   void *rbp;
   struct t *next;
   const char *desc;
+  int ran;
 };
 struct t *head;
 struct t *current;
@@ -15,24 +16,32 @@ void thread1();
 void thread2();
 
 void sched_init() {
+  // t1 is a special thread, I think
   struct t *t1 = (struct t*)tkalloc(sizeof(struct t), "struct t for t1", 0x1000);
   t1->rsp = t1->rbp = tkalloc(0x1000, "stack for t1", 0x1000);
-  t1->rip = (void*)thread1;
+  t1->entry = thread1;
+  t1->ran = 0;
   t1->desc = "t1";
 
   struct t *t2 = (struct t*)tkalloc(sizeof(struct t), "struct t for t2", 0x1000);
   t2->rsp = t2->rbp = tkalloc(0x1000, "stack for t2", 0x1000);
-  t2->rip = (void*)thread2;
+  t2->entry = thread2;
   t2->desc = "t2";
+  t2->ran = 0;
 
   head = t1;
   t1->next = t2;
   t2->next = 0;
 
+  /**
+    An idea here is that we actually don't need to store the RIP of each
+    thread. As ridiculous as it sounds, this is possibly OK if we assume that
+    every thread that is not the current thread is stuck in a call to kyield.
+    (which is awesome, I think)
+  */
+
   // GOOO
-  current = t1;
   kyield();
-  thread1();
 }
 
 void kyield() {
@@ -55,39 +64,43 @@ void kyield() {
     cor_panic("no task to yield to!");
   }
 
-  cor_printk("kyield: Yielding from %s to %s\n", current->desc, tar->desc);
+  if(current)
+    cor_printk("kyield: Yielding from %s to %s\n", current->desc, tar->desc);
+  else
+    cor_printk("kyield: initially launching %s\n", tar->desc);
 
-  // no stack allocations allowed after here! this should actually be asm, i guess, but whatever
-  // TODO: what else besides RSP do we need to save?
-
-  __asm__ volatile (
-    "mov %%rsp, %0\n"
-    "mov %%rbp, %1\n"
-    : "=r" (current->rsp), "=r" (current->rbp)
-    :
-    : "memory" // TODO: declare all the things, this is VOLATILE AS FUCK
-    );
-
-  // Please write multiple paragraphs about this and how it's a horrible thing and works on gcc only
-  void *le_rip = &&done;
-  current->rip = le_rip; // when reentering, don't switch things, but jump to the end of kyield (because recursion)
-
+  // we have to be really careful with  stack allocations here, I think.
+  // actually, this should likely be asm, but whatever
+  // TODO: what else besides RSP+RBP do we need to save?
+  if(current) {
+    __asm__ volatile (
+      "mov %%rsp, %0\n"
+      "mov %%rbp, %1\n"
+      : "=r" (current->rsp), "=r" (current->rbp)
+      :
+      : "memory" // TODO: declare all the things, this is VOLATILE AS FUCK
+      );
+  }
 
   // aaand switcharoo
   current = tar;
 
   __asm__ volatile (
-    "mov %1, %%rsp\n"
-    "mov %2, %%rbp\n"
-    "jmp %0"
+    "mov %0, %%rsp\n"
+    "mov %1, %%rbp\n"
     :
-    : "r" (current->rip), "r" (current->rsp), "r"(current->rbp)
+    : "r" (current->rsp), "r"(current->rbp)
     :
     );
 
-done:
-  // we need at least one instruction here...
-  __asm__ volatile("nop");
+  if(current->ran == 0) {
+    current->ran = 1;
+    current->entry();
+    // Right here, I think, is where we have to worry about a thread exiting
+    // We can't just return since that will blow the stack, I think
+    cor_panic("A thread exited, I don't know what to do");
+  }
+
 }
 
 void thread1() {

@@ -174,7 +174,7 @@ void kernel_main(void) {
   cor_printk("OK.\n");
 
   cor_printk("Setting up scheduler.. ");
-  //sched_init();
+  sched_init();
   cor_printk("OK.\n");
 
   cor_printk("Exec'ing init.\n");
