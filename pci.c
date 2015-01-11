@@ -1,5 +1,6 @@
 #include "common.h"
 #include "io.h"
+#include "sched.h"
 #include "vendor/virtio.h"
 
 // ref: http://wiki.osdev.org/PCI
@@ -126,6 +127,9 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
   // but we won't use it here.
   uint32_t bar0 = pciConfigReadLong(bus, slot, function, 0x10);
   uint16_t io_base = bar0 & 0xFFFFFFFC;
+
+  uint8_t irq = (uint8_t)(pciConfigReadLong(bus, slot, function, 0x3c) & 0xff);
+  cor_printk("Virtio IRQ is %x\n", irq);
 
   // This is pretty much all we actually interface with PCI; once we have the
   // I/O base port, we're golden.
@@ -273,6 +277,7 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
   // behvaiour we're relying on here, but let's just skip the wait while we
   // can.
   //for(int i = 0; i < 100000000; i++);
+  kyield();
 
   // Now, magically, this index should have changed to "1" to indicate that
   // the device has processed our request buffer.
@@ -304,6 +309,10 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
   // multiplexing/reordering/scheduling going on.
 
   cor_printk("Done initializing the virtio block device\n");
+
+  while(1) {
+    kyield();
+  }
 }
 
 // When a configuration access attempts to select a device that does not exist,

@@ -86,5 +86,8 @@ uint64_t interrupt(char no, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_
       return syscall_moremem(arg2);
     }
   }
+  if(no==0x2b) {
+    // TODO: this is exactly where we should wake up stuff waiting for virtio to finish
+  }
   return 0; // TODO: wat
 }

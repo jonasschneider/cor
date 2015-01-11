@@ -154,15 +154,26 @@ void kernel_main(void) {
   tss_setup();
   cor_printk("OK.\n");
 
-  cor_printk("Initializing PCI.. ");
-  pci_init();
-  cor_printk("OK.\n");
 
   cor_printk("Setting up scheduler.. ");
   sched_init();
   sched_add(init_task, "PID EINS");
   cor_printk("OK.\n");
 
+  cor_printk("Initializing PCI.. ");
+  sched_add(pci_init, "PCI init");
+  cor_printk("OK.\n");
+
+
+  // Okay, now that we have the scheduler set up, we can start doing things
+  // that set up tasks to react to input from the outside. A perfect example
+  // is initializing PCI devices that occasionally send interrupts if they
+  // have something to say to us.
+
+  // Finally, we can pass control to all the tasks that have been set up by
+  // now; the first task started will be run, and once it yields, the next
+  // task registered with the scheduler will be started; eventually, we'll
+  // round-robin between all the tasks.
   cor_printk("Passing control to scheduler loop.. ");
   sched_exec();
 
@@ -171,7 +182,17 @@ void kernel_main(void) {
   cor_panic("reached the unreachable");
 }
 
+void kyield();
 void init_task() {
   cor_printk("Exec'ing init from task..\n");
+
+  // this is where we'd have timer things
+  while(1) {
+    cor_printk("init doing some work...\n");
+    for(int i = 0; i<1000000; i++);
+    cor_printk("init done working, yielding.\n");
+    kyield();
+  }
+
   cor_elf_exec(&cor_stage2_init_data, cor_stage2_init_data_len);
 }

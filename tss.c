@@ -26,7 +26,8 @@ void tss_setup()
    // The corresponding GDT entry is set up by boot.s
    struct tss *my_tss = (struct tss *)(0x80000|0x0000008000000000);
    my_tss->rsp0 = 0x55000|0x0000008000000000;
-   // TODO: IST whatup?
+   // TODO: What the hell is any of this and why do I need it
+   // FIXME: Where is this stack pointer coming from? How does this interfere with what we do in sched?
 
    __asm__ (
       "mov $40, %ax\n"

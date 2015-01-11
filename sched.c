@@ -28,7 +28,7 @@ pid_t sched_add(void (*entry)(), const char *desc) {
   t1->desc = desc;
 
   // Set up the scheduling info
-  t1->rsp = t1->rbp = tkalloc(0x1000, "task stack", 0x10); // 4k by default
+  t1->rsp = t1->rbp = tkalloc(0x1000, "task stack", 0x10) + 0x0ff0; // 4k by default
   t1->entry = entry;
   t1->ran = 0;
 

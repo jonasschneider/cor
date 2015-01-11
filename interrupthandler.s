@@ -3,6 +3,7 @@
 .align   4
 
 isr_dispatcher:
+  #push %rax # TODO: figure out why this breaks everything
   push %rbx
   push %rcx
   push %rdx
@@ -32,6 +33,7 @@ isr_dispatcher:
   pop %rdx
   pop %rcx
   pop %rbx
+  #pop %rax
 
   # pop the interrupt number
   add $8, %rsp
