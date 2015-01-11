@@ -22,7 +22,7 @@ When(/^I run the machine$/) do
   @process = Subprocess.popen(["bin/run"], stdout: Subprocess::PIPE)
 end
 
-Then(/^I should see "(.*?)"$/) do |needle|
+Then(/^I should see "([^"]*?)"$/) do |needle|
   @out = ""
   catch :bye do
     begin

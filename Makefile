@@ -2,7 +2,7 @@ ROOT=.
 include Makefile.conf
 .PHONY: all clean
 
-OBJS=main.o printk.o chrdev_serial.o chrdev_console.o io.o elf.o interrupthandler.o tss.o mm.o task.o pci.o timer.o pic.o interrupt.o sched.o
+OBJS=main.o printk.o chrdev_serial.o chrdev_console.o io.o elf.o interrupthandler.o tss.o mm.o task.o pci.o timer.o pic.o interrupt.o sched.o test_mock_supplement.o
 
 all: disk.bin
 
@@ -31,6 +31,9 @@ stage2_entrypoint.o: stage2_entrypoint.s
 
 interrupthandler.o: interrupthandler.s include/cor/syscall.h intstubs.s~
 	$(CC) $(KCFLAGS) -c -x assembler-with-cpp -Iinclude $< -o $@
+
+test_mock_supplement.o: $(wildcard ./test_mock_supplement.c~) test_mock_supplement_stub.c
+	if [ -e "test_mock_supplement.c~" ]; then f="test_mock_supplement.c~"; else f="test_mock_supplement_stub.c"; fi; $(CC) $(KCCFLAGS) -c -x c $$f -o $@
 
 stage2.o: $(OBJS) linkerscript stage2_entrypoint.o init_static.o mod/block.kmo
 	echo LONG\(0x$(shell git rev-parse HEAD | cut -c 1-6)\) > versionstamp~

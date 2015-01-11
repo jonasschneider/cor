@@ -1,19 +1,22 @@
 Feature: Kernelspace multitasking
   Scenario: Two simple concurrent threads
-    Given the following code in the kernel:
+    Given the following C code in the kernel:
       """
+      #include "common.h"
+      #include "sched.h"
+
       void thread1() {
         while(1) {
-          cor_printk("Hello from t2! Working for a bit...\n", stack);
-          for(int i=0;i<100000000;i++);
+          cor_printk("Hello from t1! Working for a bit...\n");
+          for(int i=0;i<100000;i++);
           kyield();
         }
       }
 
       void thread2() {
         while(1) {
-          cor_printk("Hello from t2! Working for a bit...\n", stack);
-          for(int i=0;i<100000000;i++);
+          cor_printk("Hello from t2! Working for a bit...\n");
+          for(int i=0;i<100000;i++);
           kyield();
         }
       }

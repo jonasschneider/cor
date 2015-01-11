@@ -10,10 +10,19 @@
 #include "interrupt.h"
 #include "sched.h"
 
+void test_mock_main();
 extern char cor_stage2_init_data;
 extern int cor_stage2_init_data_len;
 
 unsigned long *timer = (unsigned long*)(0x81000|0x0000008000000000);
+
+void thread22() {
+  while(1) {
+    cor_printk("Hello from t2! Working for a bit...\n");
+    for(int i=0;i<100000000;i++);
+    kyield();
+  }
+}
 
 void cor_panic(const char *msg) {
   cor_printk("\nPANIC: %s\n    (at t=%x)\n", msg, *timer);
@@ -69,6 +78,10 @@ uint64_t syscall_write(uint64_t fd64, uint64_t buf64, size_t count64) {
 uint64_t syscall_exit(uint64_t ret64) {
   int ret = (int)ret64;
   cor_printk("exit() ret=%x\n", ret);
+  cor_printk("we should panic/poweroff now, but we'll NEVER SHUT DOWN EVER\n");
+  while(1) {
+    kyield();
+  }
   cor_panic("init exited");
   return 0; // not really meaningful, but by convention, syscalls always return one 64-bit val
 }
@@ -160,15 +173,17 @@ void kernel_main(void) {
   sched_add(init_task, "PID EINS");
   cor_printk("OK.\n");
 
-  cor_printk("Initializing PCI.. ");
-  sched_add(pci_init, "PCI init");
-  cor_printk("OK.\n");
-
-
   // Okay, now that we have the scheduler set up, we can start doing things
   // that set up tasks to react to input from the outside. A perfect example
   // is initializing PCI devices that occasionally send interrupts if they
   // have something to say to us.
+
+  cor_printk("Initializing PCI.. ");
+  sched_add(pci_init, "PCI init");
+  cor_printk("OK.\n");
+
+  // Add a hook so we can insert things here when running tests.
+  test_mock_main();
 
   // Finally, we can pass control to all the tasks that have been set up by
   // now; the first task started will be run, and once it yields, the next
@@ -186,13 +201,6 @@ void kyield();
 void init_task() {
   cor_printk("Exec'ing init from task..\n");
 
-  // this is where we'd have timer things
-  while(1) {
-    cor_printk("init doing some work...\n");
-    for(int i = 0; i<1000000; i++);
-    cor_printk("init done working, yielding.\n");
-    kyield();
-  }
-
   cor_elf_exec(&cor_stage2_init_data, cor_stage2_init_data_len);
+  // this should never, ever return.. right?
 }

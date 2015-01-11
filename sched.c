@@ -14,8 +14,6 @@ struct t *current;
 pid_t next_pid = 0;
 
 void kyield();
-void thread1();
-void thread2();
 
 void sched_init() {
 
@@ -46,23 +44,21 @@ void sched_exec() {
 
 void kyield() {
   // sooo, you want to yield? that's cool
-  struct t *cur = head;
   struct t *tar = 0;
 
-  // we'll just grab any task that's not us
-  while(cur) {
-    cor_printk("checking %s\n", cur->desc);
-    if(cur != current) {
-      // then it's a candidate.
-      // insert priorities here
-      tar = cur;
-    }
-    cur = cur->next;
+  // we'll just grab the next task, and wrap around once we reach the end
+  if(current) {
+    tar = current->next;
+    if(!tar) tar = head;
+  } else {
+    // first run, just take the head
+    tar = head;
   }
 
   if(!tar) {
     cor_panic("no task to yield to!");
   }
+
 
   if(current)
     cor_printk("kyield: Yielding from %s to %s\n", current->desc, tar->desc);
@@ -103,26 +99,4 @@ void kyield() {
 
 }
 
-void thread1() {
-  while(1) {
-    void *stack;
-    __asm__ ("mov %%rsp, %0":"=r"(stack));
-    cor_printk("Hello from t1! My stack is at %p.\n", stack);
-    for(int i=0;i<100000000;i++); // we can't really sleep yet
-    cor_printk("t1 yielding now.\n");
-    kyield();
-    cor_printk("we kyield'ed to t1\n");
-  }
-}
 
-void thread2() {
-  while(1) {
-    void *stack;
-    __asm__ ("mov %%rsp, %0":"=r"(stack));
-    cor_printk("Hello from t2! My stack is at %p.\n", stack);
-    for(int i=0;i<100000000;i++); // we can't really sleep yet
-    cor_printk("t2 yielding now.\n");
-    kyield();
-    cor_printk("we kyield'ed to t2\n");
-  }
-}
