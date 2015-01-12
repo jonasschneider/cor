@@ -12,5 +12,5 @@ clean:
 block.kmo: *.rs **/*.rs lib.c
 	rustc block.rs -C no-stack-check -C relocation-model=static -g --cfg external_funcs -C code-model=large
 	gcc -o lib.o lib.c -c $(KCCFLAGS)
-	gcc lib.o -o block.kmo~ -e virtio_init -Wl,--gc-sections,-lm,-L.,-lblock,-r $(KCCFLAGS)
-	objcopy block.kmo~ block.kmo -N _GLOBAL_OFFSET_TABLE_ -G virtio_init # mark all except the global entry point as local
+	gcc lib.o -o block.kmo~ -e virtio_init -e rs_sched_init -Wl,--gc-sections,-lm,-L.,-lblock,-r $(KCCFLAGS)
+	objcopy block.kmo~ block.kmo -N _GLOBAL_OFFSET_TABLE_ -G rs_sched_init -G virtio_init # mark all except the global entry point as local

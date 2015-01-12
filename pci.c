@@ -135,7 +135,7 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
   // I/O base port, we're golden.
 
   cor_printk("Doing rust call thingie\n");
-  virtio_init(io_base);
+  //virtio_init(io_base);
 
   // Now comes the block-device-specific setup.
   // (The configuration of a single virtqueue isn't device-specific though; it's the same

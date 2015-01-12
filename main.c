@@ -10,6 +10,7 @@
 #include "interrupt.h"
 #include "sched.h"
 
+void rs_sched_init();
 void test_mock_main();
 extern char cor_stage2_init_data;
 extern int cor_stage2_init_data_len;
@@ -169,6 +170,7 @@ void kernel_main(void) {
 
 
   cor_printk("Setting up scheduler.. ");
+  rs_sched_init();
   sched_init();
   sched_add(init_task, "PID EINS");
   cor_printk("OK.\n");

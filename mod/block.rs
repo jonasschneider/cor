@@ -23,6 +23,8 @@ mod block {
   pub mod virtio;
 }
 
+pub mod sched;
+
 
 
 
@@ -52,8 +54,13 @@ impl core::fmt::Show for State {
 
 
 #[no_mangle]
-pub fn virtio_init(ioport : u16) {
+pub fn rs_sched_init() {
+  sched::init();
+}
 
+
+#[no_mangle]
+pub fn virtio_init(ioport : u16) {
   // apparently, anything modifying global mutable state is considered unsafe...
   unsafe { state = Some(State { number: 1337, string: "" }); }
 
