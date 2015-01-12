@@ -15,8 +15,8 @@ struct Task {
 
   ran : bool,
   stack: kbuf::Buf<'static>,
-  rsp: *mut u8,
-  rbp: *mut u8,
+  rsp: u64,
+  rbp: u64,
   entrypoint: fn(),
 }
 
@@ -62,21 +62,22 @@ pub fn add_task(entrypoint : fn(), desc : &'static str) {
   let id = makeNextTid();
 
   let stack = kbuf::new("task stack");
+  let rsp = stack.original_mem as u64;
   let t = box Task{id: id, desc: desc, entrypoint: entrypoint,
     stack: stack,
-    rsp: stack.original_mem,
-    rbp: stack.original_mem,
+    rsp: rsp,
+    rbp: rsp,
     ran: false};
 
   // unsafe because we have to access the global state.. ugh
-  unsafe { (*theState).runnable.push_front(t); }
+  unsafe { (*theState).runnable.push_back(t); }
 }
 
 pub fn exec() {
   kyield();
 }
 
-fn afterswitch() {
+fn starttask() {
   unsafe {
     let ref c = (*theState).current;  // there should always be a current after context switch
 
@@ -85,12 +86,9 @@ fn afterswitch() {
         println!("no task after afterswitch?!");
       }
       &Some(ref t) => {
-        if t.ran == false {
-          println!("launching task entrypoint");
-          (t.entrypoint)();
-        } else {
-          println!("just re-entering");
-        }
+        println!("launching task entrypoint");
+        (t.entrypoint)();
+        println!("ohmygod entrypoint returned, cleanup here pls alert alert");
       }
     }
 
@@ -121,16 +119,25 @@ pub fn kyield() {
     let mut newRSP = 0;
     let mut newRBP = 0;
 
+    let mut   afterswitch = 0;
+
 
     match s.runnable.pop_front() {
       None => {
         println!("nothing to yield to! panic!");
+        while(true) {}
         // FIXME: http://doc.rust-lang.org/std/macro.panic!.html
         //panic!();
       }
-      Some(boxt) => {
+      Some(mut boxt) => {
         newRSP = boxt.rsp as u64; // POINTER SIZES FTW
         newRBP = boxt.rsp as u64;
+
+        if(boxt.ran == false) {
+          boxt.ran = true;
+          afterswitch = starttask as u64;
+        }
+        println!("yielding to {}", boxt.desc);
         next = Some(boxt);
       }
     }
@@ -138,8 +145,10 @@ pub fn kyield() {
 
     let old = mem::replace(&mut s.current, next);
     match old {
-      Some(old_t) => {
+      Some(mut old_t) => {
         println!("switching away");
+        oldRSP_dst = &mut old_t.rsp;
+        oldRBP_dst = &mut old_t.rbp;
         s.runnable.push_back(old_t);
       },
       None => {
@@ -148,15 +157,68 @@ pub fn kyield() {
     };
 
 
-    sched_contextswitch(
-      oldRSP_dst,
-      oldRBP_dst,
 
-      newRSP,
-      newRBP,
 
-      afterswitch,
-    );
+    // sooo, this is a bit hairy. Original C:
+    // if(current) {
+    //   __asm__ volatile (
+    //     "mov %%rsp, %0\n"
+    //     "mov %%rbp, %1\n"
+    //     : "=r" (current->rsp), "=r" (current->rbp)
+    //     :
+    //     : "memory" // TODO: declare all the things, this is VOLATILE AS FUCK
+    //     );
+    // }
+    // // aaand switcharoo
+    // current = tar;
+    // __asm__ volatile (
+    //   "mov %0, %%rsp\n"
+    //   "mov %1, %%rbp\n"
+    //   :
+    //   : "r" (current->rsp), "r"(current->rbp)
+    //   :
+    //   );
+    // if(current->ran == 0) {
+    //   current->ran = 1;
+    //   current->entry();
+    //   // Right here, I think, is where we have to worry about a thread exiting
+    //   // We can't just return since that will blow the stack, I think
+    //   cor_panic("A thread exited, I don't know what to do");
+    // }
+    //
+    // We want to do all of this as safely as possible. I think, 'safely' in this
+    // context actually means in a single block of asm. It may not use the stack, and it may not
+    // do function calls (since we mess with the stack).
+    // We have collected all the data we need from above. Rust should have all of these
+    // local variables on the stack, so we'll just put them all in registers,
+    // then switch out the stack, and then restore as appropriate.
+    asm!(
+      // save old things
+      "mov %rsp, ($0)
+       mov %rbp, ($1)\n"
+
+      // switch stack
+      "mov $2, %rsp
+       mov $3, %rbp\n"
+
+      // and, if appropriate, call the entry point
+      // FIXME: default case should not jump
+      "movq $4, %rax
+       cmp $$0, %rax
+       jne lol
+       jmp done
+       lol: jmp *%rax
+       done: nop
+       "
+      : // no writes
+      : "rm"(oldRSP_dst),
+        "rm"(oldRBP_dst),
+        "m"(newRSP)
+        "r"(newRBP)
+        "r"(afterswitch)
+      : "rax"
+      : // options here
+      );
   }
 }
 

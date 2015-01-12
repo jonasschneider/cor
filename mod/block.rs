@@ -65,11 +65,17 @@ pub fn rs_sched_init() {
 }
 
 fn thread1() {
-  println!("hi from thread1");
+  while(true) {
+    println!("hi from thread1");
+    sched::kyield();
+  }
 }
 
 fn thread2() {
-  println!("hi from thread2");
+  while(true) {
+    println!("hi from thread2");
+    sched::kyield();
+  }
 }
 
 
