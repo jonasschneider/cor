@@ -150,54 +150,36 @@ pub fn kyield() {
     };
 
 
-    // sooo, this is a bit hairy. Original C:
-    // if(current) {
-    //   __asm__ volatile (
-    //     "mov %%rsp, %0\n"
-    //     "mov %%rbp, %1\n"
-    //     : "=r" (current->rsp), "=r" (current->rbp)
-    //     :
-    //     : "memory" // TODO: declare all the things, this is VOLATILE AS FUCK
-    //     );
-    // }
-    // // aaand switcharoo
-    // current = tar;
-    // __asm__ volatile (
-    //   "mov %0, %%rsp\n"
-    //   "mov %1, %%rbp\n"
-    //   :
-    //   : "r" (current->rsp), "r"(current->rbp)
-    //   :
-    //   );
-    // if(current->ran == 0) {
-    //   current->ran = 1;
-    //   current->entry();
-    //   // Right here, I think, is where we have to worry about a thread exiting
-    //   // We can't just return since that will blow the stack, I think
-    //   cor_panic("A thread exited, I don't know what to do");
-    // }
+    // sooo, the context switch itself is a bit hairy. Our goals are:
     //
+    //  1. Save the old task's %rsp and %rbp into its task struct so we know
+    //     how to resume
+    //  2. Load the new task's %rsp and %rbp from its task struct
+    //  3. And then comes something interesting:
+    //    - If the new task has never been launched yet: "Call" its entrypoint
+    //      -- I say "call" because since we're not in a valid stack frame,
+    //      this call can never return without breaking stuff. So, we wrap it
+    //      in a call around starttask().
+    //    - Otherwise, the new stack frame puts us into a call to kyield(),
+    //      the frame that called us is code from within the resumed task. So
+    //      we should just return like
+    //      a reasonable citizen.
+
     // We want to do all of this as safely as possible. I think, 'safely' in this
     // context actually means in a single block of asm. It may not use the stack, and it may not
     // do function calls (since we mess with the stack).
-    // We have collected all the data we need from above. Rust should have all of these
-    // local variables on the stack, so we'll just put them all in registers,
-    // then switch out the stack, and then restore as appropriate.
+    // We have collected all the data we need from above. We need to put it all in registers
+    // so we don't depend on the stack at all anymore.
     // TODO: think if the exact ourobouros-recursion-property we're enforcing here is just reentrancy.
     //       Reentrancy is certainly a part of it.
-    // 'Appropriate' is:
-    //   (a) For new tasks, launch starttask(), which will launch the task's entrypoint and handles when it exits
-    //   (b) For existing tasks, just return, like a call to kyield() should
-
-    asm!( // FIXME: the common case should not jump
-      // save old things
+    asm!(
       "mov %rsp, ($0)
        mov %rbp, ($1)
        mov $2, %rsp
        mov $3, %rbp
        cmp $$0, $4
        jne go_to_starttask
-       jmp just_continue
+       jmp just_continue # FIXME(perf): the common case should not branch
       go_to_starttask:
        jmp *$4
       just_continue:
@@ -209,6 +191,10 @@ pub fn kyield() {
        # skipping Drop() handlers inserted by LLVM because they depend on the old stack.
        # This is horrible and it seems like we should do context-switching outside of Rustland
        # entirely.
+       # I still have this idea about modding the return address of this stack frame.
+       # It would point to do_context_switch, which is itself defined in a .s somewhere
+       # and receives its arguments (i.e. the stuff we give it here) via a static (actually, cpu-local)
+       # memory location somewhere. (it can't be the registers and it can't be the stack...)
        pop %rbp
        retq
        "
