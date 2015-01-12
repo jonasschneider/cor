@@ -1,4 +1,5 @@
 use myheap;
+use kbuf;
 
 use boxed::Box;
 use core::prelude::*;
@@ -6,19 +7,16 @@ use core::mem;
 use core;
 use mydlist::DList;
 
-// struct t {
-//   void *rsp;
-//   void (*entry)();
-//   void *rbp;
-//   struct t *next;
-//   const char *desc;
-//   int ran;
-//   pid_t pid;
-// };
 type Tid = u64;
+
 struct Task {
   id : Tid,
   desc: &'static str,
+
+  ran : bool,
+  stack: kbuf::Buf<'static>,
+  rsp: *const u8,
+  rbp: *const u8,
   entrypoint: fn(),
 }
 
@@ -45,7 +43,7 @@ fn makeNextTid() -> u64 {
   }
 }
 
-pub fn init() {
+pub unsafe fn init() {
   println!("initing sched!");
   let s = box PerCoreState{runnable: DList::new()};
   unsafe  {
@@ -62,35 +60,24 @@ pub fn init() {
 pub fn add_task(entrypoint : fn(), desc : &'static str) {
   let id = makeNextTid();
 
-  let t = box Task{id: id, desc: desc, entrypoint: entrypoint};
+  let stack = kbuf::new("task stack");
+  let t = box Task{id: id, desc: desc, entrypoint: entrypoint,
+    stack: stack,
+    rsp: stack.original_mem,
+    rbp: stack.original_mem,
+    ran: false};
 
   // unsafe because we have to access the global state.. ugh
   unsafe { (*theState).runnable.push_front(t); }
 }
 
+pub fn exec() {
+  kyield();
+}
 
-// pid_t sched_add(void (*entry)(), const char *desc) {
-//   // fill in the identity parts
-//   struct t *t1 = (struct t*)tkalloc(sizeof(struct t), "struct t", 0x10);
-//   t1->pid = next_pid++;
-//   t1->desc = desc;
+pub fn kyield() {
 
-//   // Set up the scheduling info
-//   t1->rsp = t1->rbp = tkalloc(0x1000, "task stack", 0x10) + 0x0ff0; // 4k by default
-//   t1->entry = entry;
-//   t1->ran = 0;
-
-//   // Insert it into the list
-//   t1->next = head;
-//   head = t1;
-
-//   return t1->pid;
-// }
-
-// void sched_exec() {
-//   // This one's actually surprisingly easy
-//   kyield();
-// }
+}
 
 // void kyield() {
 //   // sooo, you want to yield? that's cool

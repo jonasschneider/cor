@@ -24,6 +24,7 @@ mod block {
 }
 
 mod mydlist;
+mod kbuf;
 
 pub mod sched;
 
@@ -57,9 +58,10 @@ impl core::fmt::Show for State {
 
 #[no_mangle]
 pub fn rs_sched_init() {
-  sched::init();
+  unsafe { sched::init(); }
   sched::add_task(thread1, "thread1");
   sched::add_task(thread2, "thread2");
+  unsafe { sched::exec(); }
 }
 
 fn thread1() {

@@ -3,41 +3,11 @@ use cpuio;
 use boxed::Box;
 use core::slice;
 use core::fmt;
-
-mod bytebuf {
-  use core::mem;
-  use myheap::allocate;
-  use myheap::deallocate;
-  use core::slice;
-  use core;
-
-  pub struct Buf<'buflife> {
-    pub s : &'buflife mut[u8],
-    original_mem : *mut u8,
-    original_size: uint,
-    original_align: uint,
-  }
-
-  pub fn new<'buflife>(name : &'buflife str) -> Buf<'buflife> {
-    let size = 512;
-    let align = 1;
-    let mem = unsafe { allocate(size, align) };
-    let memptr : &*mut u8 = unsafe { mem::transmute(&mem) };
-    let slice : &mut[u8] = unsafe { slice::from_raw_mut_buf(memptr, 512) };
-    Buf{s: slice, original_mem: mem, original_size: size, original_align: align}
-  }
-
-  #[unsafe_destructor]
-  impl<'buflife> core::ops::Drop for Buf<'buflife> {
-      fn drop(&mut self) {
-        unsafe { deallocate(self.original_mem, self.original_size, self.original_align) }
-      }
-  }
-}
+use kbuf;
 
 mod common_virtio {
   pub struct virtqueue<'dev_life> {
-    pub buf : ::block::virtio::bytebuf::Buf<'dev_life>
+    pub buf : ::kbuf::Buf<'dev_life>
   }
 }
 
@@ -66,7 +36,7 @@ pub fn init<'devlife>(io_base : &'devlife u16) -> Box<virtio_blkdev> {
 
   let io = *io_base;
 
-  let mybuf = bytebuf::new("a buffer");
+  let mybuf = kbuf::new("a buffer");
   let theq = common_virtio::virtqueue{buf: mybuf};
   let dev = box virtio_blkdev{
     q: theq,
