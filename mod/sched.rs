@@ -15,14 +15,15 @@ struct Task {
 
   ran : bool,
   stack: kbuf::Buf<'static>,
-  rsp: *const u8,
-  rbp: *const u8,
+  rsp: *mut u8,
+  rbp: *mut u8,
   entrypoint: fn(),
 }
 
 // struct t *current;
 struct PerCoreState {
   runnable : DList<Box<Task>>,
+  current: Option<Box<Task>>,
 }
 
 // Okay, this should not be a static and Rust rightly slaps us in the face for
@@ -45,7 +46,7 @@ fn makeNextTid() -> u64 {
 
 pub unsafe fn init() {
   println!("initing sched!");
-  let s = box PerCoreState{runnable: DList::new()};
+  let s = box PerCoreState{runnable: DList::new(), current: None};
   unsafe  {
     // This will (per IRC) consume the box, and turn it into a pointer
     // to the thing that was in the box (the box itself isn't a struct anywhere in memory)
@@ -75,45 +76,90 @@ pub fn exec() {
   kyield();
 }
 
-pub fn kyield() {
+fn afterswitch() {
+  unsafe {
+    let ref c = (*theState).current;  // there should always be a current after context switch
 
+    match c {
+      &None => {
+        println!("no task after afterswitch?!");
+      }
+      &Some(ref t) => {
+        if t.ran == false {
+          println!("launching task entrypoint");
+          (t.entrypoint)();
+        } else {
+          println!("just re-entering");
+        }
+      }
+    }
+
+  }
 }
 
-// void kyield() {
-//   // sooo, you want to yield? that's cool
-//   struct t *tar = 0;
+extern "C" {
+  fn sched_contextswitch(
+    oldRSP_dst : *mut u64,
+    oldRBP_dst : *mut u64,
 
-//   // we'll just grab the next task, and wrap around once we reach the end
-//   if(current) {
-//     tar = current->next;
-//     if(!tar) tar = head;
-//   } else {
-//     // first run, just take the head
-//     tar = head;
-//   }
+    newRSP : u64,
+    newRBP : u64,
 
-//   if(!tar) {
-//     cor_panic("no task to yield to!");
-//   }
+    afterswitch : fn(),
+  );
+}
+
+pub fn kyield() {
+  // unsafe because we have to access the global state..
+  unsafe {
+    let ref mut s = *theState;
+
+    let mut next : Option<Box<Task>> = None;
+    // eep
+    let mut oldRSP_dst = 0 as *mut u64;
+    let mut oldRBP_dst = 0 as *mut u64;
+    let mut newRSP = 0;
+    let mut newRBP = 0;
 
 
-//   if(current)
-//     cor_printk("kyield: Yielding from %s to %s\n", current->desc, tar->desc);
-//   else
-//     cor_printk("kyield: initially launching %s\n", tar->desc);
+    match s.runnable.pop_front() {
+      None => {
+        println!("nothing to yield to! panic!");
+        // FIXME: http://doc.rust-lang.org/std/macro.panic!.html
+        //panic!();
+      }
+      Some(boxt) => {
+        newRSP = boxt.rsp as u64; // POINTER SIZES FTW
+        newRBP = boxt.rsp as u64;
+        next = Some(boxt);
+      }
+    }
 
-//   // we have to be really careful with  stack allocations here, I think.
-//   // actually, this should likely be asm, but whatever
-//   // TODO: what else besides RSP+RBP do we need to save?
-//   if(current) {
-//     __asm__ volatile (
-//       "mov %%rsp, %0\n"
-//       "mov %%rbp, %1\n"
-//       : "=r" (current->rsp), "=r" (current->rbp)
-//       :
-//       : "memory" // TODO: declare all the things, this is VOLATILE AS FUCK
-//       );
-//   }
+
+    let old = mem::replace(&mut s.current, next);
+    match old {
+      Some(old_t) => {
+        println!("switching away");
+        s.runnable.push_back(old_t);
+      },
+      None => {
+        println!("initial switch");
+      }
+    };
+
+
+    sched_contextswitch(
+      oldRSP_dst,
+      oldRBP_dst,
+
+      newRSP,
+      newRBP,
+
+      afterswitch,
+    );
+  }
+}
+
 
 //   // aaand switcharoo
 //   current = tar;
