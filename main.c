@@ -8,7 +8,6 @@
 #include "pic.h"
 #include "timer.h"
 #include "interrupt.h"
-#include "sched.h"
 
 void rs_sched_init();
 void test_mock_main();
@@ -16,14 +15,6 @@ extern char cor_stage2_init_data;
 extern int cor_stage2_init_data_len;
 
 unsigned long *timer = (unsigned long*)(0x81000|0x0000008000000000);
-
-void thread22() {
-  while(1) {
-    cor_printk("Hello from t2! Working for a bit...\n");
-    for(int i=0;i<100000000;i++);
-    kyield();
-  }
-}
 
 void cor_panic(const char *msg) {
   cor_printk("\nPANIC: %s\n    (at t=%x)\n", msg, *timer);
@@ -79,9 +70,9 @@ uint64_t syscall_write(uint64_t fd64, uint64_t buf64, size_t count64) {
 uint64_t syscall_exit(uint64_t ret64) {
   int ret = (int)ret64;
   cor_printk("exit() ret=%x\n", ret);
-  cor_printk("we should panic/poweroff now, but we'll NEVER SHUT DOWN EVER\n");
+  cor_printk("fix your things, init exited...\n");
   while(1) {
-    kyield();
+
   }
   cor_panic("init exited");
   return 0; // not really meaningful, but by convention, syscalls always return one 64-bit val
@@ -95,6 +86,9 @@ CASSERT(sizeof(uint8_t) == 1);
 CASSERT(sizeof(uint16_t) == 2);
 CASSERT(sizeof(uint32_t) == 4);
 CASSERT(sizeof(uint64_t) == 8);
+
+void rs_sched_add_cfunc(void (*entry)(), const char *desc);
+void rs_sched_exec();
 
 void kernel_main(void) {
   chrdev_console_init();
@@ -168,38 +162,14 @@ void kernel_main(void) {
   tss_setup();
   cor_printk("OK.\n");
 
-
-  cor_printk("Setting up scheduler.. ");
-  rs_sched_init();
-  sched_init();
-  sched_add(init_task, "PID EINS");
-  cor_printk("OK.\n");
-
-  // Okay, now that we have the scheduler set up, we can start doing things
-  // that set up tasks to react to input from the outside. A perfect example
-  // is initializing PCI devices that occasionally send interrupts if they
-  // have something to say to us.
-
-  cor_printk("Initializing PCI.. ");
-  sched_add(pci_init, "PCI init");
-  cor_printk("OK.\n");
-
-  // Add a hook so we can insert things here when running tests.
-  test_mock_main();
-
-  // Finally, we can pass control to all the tasks that have been set up by
-  // now; the first task started will be run, and once it yields, the next
-  // task registered with the scheduler will be started; eventually, we'll
-  // round-robin between all the tasks.
-  cor_printk("Passing control to scheduler loop.. ");
-  sched_exec();
+  // Rust will also set up init_task to boot
+  cor_printk("Exec'ing Rust scheduler.. ");
+  rs_sched_exec(); // The journey continues in `mod/block.rs`
 
   // we'll never return... if everything goes right
-
   cor_panic("reached the unreachable");
 }
 
-void kyield();
 void init_task() {
   cor_printk("Exec'ing init from task..\n");
 
