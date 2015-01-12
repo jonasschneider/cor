@@ -1,12 +1,10 @@
-
 use myheap;
 
 use boxed::Box;
 use core::prelude::*;
 use core::mem;
 use core;
-
-// #include "common.h"
+use mydlist::DList;
 
 // struct t {
 //   void *rsp;
@@ -17,36 +15,16 @@ use core;
 //   int ran;
 //   pid_t pid;
 // };
-// struct t *head = 0;
-// struct t *current;
-// pid_t next_pid = 0;
-
 type Tid = u64;
-
 struct Task {
   id : Tid,
+  desc: &'static str,
+  entrypoint: fn(),
 }
 
-enum TaskListNode {
-  Entry(Box<Task>, Box<TaskListNode>),
-  End
-}
-
-impl core::fmt::Show for TaskListNode {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        // The `f` value implements the `Writer` trait, which is what the
-        // write! macro is expecting. Note that this formatting ignores the
-        // various flags provided to format strings.
-        match self {
-          &TaskListNode::Entry(ref t, ref n)  => write!(f, "(n: present), {}", n),
-          &TaskListNode::End  => write!(f, "(end)")
-        }
-
-    }
-}
-
+// struct t *current;
 struct PerCoreState {
-  runnable_list_head : Box<TaskListNode>,
+  runnable : DList<Box<Task>>,
 }
 
 // Okay, this should not be a static and Rust rightly slaps us in the face for
@@ -56,9 +34,20 @@ struct PerCoreState {
 // TODO(smp): fix all of this
 static mut theState : *mut PerCoreState = 0 as *mut PerCoreState;
 
+// Interestingly, this shouldn't be CPU-local, but still global
+// Use an ArcRW or something?
+static mut nextTid : Tid = 0;
+fn makeNextTid() -> u64 {
+  // unsafe because global & nonatomic
+  unsafe {
+    nextTid += 1;
+    return nextTid
+  }
+}
+
 pub fn init() {
   println!("initing sched!");
-  let s = box PerCoreState{runnable_list_head: box TaskListNode::End};
+  let s = box PerCoreState{runnable: DList::new()};
   unsafe  {
     // This will (per IRC) consume the box, and turn it into a pointer
     // to the thing that was in the box (the box itself isn't a struct anywhere in memory)
@@ -66,16 +55,19 @@ pub fn init() {
     // but will instead 'leak' -- which is exactly what we want.
     theState = mem::transmute(s);
   }
-  unsafe { println!("sched is so up: {}", (*theState).runnable_list_head); }
+  //unsafe { println!("sched is so up: {}", (*theState).runnable_list_head); }
 }
 
 
-//
-// void kyield();
+pub fn add_task(entrypoint : fn(), desc : &'static str) {
+  let id = makeNextTid();
 
-// void sched_init() {
+  let t = box Task{id: id, desc: desc, entrypoint: entrypoint};
 
-// }
+  // unsafe because we have to access the global state.. ugh
+  unsafe { (*theState).runnable.push_front(t); }
+}
+
 
 // pid_t sched_add(void (*entry)(), const char *desc) {
 //   // fill in the identity parts

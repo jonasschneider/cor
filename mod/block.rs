@@ -23,6 +23,8 @@ mod block {
   pub mod virtio;
 }
 
+mod mydlist;
+
 pub mod sched;
 
 
@@ -56,6 +58,16 @@ impl core::fmt::Show for State {
 #[no_mangle]
 pub fn rs_sched_init() {
   sched::init();
+  sched::add_task(thread1, "thread1");
+  sched::add_task(thread2, "thread2");
+}
+
+fn thread1() {
+  println!("hi from thread1");
+}
+
+fn thread2() {
+  println!("hi from thread2");
 }
 
 
