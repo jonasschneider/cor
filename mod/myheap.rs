@@ -19,6 +19,61 @@ extern {
   fn abort() -> !;
 }
 
+
+mod imp {
+    extern {
+        fn rust_allocate(size: uint, align: uint) -> *mut u8;
+        fn rust_deallocate(ptr: *mut u8, old_size: uint, align: uint);
+        fn rust_reallocate(ptr: *mut u8, old_size: uint, size: uint, align: uint) -> *mut u8;
+        fn rust_reallocate_inplace(ptr: *mut u8, old_size: uint, size: uint,
+                                   align: uint) -> uint;
+        fn rust_usable_size(size: uint, align: uint) -> uint;
+        fn rust_stats_print();
+    }
+
+    #[inline]
+    pub unsafe fn allocate(size: uint, align: uint) -> *mut u8 {
+        rust_allocate(size, align)
+    }
+
+
+    #[inline]
+    pub unsafe fn reallocate(ptr: *mut u8, old_size: uint, size: uint,
+                                     align: uint) -> *mut u8 {
+        rust_reallocate(ptr, old_size, size, align)
+    }
+
+    #[inline]
+    pub unsafe fn reallocate_inplace(ptr: *mut u8, old_size: uint, size: uint,
+                                     align: uint) -> uint {
+        rust_reallocate_inplace(ptr, old_size, size, align)
+    }
+
+    #[inline]
+    pub unsafe fn deallocate(ptr: *mut u8, old_size: uint, align: uint) {
+        rust_deallocate(ptr, old_size, align)
+    }
+
+    #[inline]
+    pub fn usable_size(size: uint, align: uint) -> uint {
+        unsafe { rust_usable_size(size, align) }
+    }
+
+    #[inline]
+    pub fn stats_print() {
+        unsafe { rust_stats_print() }
+    }
+}
+
+
+pub fn oom() -> ! {
+    // FIXME(#14674): This really needs to do something other than just abort
+    //                here, but any printing done must be *guaranteed* to not
+    //                allocate.
+    unsafe { abort() }
+}
+
+
 // FIXME: #13996: mark the `allocate` and `reallocate` return value as `noalias`
 
 /// Return a pointer to `size` bytes of memory aligned to `align`.
@@ -133,55 +188,3 @@ const MIN_ALIGN: uint = 8;
           target_arch = "aarch64"))]
 const MIN_ALIGN: uint = 16;
 
-#[cfg(external_funcs)]
-mod imp {
-    extern {
-        fn rust_allocate(size: uint, align: uint) -> *mut u8;
-        fn rust_deallocate(ptr: *mut u8, old_size: uint, align: uint);
-        fn rust_reallocate(ptr: *mut u8, old_size: uint, size: uint, align: uint) -> *mut u8;
-        fn rust_reallocate_inplace(ptr: *mut u8, old_size: uint, size: uint,
-                                   align: uint) -> uint;
-        fn rust_usable_size(size: uint, align: uint) -> uint;
-        fn rust_stats_print();
-    }
-
-    #[inline]
-    pub unsafe fn allocate(size: uint, align: uint) -> *mut u8 {
-        rust_allocate(size, align)
-    }
-
-
-    #[inline]
-    pub unsafe fn reallocate(ptr: *mut u8, old_size: uint, size: uint,
-                                     align: uint) -> *mut u8 {
-        rust_reallocate(ptr, old_size, size, align)
-    }
-
-    #[inline]
-    pub unsafe fn reallocate_inplace(ptr: *mut u8, old_size: uint, size: uint,
-                                     align: uint) -> uint {
-        rust_reallocate_inplace(ptr, old_size, size, align)
-    }
-
-    #[inline]
-    pub unsafe fn deallocate(ptr: *mut u8, old_size: uint, align: uint) {
-        rust_deallocate(ptr, old_size, align)
-    }
-
-    #[inline]
-    pub fn usable_size(size: uint, align: uint) -> uint {
-        unsafe { rust_usable_size(size, align) }
-    }
-
-    #[inline]
-    pub fn stats_print() {
-        unsafe { rust_stats_print() }
-    }
-}
-
-pub fn oom() -> ! {
-    // FIXME(#14674): This really needs to do something other than just abort
-    //                here, but any printing done must be *guaranteed* to not
-    //                allocate.
-    unsafe { abort() }
-}
