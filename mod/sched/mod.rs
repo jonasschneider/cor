@@ -7,17 +7,24 @@ use core::mem;
 use core;
 use mydlist::DList;
 
+mod context;
+
 type Tid = u64;
 
 struct Task {
+  // identity info
   id : Tid,
   desc: &'static str,
 
-  ran : bool,
+  // context switching info
+  started : bool,
   stack: kbuf::Buf<'static>,
   rsp: u64,
   rbp: u64,
   entrypoint: fn(),
+
+  // parking/scheduling info
+  exited : bool,
 }
 
 // struct t *current;
@@ -42,38 +49,6 @@ fn makeNextTid() -> u64 {
     nextTid += 1;
     return nextTid
   }
-}
-
-pub fn init() {
-  println!("initing sched!");
-  let s = box PerCoreState{runnable: DList::new(), current: None};
-  unsafe  {
-    // This will (per IRC) consume the box, and turn it into a pointer
-    // to the thing that was in the box (the box itself isn't a struct anywhere in memory)
-    // This also means that the box won't be dropped once we leave this function,
-    // but will instead 'leak' -- which is exactly what we want.
-    theState = mem::transmute(s);
-  }
-}
-
-pub fn add_task(entrypoint : fn(), desc : &'static str) {
-  let id = makeNextTid();
-
-  let stack = kbuf::new("task stack");
-  let rsp = (stack.original_mem as u64) +0xff0;
-  let t = box Task{id: id, desc: desc, entrypoint: entrypoint,
-    stack: stack,
-    rsp: rsp,
-    rbp: rsp,
-    ran: false};
-
-  // unsafe because we have to access the global state.. ugh
-  unsafe { (*theState).runnable.push_back(t); }
-}
-
-// Start the scheduler loop, consuming the active thread as the 'boot thread'.
-pub fn exec() {
-  kyield();
 }
 
 fn starttask() {
@@ -126,8 +101,8 @@ pub fn kyield() {
         newRBP = boxt.rbp as u64;
         println!("loading {} from ", newRSP as *mut u64);
 
-        if(boxt.ran == false) {
-          boxt.ran = true;
+        if(boxt.started == false) {
+          boxt.started = true;
           afterswitch = starttask as u64;
         }
         println!("yielding to {}", boxt.desc);
@@ -208,4 +183,37 @@ pub fn kyield() {
       : // options here
       );
   }
+}
+
+pub fn init() {
+  println!("initing sched!");
+  let s = box PerCoreState{runnable: DList::new(), current: None};
+  unsafe  {
+    // This will (per IRC) consume the box, and turn it into a pointer
+    // to the thing that was in the box (the box itself isn't a struct anywhere in memory)
+    // This also means that the box won't be dropped once we leave this function,
+    // but will instead 'leak' -- which is exactly what we want.
+    theState = mem::transmute(s);
+  }
+}
+
+pub fn add_task(entrypoint : fn(), desc : &'static str) {
+  let id = makeNextTid();
+
+  let stack = kbuf::new("task stack");
+  let rsp = (stack.original_mem as u64) +0xff0;
+  let t = box Task{id: id, desc: desc, entrypoint: entrypoint,
+    stack: stack,
+    rsp: rsp,
+    rbp: rsp,
+    started: false,
+    exited: false};
+
+  // unsafe because we have to access the global state.. ugh
+  unsafe { (*theState).runnable.push_back(t); }
+}
+
+// Start the scheduler loop, consuming the active thread as the 'boot thread'.
+pub fn exec() {
+  kyield();
 }

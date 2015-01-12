@@ -52,9 +52,10 @@ Roadmap
 - [x] Userspace page table management
 - [ ] Concurrency
   - [ ] Process lifecycle / identity management, Process table
-  - [ ] Kernel worker & I/O threads
   - [x] Enable PIT chip
-  - [ ] Timer-based scheduler
+  - [x] Cooperative (yield-based) scheduler
+  - [ ] I/O blocking for kernel threads
+  - [ ] Timer-based preemptive scheduler
   - [ ] fork()
 - [ ] Make a userspace toolchain
   - [x] Make a "hello world" binary that runs on host Linux and is as static as it gets (no libc)

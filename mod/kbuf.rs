@@ -24,6 +24,7 @@ pub fn new<'buflife>(name : &'buflife str) -> Buf<'buflife> {
 #[unsafe_destructor]
 impl<'buflife> core::ops::Drop for Buf<'buflife> {
     fn drop(&mut self) {
+      println!("freeing a kbuf");
       unsafe { deallocate(self.original_mem, self.original_size, self.original_align) }
     }
 }
