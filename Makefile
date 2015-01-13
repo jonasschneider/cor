@@ -2,7 +2,7 @@ ROOT=.
 include Makefile.conf
 .PHONY: all clean
 
-OBJS=main.o printk.o chrdev_serial.o chrdev_console.o io.o elf.o interrupthandler.o tss.o mm.o task.o pci.o timer.o pic.o interrupt.o test_mock_supplement.o
+OBJS=main.o printk.o chrdev_serial.o chrdev_console.o io.o elf.o interrupthandler.o tss.o mm.o task.o pci.o timer.o pic.o interrupt.o test_mock_supplement.o context_switch.o
 
 all: disk.bin
 
@@ -28,6 +28,9 @@ mbr.bin: blank_mbr boot.o
 
 stage2_entrypoint.o: stage2_entrypoint.s
 	$(CC) $(KCFLAGS) -c stage2_entrypoint.s -o stage2_entrypoint.o
+
+context_switch.o: context_switch.s
+	$(CC) $(KCFLAGS) -c $< -o $@
 
 interrupthandler.o: interrupthandler.s include/cor/syscall.h intstubs.s~
 	$(CC) $(KCFLAGS) -c -x assembler-with-cpp -Iinclude $< -o $@

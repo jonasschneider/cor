@@ -34,19 +34,23 @@ impl core::fmt::Show for Task {
     }
 }
 
-// struct t *current;
+//
+// STATE
+//
 struct PerCoreState {
   runnable : DList<Box<Task>>,
   current: Option<Box<Task>>,
 }
+// FIXME(smp): this should be per-core as well, but we have to access it from C-land, sooo...
+extern {
+  static mut context_switch_oldrsp_dst : u64;
+  static mut context_switch_oldrbp_dst : u64;
+  static mut context_switch_newrsp : u64;
+  static mut context_switch_newrbp : u64;
+  static mut context_switch_jumpto : u64;
 
-
-impl core::fmt::Show for PerCoreState {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-      write!(f, "(Sched. >{}< of {})", self.current, self.runnable)
-    }
+  fn context_switch();
 }
-
 // Okay, this should not be a static and Rust rightly slaps us in the face for
 // trying to use a mutable static thingie. However, we don't even have
 // multiple cores right now, and we don't have any abstraction for per-core
@@ -64,7 +68,21 @@ fn makeNextTid() -> u64 {
     return nextTid
   }
 }
+//
+// END STATE
+//
 
+pub fn kyield() {
+  reschedule();
+  unsafe { context_switch(); }
+}
+
+
+// This is the actual entry point we reach after switching tasks.
+// It reads the current task from the per-CPU storage,
+// and runs the actual main() function of the task.
+//
+// Maybe it should also do things like set up thread-local storage?
 fn starttask() {
   unsafe {
     let ref mut c = (*theState).current;  // there should always be a current after context switch
@@ -86,24 +104,25 @@ fn starttask() {
   }
 }
 
-pub fn kyield() {
+
+// Defining the actual yield in Rust is unsafe because we enter the function
+// on a different stack than the one that's present when leaving the function.
+// This breaks one of Rust's assumptions about the machine model. So, we'll do
+// it in asm!
+fn reschedule() {
   // unsafe because we have to access the global state..
   // we're doing lots more of unsafe operations in here.
   // TODO: finer-grained unsafe blocks here, and think harder about everything unsafe
   unsafe {
-    let ref mut s = *theState;
-    println!("yielding with state={}", s);
-
     // eep
-    let mut oldRSP_dst = 0 as *mut u64;
-    let mut oldRBP_dst = 0 as *mut u64;
-    let mut newRSP = 0;
-    let mut newRBP = 0;
+    context_switch_oldrsp_dst = 0;
+    context_switch_oldrbp_dst = 0;
+    context_switch_newrsp = 0;
+    context_switch_newrbp = 0;
+    context_switch_jumpto = 0;
 
-    // this is the best thing ever: in case we're entering anew, we put the
-    // address of starttask() in here
-    let mut afterswitch = 0;
-
+    let ref mut s = *theState;
+    println!("yielding with state={}, data={}", s, context_switch_oldrbp_dst);
 
     let next = match s.runnable.pop_front() {
       None => {
@@ -114,13 +133,13 @@ pub fn kyield() {
         //panic!();
       }
       Some(mut boxt) => {
-        newRSP = boxt.rsp as u64; // POINTER SIZES FTW
-        newRBP = boxt.rbp as u64;
-        println!("loading sp=0x{:x}, bp=0x{:x}", newRSP, newRBP);
+        context_switch_newrsp = boxt.rsp as u64; // POINTER SIZES FTW
+        context_switch_newrbp = boxt.rbp as u64;
+        println!("loading sp=0x{:x}, bp=0x{:x}", context_switch_newrsp, context_switch_newrbp);
 
         if(boxt.started == false) {
           boxt.started = true;
-          afterswitch = starttask as u64;
+          context_switch_jumpto = starttask as u64;
         }
         println!("yielding to {}", boxt.desc);
         Some(boxt)
@@ -134,79 +153,18 @@ pub fn kyield() {
         if old_t.exited {
           println!("task marked as exited, not rescheduling");
         } else {
-          oldRSP_dst = mem::transmute(&old_t.rsp);
-          oldRBP_dst = mem::transmute(&old_t.rbp);
-          println!("old RSP is stored at {}", oldRSP_dst);
+          context_switch_oldrsp_dst = mem::transmute(&old_t.rsp);
+          context_switch_oldrbp_dst = mem::transmute(&old_t.rbp);
           s.runnable.push_back(old_t); // TODO(perf): this allocates!!! DList sucks, apparently
         }
       },
       None => {
         println!("initial switch");
       }
-    };
-
-
-    // sooo, the context switch itself is a bit hairy. Our goals are:
-    //
-    //  1. Save the old task's %rsp and %rbp into its task struct so we know
-    //     how to resume
-    //  2. Load the new task's %rsp and %rbp from its task struct
-    //  3. And then comes something interesting:
-    //    - If the new task has never been launched yet: "Call" its entrypoint
-    //      -- I say "call" because since we're not in a valid stack frame,
-    //      this call can never return without breaking stuff. So, we wrap it
-    //      in a call around starttask().
-    //    - Otherwise, the new stack frame puts us into a call to kyield(),
-    //      the frame that called us is code from within the resumed task. So
-    //      we should just return like
-    //      a reasonable citizen.
-
-    // We want to do all of this as safely as possible. I think, 'safely' in this
-    // context actually means in a single block of asm. It may not use the stack, and it may not
-    // do function calls (since we mess with the stack).
-    // We have collected all the data we need from above. We need to put it all in registers
-    // so we don't depend on the stack at all anymore.
-    // TODO: think if the exact ourobouros-recursion-property we're enforcing here is just reentrancy.
-    //       Reentrancy is certainly a part of it.
-    asm!(
-      "cmp $$0, $0
-       je kyield_drop_old
-       mov %rsp, ($0)
-       mov %rbp, ($1)
-      kyield_drop_old:
-       mov $2, %rsp
-       mov $3, %rbp
-       cmp $$0, $4
-       jne kyield_go_to_starttask
-       jmp kyield_just_continue # FIXME(perf): the common case should not have to branch
-      kyield_go_to_starttask:
-       jmp *$4
-      kyield_just_continue:
-
-       # FIXME: THIS IS A HUGE HACK AND SUPER UNSAFE.
-       # -CUE WARNING LIGHTS-
-       # This is actually worse than the context switch itself.
-       # We don't let Rust finish up with its own stack frame,
-       # skipping Drop() handlers inserted by LLVM because they depend on the old stack.
-       # This is horrible and it seems like we should do context-switching outside of Rustland
-       # entirely.
-       # I still have this idea about modding the return address of this stack frame.
-       # It would point to do_context_switch, which is itself defined in a .s somewhere
-       # and receives its arguments (i.e. the stuff we give it here) via a static (actually, cpu-local)
-       # memory location somewhere. (it can't be the registers and it can't be the stack...)
-       leave
-       ret
-       "
-      : // no writes
-      : "r"(oldRSP_dst),
-        "r"(oldRBP_dst),
-        "r"(newRSP)
-        "r"(newRBP)
-        "r"(afterswitch)
-      : "rax", "rsp", "rbp"
-      : // options here
-      );
+    }
   }
+
+  // we don't do the actual context switch here, see yield
 }
 
 pub fn init() {
@@ -241,4 +199,13 @@ pub fn add_task(entrypoint : fn(), desc : &'static str) {
 // Start the scheduler loop, consuming the active thread as the 'boot thread'.
 pub fn exec() {
   kyield();
+}
+
+
+
+
+impl core::fmt::Show for PerCoreState {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+      write!(f, "(Sched >{}< of {})", self.current, self.runnable)
+    }
 }
