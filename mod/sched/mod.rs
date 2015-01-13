@@ -27,10 +27,24 @@ struct Task {
   exited : bool,
 }
 
+impl core::fmt::Show for Task {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+      let s = if self.exited { "dead" } else { "alive" };
+      write!(f, "[{} - {} - {}]", self.id, self.desc, s)
+    }
+}
+
 // struct t *current;
 struct PerCoreState {
   runnable : DList<Box<Task>>,
   current: Option<Box<Task>>,
+}
+
+
+impl core::fmt::Show for PerCoreState {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+      write!(f, "(Sched. >{}< of {})", self.current, self.runnable)
+    }
 }
 
 // Okay, this should not be a static and Rust rightly slaps us in the face for
@@ -53,17 +67,19 @@ fn makeNextTid() -> u64 {
 
 fn starttask() {
   unsafe {
-    let ref c = (*theState).current;  // there should always be a current after context switch
-
+    let ref mut c = (*theState).current;  // there should always be a current after context switch
     match c {
       &None => {
         println!("no task after afterswitch?!");
       }
-      &Some(ref t) => {
+      &Some(ref mut t) => {
         println!("launching task entrypoint");
         (t.entrypoint)();
-        println!("ohmygod entrypoint returned, cleanup here pls alert alert");
-        while(true) {}
+        println!("task entrypoint returned, yielding away from us for the last time");
+        t.exited = true;
+        kyield();
+        println!("PANIC! kyield() returned after exit");
+        while(true) { }
       }
     }
 
@@ -76,6 +92,7 @@ pub fn kyield() {
   // TODO: finer-grained unsafe blocks here, and think harder about everything unsafe
   unsafe {
     let ref mut s = *theState;
+    println!("yielding with state={}", s);
 
     // eep
     let mut oldRSP_dst = 0 as *mut u64;
@@ -99,7 +116,7 @@ pub fn kyield() {
       Some(mut boxt) => {
         newRSP = boxt.rsp as u64; // POINTER SIZES FTW
         newRBP = boxt.rbp as u64;
-        println!("loading {} from ", newRSP as *mut u64);
+        println!("loading sp=0x{:x}, bp=0x{:x}", newRSP, newRBP);
 
         if(boxt.started == false) {
           boxt.started = true;
@@ -114,10 +131,14 @@ pub fn kyield() {
     let old = mem::replace(&mut s.current, next);
     match old {
       Some(mut old_t) => {
-        oldRSP_dst = mem::transmute(&old_t.rsp);
-        oldRBP_dst = mem::transmute(&old_t.rsp);
-        println!("old value {:x} is stored at {}", old_t.rsp, oldRSP_dst);
-        s.runnable.push_back(old_t); // TODO(perf): this allocates!!! DList sucks, apparently
+        if old_t.exited {
+          println!("task marked as exited, not rescheduling");
+        } else {
+          oldRSP_dst = mem::transmute(&old_t.rsp);
+          oldRBP_dst = mem::transmute(&old_t.rbp);
+          println!("old RSP is stored at {}", oldRSP_dst);
+          s.runnable.push_back(old_t); // TODO(perf): this allocates!!! DList sucks, apparently
+        }
       },
       None => {
         println!("initial switch");
@@ -148,16 +169,19 @@ pub fn kyield() {
     // TODO: think if the exact ourobouros-recursion-property we're enforcing here is just reentrancy.
     //       Reentrancy is certainly a part of it.
     asm!(
-      "mov %rsp, ($0)
+      "cmp $$0, $0
+       je kyield_drop_old
+       mov %rsp, ($0)
        mov %rbp, ($1)
+      kyield_drop_old:
        mov $2, %rsp
        mov $3, %rbp
        cmp $$0, $4
-       jne go_to_starttask
-       jmp just_continue # FIXME(perf): the common case should not branch
-      go_to_starttask:
+       jne kyield_go_to_starttask
+       jmp kyield_just_continue # FIXME(perf): the common case should not have to branch
+      kyield_go_to_starttask:
        jmp *$4
-      just_continue:
+      kyield_just_continue:
 
        # FIXME: THIS IS A HUGE HACK AND SUPER UNSAFE.
        # -CUE WARNING LIGHTS-
@@ -170,8 +194,8 @@ pub fn kyield() {
        # It would point to do_context_switch, which is itself defined in a .s somewhere
        # and receives its arguments (i.e. the stuff we give it here) via a static (actually, cpu-local)
        # memory location somewhere. (it can't be the registers and it can't be the stack...)
-       pop %rbp
-       retq
+       leave
+       ret
        "
       : // no writes
       : "r"(oldRSP_dst),
@@ -201,7 +225,8 @@ pub fn add_task(entrypoint : fn(), desc : &'static str) {
   let id = makeNextTid();
 
   let stack = kbuf::new("task stack");
-  let rsp = (stack.original_mem as u64) +0xff0;
+  let rsp = unsafe { (stack.original_mem as u64) } +0x3ff0;
+  println!("Task RSP: 0x{:x}", rsp);
   let t = box Task{id: id, desc: desc, entrypoint: entrypoint,
     stack: stack,
     rsp: rsp,

@@ -171,8 +171,9 @@ void kernel_main(void) {
 }
 
 void init_task() {
-  cor_printk("Exec'ing init from task..\n");
+  cor_printk("Exec'ing init from task.. lol j/k\n");
+  while(1);
 
-  cor_elf_exec(&cor_stage2_init_data, cor_stage2_init_data_len);
+  //cor_elf_exec(&cor_stage2_init_data, cor_stage2_init_data_len);
   // this should never, ever return.. right?
 }

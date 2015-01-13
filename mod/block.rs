@@ -63,14 +63,13 @@ extern "C" {
 
 fn rust_init_task() {
   unsafe { init_task(); }
-  println!("c-land init_task exited?!, loop-yielding");
+  println!("c-land init_task exited.?!, loop-yielding");
   while(true) { sched::kyield(); }
 }
 
 fn rust_pci_task() {
   unsafe { pci_init(); }
-  println!("c-land pci_init exited?!, loop-yielding");
-  while(true) { sched::kyield(); }
+  println!("c-land pci_init exited");
 }
 
 #[no_mangle]

@@ -13,11 +13,11 @@ pub struct Buf<'buflife> {
 }
 
 pub fn new<'buflife>(name : &'buflife str) -> Buf<'buflife> {
-  let size = 0x1000;
-  let align = 0x10;
+  let size = 0x4000;
+  let align = 0x100;
   let mem = unsafe { allocate(size, align) };
   let memptr : &*mut u8 = unsafe { mem::transmute(&mem) };
-  let slice : &mut[u8] = unsafe { slice::from_raw_mut_buf(memptr, 512) };
+  let slice : &mut[u8] = unsafe { slice::from_raw_mut_buf(memptr, 0x4000) };
   Buf{s: slice, original_mem: mem, original_size: size, original_align: align}
 }
 
