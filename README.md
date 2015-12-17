@@ -1,24 +1,21 @@
-Cor -- a hobbyist x86_64 kernel
-===============================
+Cor: a hobbyist x86_64 kernel
+=============================
 
-Cor is a completely fresh start in kernel architecture. Created by someone with no experience in this field whatsoever, its goals are:
+Cor explores how one could build a bare-metal kernel in 2015.
+It uses the [https://www.rust-lang.org/](Rust) programming language to achieve memory safety.
 
-- Be a living document on what's needed to build something that runs on today's metal (or, right now, QEMU)
-- Make interactions between kernel- and userspace and between kernel components clear
-- Clarify where & how one would implement "smart" policies and algorithms
-- Occasionally introduce unneeded complexity (read: Rust kernel modules) to prove a point
+We find that the complexity of modern CPU architectures doesn't necessarily mean that you can't build nice things yourself.
 
-Also, build a robust kernel. Explicit non-goals are:
-
-- Be fast (if we optimize, we're doing it to make sure that nothing breaks)
-- Be secure (you wouldn't attach this to your network at work)
-- Be, by any definition, production-ready
-- Implement smart policies and algorithms, where not crucial
-- [Compile all the bad parts of Windows, Linux, and OS X to form the platform for 21st century computing.](http://upload.wikimedia.org/wikipedia/en/a/ae/BeOS_Desktop.png)
+Non-goals
+---------
+- Speed (though Rust is pretty fast out of the box)
+- Security (you wouldn't attach this to your network at work)
+- Production readiness
 
 Synopsis
 --------
-- Install dependencies: Compilers (XCode CLI tools / `build-essential`), QEMU, Vagrant, xxd, Ruby, Go, Rust
+- If you're not running Linux, it's easiest to grab [https://www.vagrantup.com/](Vagrant) and run `vagrant up`.
+- Install dependencies: `build-essential`, qemu, xxd, Ruby, Go, Rust
 - `$ make`
 - `$ bin/run` to start the system, you'll be connected to the serial console of the machine
 - `$ bin/debug` to debug the kernel, runs qemu and tells you how to attach a `gdb`
@@ -46,22 +43,21 @@ Roadmap
   - [x] sbrk
   - [x] Fix page permissions (`|4`s in boot.s)
   - [x] Move to higher-half kernel
-- [ ] Kernel modules
-  - [x] Simple static module (Rust)
-  - [ ] Definition of core <-> module interface
-- [x] Userspace page table management
-- [ ] Concurrency
+- [x] Trampoline from C to Rust code after bootstrapping
+- [x] Simple serspace page table management
+- [ ] Concurrency / Multiprocessing
   - [ ] Process lifecycle / identity management, Process table
   - [x] Enable PIT chip
-  - [x] Cooperative (yield-based) scheduler
+  - [x] Cooperative (yield-based) scheduler for kernel threads
+  - [ ] Yielding from userspace
   - [ ] I/O blocking for kernel threads
   - [ ] Timer-based preemptive scheduler
   - [ ] fork()
-- [ ] Make a userspace toolchain
+- [ ] Build a userspace toolchain
   - [x] Make a "hello world" binary that runs on host Linux and is as static as it gets (no libc)
   - [ ] Mod dietlibc to fit our syscall mechanism
   - [ ] Package that as libcorc or something
-- [ ] Make something like a shell over serial (this will be our /sbin/init)
+- [ ] Build something like a shell that talks over serial (this will be our init)
 - [ ] Filesystem
   - [x] Attach virtio (virtio-scsi, or preferredly virtio-blk) to QEMU
   - [x] PCI device detection
@@ -69,26 +65,25 @@ Roadmap
   - [ ] virtio PCI block device driver
   - [ ] block device abstraction (likely in C land, or maybe the scheduler in Rust)
   - [ ] tiniest filesystem imaginable (read-only single-level?) -> tar format, FS state in rust
-- [ ] Networking -> DHCP + UDP/IP, then TCP
-- [ ] implement `ls` & `netcat` equivalents
-- [ ] Litmus test for a complete operating system:
-
-    $ ping 8.8.8.8 | sed -l 's/.*/ping/' | xargs -n1 say
-
+- [ ] Userspace binaries (`ls` and such)
+- [ ] Networking:
+  - [ ] virtio NIC
+  - [ ] Ethernet/Layer 2 broadcasting & receiving
+  - [ ] DHCP, UDP with stub IP
+  - [ ] real IP config
+  - [ ] Ping
+  - [ ] TCP
+  - [ ] Tiny webserver
 
 More unicorns:
 
 - [ ] Page-table-based IPC ("send" a page to another process, zero copy yadda yadda)
 - [ ] SMP support
-- [ ] Isolated kernel modules (maybe in Rust)
-  - [ ] Memory manager (unclear if a good idea; maybe just the userspace memory manager)
-  - [ ] FS (block device code in C)
-  - [ ] Networking (PCI code in C)
 - [ ] Smarter kalloc (something like Linux' slab allocator?)
 - [ ] Smarter userspace `malloc` that allocates contiguous sections for a single task
 - [ ] FS: Journalling
-- [ ] Real hardware
-- [ ] Thread-local storage setup for Rustland
+- [ ] Test on real hardware
+- [ ] Thread-local storage setup for Rustland:
 
     <nathan7> jonasschneider: but figure out some place to put your F-segment, and stick the address in the GDT
     <nathan7> jonasschneider: (and do an LGDT and all)
@@ -178,9 +173,9 @@ As this is an academic project, I'll try to document things I stumbled over.
 
 The Story
 ---------
-I don't have a long history with writing anything low-level. I usually program in Ruby or other dynamic languages with GC, and never really cared about what actually went down inside the computer. UNIX syscalls were my primitive instructions. `gdb` always scared me with its pointers, and how it could crash my entire process so easily. Finding `.S` files in a project repo was always a good sign for me to avoid touching it with a 10ft pole.
+I don't have a history with writing anything low-level. I usually write Ruby or other dynamic languages with GC, and never really cared about what actually went down inside the computer. UNIX syscalls were my primitive instructions. `gdb` always scared me with its pointers, and how it could crash my entire process so easily. Finding `.s` files in a project repo was always a good sign for me to avoid touching it with a 10ft pole.
 
-Takeaway: For high-level developers like me, the scare factor of low-level assembly programming might be so high because it's combined with the great complexity of a modern OS. If you take one of the factors away, you're back in a fairly comfortable zone; usually, you take away the low-level factor and deal with the complexity. It turns out that taking away the complexity works just as well.
+Takeaway: For high-level developers, the scare factor of low-level assembly programming might be so high because it's combined with the great complexity of a modern OS. If you take one of the factors away, you're back in a fairly comfortable zone; usually, you take away the low-level factor and deal with the complexity. It turns out that taking away the complexity works just as well.
 
 
 Bibliography
