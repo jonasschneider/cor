@@ -4,10 +4,14 @@
 #![no_std]
 #![feature(lang_items,unsafe_destructor,asm,box_patterns)]
 
+// only for bindgen'd stuff!
+#![feature(libc)]
+
 // Use kalloc for heap memory
 extern crate kalloc;
 
 extern crate alloc;
+#[macro_use(vec)]
 extern crate collections;
 
 // Set up the `print!` and `println!` macros, printing to the kernel console
@@ -19,9 +23,7 @@ mod std { pub use core::fmt; } // std-module-trick to fix expansion of `format_a
 mod cpuio;
 
 // import submodules
-mod block {
-  pub mod virtio;
-}
+mod virtio;
 
 mod kbuf;
 
@@ -126,8 +128,8 @@ pub fn virtio_init(ioport : u16) {
   }
 
   unsafe { println!("the state is now {:?}, lol", state); }
-  let a_device = block::virtio::init(&ioport);
-  println!("my device is: {:?}", a_device);
+  //let a_device = unsafe { virtio::init(ioport) };
+  //println!("result of blockdevice init: {:?}", a_device);
 }
 
 #[lang = "stack_exhausted"] extern fn stack_exhausted() {}

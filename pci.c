@@ -128,13 +128,13 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
   uint16_t io_base = bar0 & 0xFFFFFFFC;
 
   uint8_t irq = (uint8_t)(pciConfigReadLong(bus, slot, function, 0x3c) & 0xff);
-  cor_printk("Virtio IRQ is %x\n", irq);
+  cor_printk("Virtio IRQ is %x, IO base location %x\n", irq, io_base);
 
   // This is pretty much all we actually interface with PCI; once we have the
   // I/O base port, we're golden.
 
   cor_printk("Doing rust call thingie\n");
-  //virtio_init(io_base);
+  virtio_init(io_base);
 
   // Now comes the block-device-specific setup.
   // (The configuration of a single virtqueue isn't device-specific though; it's the same
