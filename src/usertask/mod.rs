@@ -21,9 +21,11 @@ pub fn exec_init() {
     trampoline_to_user_rsp = 0x602000; // !!
     trampoline_to_user_rip = init_entry;
 
-    println!("Trampolining to userspace at {:x} with stack at ", trampoline_to_user_rip);
+    println!("Trampolining to userspace at {:x} with stack at {:x}", trampoline_to_user_rip, trampoline_to_user_rsp);
 
     trampoline_to_user();
+
+    println!("Back from userspace!");
   }
 
   // FIXME FIXME: this is superbad; better than overwriting kernel code, but still bad

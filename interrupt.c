@@ -54,7 +54,7 @@ void interrupt_init() {
   // but doing with a software interrupt is the original way.
   debug("Firing test interrupt.. ");
   int a = 1337;
-  __asm__ ( "int $49" );
+  __asm__ ( "int $48" );
   debug("returned.. ");
   if(a == 1337) {
     debug("OK, stack looks intact.\n");

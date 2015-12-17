@@ -69,5 +69,5 @@ init_static.c~: userspace/*.c
 	$(MAKE) -C userspace
 	cat userspace/init | ruby -e 'b = $$stdin.read.bytes; puts "int cor_stage2_init_data_len = "+b.count.to_s+"; char cor_stage2_init_data[] = {";puts b.map{|x|"0x#{x.to_s(16)}"}.join(", ");puts "};"' > $@
 
-intstubs.s~:
-	ruby -e '0.upto(255) { |i| puts ".align 16\n.global intrstub_#{i}\nintrstub_#{i}:\n  push $$#{i}\n  jmp isr_dispatcher\n\n" }' > $@
+intstubs.s~: Makefile
+	ruby -e '0.upto(255) { |i| puts ".align 16\n.global intrstub_#{i}\nintrstub_#{i}:\n  push %rax\n  mov $$#{i}, %rax\n  jmp isr_dispatcher\n\n" }' > $@

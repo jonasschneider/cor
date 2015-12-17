@@ -2,7 +2,16 @@
 .globl   dummy_isr
 .align   4
 
+is_return_from_trampoline:
+  pop %rax
+  cli
+  jmp trampoline_from_user
+
 isr_dispatcher:
+  sub $49, %rax
+  jz is_return_from_trampoline
+  pop %rax
+
   #push %rax # TODO: figure out why this breaks everything
   push %rbx
   push %rcx
@@ -34,9 +43,6 @@ isr_dispatcher:
   pop %rcx
   pop %rbx
   #pop %rax
-
-  # pop the interrupt number
-  add $8, %rsp
 
   iretq
 
