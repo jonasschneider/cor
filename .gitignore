@@ -1,4 +1,5 @@
 *.bin
+**/*.rlib
 .vagrant
 *.o
 *.a

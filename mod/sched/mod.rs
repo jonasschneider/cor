@@ -1,16 +1,16 @@
-use myheap;
 use kbuf;
 
-use boxed::Box;
+use alloc::boxed::Box;
 use core::prelude::*;
 use core::mem;
 use core;
-use mydlist::DList;
+use collections::linked_list::LinkedList;
 
 mod context;
 
 type Tid = u64;
 
+#[derive(Debug)]
 struct Task {
   // identity info
   id : Tid,
@@ -27,18 +27,12 @@ struct Task {
   exited : bool,
 }
 
-impl core::fmt::Show for Task {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-      let s = if self.exited { "dead" } else { "alive" };
-      write!(f, "[{} - {} - {}]", self.id, self.desc, s)
-    }
-}
-
 //
 // STATE
 //
+#[derive(Debug)]
 struct PerCoreState {
-  runnable : DList<Box<Task>>,
+  runnable : LinkedList<Box<Task>>,
   current: Option<Box<Task>>,
 }
 // FIXME(smp): this should be per-core as well, but we have to access it from C-land, sooo...
@@ -87,10 +81,10 @@ fn starttask() {
   unsafe {
     let ref mut c = (*theState).current;  // there should always be a current after context switch
     match c {
-      &None => {
+      &mut None => {
         println!("no task after afterswitch?!");
       }
-      &Some(ref mut t) => {
+      &mut Some(ref mut t) => {
         println!("launching task entrypoint");
         (t.entrypoint)();
         println!("task entrypoint returned, yielding away from us for the last time");
@@ -122,7 +116,7 @@ fn reschedule() {
     context_switch_jumpto = 0;
 
     let ref mut s = *theState;
-    println!("yielding with state={}, data={}", s, context_switch_oldrbp_dst);
+    println!("yielding with state={:?}, data={:?}", s, context_switch_oldrbp_dst);
 
     let next = match s.runnable.pop_front() {
       None => {
@@ -141,7 +135,7 @@ fn reschedule() {
           boxt.started = true;
           context_switch_jumpto = starttask as u64;
         }
-        println!("yielding to {}", boxt.desc);
+        println!("yielding to {:?}", boxt.desc);
         Some(boxt)
       }
     };
@@ -155,7 +149,7 @@ fn reschedule() {
         } else {
           context_switch_oldrsp_dst = mem::transmute(&old_t.rsp);
           context_switch_oldrbp_dst = mem::transmute(&old_t.rbp);
-          s.runnable.push_back(old_t); // TODO(perf): this allocates!!! DList sucks, apparently
+          s.runnable.push_back(old_t); // TODO(perf): this allocates!!! LinkedList sucks, apparently
         }
       },
       None => {
@@ -169,7 +163,7 @@ fn reschedule() {
 
 pub fn init() {
   println!("initing sched!");
-  let s = box PerCoreState{runnable: DList::new(), current: None};
+  let s = box PerCoreState{runnable: LinkedList::new(), current: None};
   unsafe  {
     // This will (per IRC) consume the box, and turn it into a pointer
     // to the thing that was in the box (the box itself isn't a struct anywhere in memory)
@@ -204,8 +198,8 @@ pub fn exec() {
 
 
 
-impl core::fmt::Show for PerCoreState {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-      write!(f, "(Sched >{}< of {})", self.current, self.runnable)
-    }
-}
+// impl core::fmt::Show for PerCoreState {
+//     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+//       write!(f, "(Sched >{}< of {})", self.current, self.runnable)
+//     }
+// }

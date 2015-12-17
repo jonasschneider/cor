@@ -1,27 +1,30 @@
-
 use core::prelude::*;
 use core::fmt;
+use core::fmt::Write;
 
 
 macro_rules! write {
-    ($dst:expr, $($arg:tt)*) => ((&mut *$dst).write_fmt(format_args!($($arg)*)))
+  ($dst:expr, $($arg:tt)*) => ($dst.write_fmt(format_args!($($arg)*)))
 }
 
 macro_rules! writeln {
-    ($dst:expr, $fmt:expr $($arg:tt)*) => (
-        write!($dst, concat!($fmt, "\n") $($arg)*)
-    )
+  ($dst:expr, $fmt:expr) => (
+      write!($dst, concat!($fmt, "\n"))
+  );
+  ($dst:expr, $fmt:expr, $($arg:tt)*) => (
+      write!($dst, concat!($fmt, "\n"), $($arg)*)
+  );
 }
 
 pub fn myprint_args(fmt: fmt::Arguments) -> Result<(), fmt::Error>  {
   let kio = &mut Kio { lol: 1337 };
-  let io = kio as &mut fmt::Writer;
+  let io = kio as &mut Write;
   write!(io, "{}", fmt)
 }
 
 pub fn myprintln_args(fmt: fmt::Arguments) -> Result<(), fmt::Error>  {
   let kio = &mut Kio { lol: 1337 };
-  let io = kio as &mut fmt::Writer;
+  let io = kio as &mut Write;
   writeln!(io, "{}", fmt)
 }
 
@@ -34,14 +37,14 @@ macro_rules! println {
 }
 
 extern {
-  fn rust_writek(txt : &[u8], len: uint) -> ();
+  fn rust_writek(txt : &[u8], len: usize) -> ();
 }
 
 struct Kio {
-  lol: int,
+  lol: u16,
 }
 
-impl fmt::Writer for Kio {
+impl Write for Kio {
   fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
     let sl = s.as_bytes();
     let len = s.len();

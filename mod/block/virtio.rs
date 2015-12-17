@@ -1,17 +1,19 @@
 use cpuio;
 
-use boxed::Box;
+use alloc::boxed::Box;
 use core::slice;
 use core::fmt;
 use kbuf;
 
 mod common_virtio {
+  #[derive(Debug)]
   pub struct virtqueue<'dev_life> {
     pub buf : ::kbuf::Buf<'dev_life>
   }
 }
 
-struct virtio_blkdev<'dev_life> {
+#[derive(Debug)]
+pub struct virtio_blkdev<'dev_life> {
   io_base: cpuio::Port,
   q:  common_virtio::virtqueue<'dev_life>
 }
@@ -58,7 +60,7 @@ pub fn init<'devlife>(io_base : &'devlife u16) -> Box<virtio_blkdev> {
 
   // Feature negotiation
   let offered_featureflags = unsafe { cpuio::read16(io+0) };
-  println!("The device offered us these feature bits: {}", offered_featureflags);
+  println!("The device offered us these feature bits: {:?}", offered_featureflags);
   // In theory, we'd do `negotiated = offered & supported`; we don't actually
   // support any flags, so we can just set 0.
   unsafe {cpuio::write16(io+4, 0); }
@@ -227,11 +229,11 @@ pub fn init<'devlife>(io_base : &'devlife u16) -> Box<virtio_blkdev> {
 }
 
 
-impl<'a> fmt::Show for virtio_blkdev<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // The `f` value implements the `Writer` trait, which is what the
-        // write! macro is expecting. Note that this formatting ignores the
-        // various flags provided to format strings.
-        write!(f, "some dev")
-    }
-}
+// impl<'a> fmt::Show for virtio_blkdev<'a> {
+//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//         // The `f` value implements the `Writer` trait, which is what the
+//         // write! macro is expecting. Note that this formatting ignores the
+//         // various flags provided to format strings.
+//         write!(f, "some dev")
+//     }
+// }

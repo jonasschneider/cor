@@ -1,19 +1,19 @@
 #![crate_type="staticlib"]
+#![feature(box_syntax)]
+#![feature(alloc,collections,core_intrinsics)]
 #![no_std]
-#![feature(lang_items,unsafe_destructor,asm)]
+#![feature(lang_items,unsafe_destructor,asm,box_patterns)]
 
-extern crate core;
+// Use kalloc for heap memory
+extern crate kalloc;
 
-use core::prelude::*;
+extern crate alloc;
+extern crate collections;
 
 // Set up the `print!` and `println!` macros, printing to the kernel console
 #[macro_use]
 mod print;
 mod std { pub use core::fmt; } // std-module-trick to fix expansion of `format_args!`
-
-// Provide the compiler with implementations for heap data structures via kalloc
-mod myheap;
-mod boxed;
 
 // cpuio library
 mod cpuio;
@@ -23,7 +23,6 @@ mod block {
   pub mod virtio;
 }
 
-mod mydlist;
 mod kbuf;
 
 pub mod sched;
@@ -41,18 +40,10 @@ extern {
   fn abort() -> !;
 }
 
+#[derive(Debug)]
 struct State {
-    number: int,
+    number: u8,
     string: &'static str
-}
-
-impl core::fmt::Show for State {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        // The `f` value implements the `Writer` trait, which is what the
-        // write! macro is expecting. Note that this formatting ignores the
-        // various flags provided to format strings.
-        write!(f, "(num:{}, s:{})", self.number, self.string)
-    }
 }
 
 extern "C" {
@@ -129,9 +120,9 @@ pub fn virtio_init(ioport : u16) {
     }
   }
 
-  unsafe { println!("the state is now {}, lol", state); }
+  unsafe { println!("the state is now {:?}, lol", state); }
   let a_device = block::virtio::init(&ioport);
-  println!("my device is: {}", a_device);
+  println!("my device is: {:?}", a_device);
 }
 
 #[lang = "stack_exhausted"] extern fn stack_exhausted() {}
