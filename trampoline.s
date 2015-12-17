@@ -42,9 +42,17 @@ trampoline_to_user:
     pushq %rax
     iretq
 
+
 .globl trampoline_from_user
 trampoline_from_user:
-    #jmp trampoline_from_user
+    movabs %rax, trampoline_from_user_arg1
+    mov %rbx, %rax
+    movabs %rax, trampoline_from_user_arg2
+    mov %rcx, %rax
+    movabs %rax, trampoline_from_user_arg3
+    mov %rdx, %rax
+    movabs %rax, trampoline_from_user_arg4
+
     movabs trampoline_previous_kernel_rsp, %rax
     mov %rax, %rsp
 
@@ -56,3 +64,16 @@ trampoline_from_user:
     pop %rbp
 
     ret # return back to the kernel task that called trampoline_to_user
+
+.globl trampoline_from_user_arg1
+trampoline_from_user_arg1:
+  .quad 0
+.globl trampoline_from_user_arg2
+trampoline_from_user_arg2:
+  .quad 0
+.globl trampoline_from_user_arg3
+trampoline_from_user_arg3:
+  .quad 0
+.globl trampoline_from_user_arg4
+trampoline_from_user_arg4:
+  .quad 0

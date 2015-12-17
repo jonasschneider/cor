@@ -6,6 +6,11 @@ extern {
   static mut trampoline_to_user_rip : u64;
   static mut trampoline_to_user_rsp : u64;
   static mut trampoline_to_user_codeseg : u64;
+
+  static mut trampoline_from_user_arg1 : u64;
+  static mut trampoline_from_user_arg2 : u64;
+  static mut trampoline_from_user_arg3 : u64;
+  static mut trampoline_from_user_arg4 : u64;
 }
 
 pub fn exec_init() {
@@ -26,6 +31,8 @@ pub fn exec_init() {
     trampoline_to_user();
 
     println!("Back from userspace!");
+    println!("IRQ49 with args: {:x} {:x} {:x} {:x}",
+      trampoline_from_user_arg1, trampoline_from_user_arg2, trampoline_from_user_arg3, trampoline_from_user_arg4);
   }
 
   // FIXME FIXME: this is superbad; better than overwriting kernel code, but still bad
