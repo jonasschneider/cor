@@ -9,7 +9,7 @@ all: disk.bin
 clean:
 	rm -f *.o *.bin *~ init *.so
 	$(MAKE) -C userspace clean
-	$(MAKE) -C mod clean
+	$(MAKE) -C src clean
 
 %.o: %.c
 	$(CC) $(KCCFLAGS) $< -c -o $@
@@ -17,8 +17,8 @@ clean:
 boot.o: boot.s
 	$(AS) boot.s -o boot.o
 
-mod/%.kmo: mod/**/*.rs mod/*.rs mod/*.c
-	$(MAKE) -C mod
+src/%.kmo: src/**/*.rs src/*.rs src/*.c
+	$(MAKE) -C src
 
 mbr.bin: blank_mbr boot.o
 	cp blank_mbr mbr.bin
@@ -38,10 +38,10 @@ interrupthandler.o: interrupthandler.s include/cor/syscall.h intstubs.s~
 test_mock_supplement.o: $(wildcard ./test_mock_supplement.c~) test_mock_supplement_stub.c
 	if [ -e "test_mock_supplement.c~" ]; then f="test_mock_supplement.c~"; else f="test_mock_supplement_stub.c"; fi; $(CC) $(KCCFLAGS) -c -x c $$f -o $@
 
-stage2.o: $(OBJS) linkerscript stage2_entrypoint.o init_static.o mod/block.kmo
+stage2.o: $(OBJS) linkerscript stage2_entrypoint.o init_static.o src/block.kmo
 	echo LONG\(0x$(shell git rev-parse HEAD | cut -c 1-6)\) > versionstamp~
 	# -x here removes local symbols (like those from hello.kmo from the file -- maybe for "production"?)
-	$(LD) $(OBJS) stage2_entrypoint.o init_static.o mod/block.kmo -T linkerscript -o stage2.o
+	$(LD) $(OBJS) stage2_entrypoint.o init_static.o src/block.kmo -T linkerscript -o stage2.o
 
 stage2.bin: stage2.o
 	$(OBJCOPY) --only-section=.text -O binary stage2.o stage2.bin
