@@ -19,6 +19,8 @@ extern crate collections;
 mod print;
 mod std { pub use core::fmt; } // std-module-trick to fix expansion of `format_args!`
 
+mod usertask;
+
 // cpuio library
 mod cpuio;
 
@@ -49,15 +51,8 @@ struct State {
 }
 
 extern "C" {
-  fn init_task();
   fn pci_init();
   fn test_mock_main();
-}
-
-fn rust_init_task() {
-  unsafe { init_task(); }
-  println!("c-land init_task exited.?!, loop-yielding");
-  while(true) { sched::kyield(); }
 }
 
 fn rust_pci_task() {
@@ -77,8 +72,8 @@ pub fn rs_sched_exec() {
     called = true;
   }
   unsafe { sched::init(); }
-  sched::add_task(thread1, "thread1");
-  sched::add_task(thread2, "thread2");
+  //sched::add_task(thread1, "thread1");
+  //sched::add_task(thread2, "thread2");
 
   // Okay, now that we have the scheduler set up, we can start doing things
   // that set up tasks to react to input from the outside. A perfect example
@@ -90,7 +85,7 @@ pub fn rs_sched_exec() {
   unsafe { test_mock_main(); }
 
   // we cannot yet yield back from the init task, so don't start it
-  //sched::add_task(rust_init_task, "init task");
+  sched::add_task(usertask::exec_init, "init task");
 
   // Finally, we can pass control to all the tasks that have been set up by
   // now; the first task started will be run, and once it yields, the next
@@ -100,14 +95,14 @@ pub fn rs_sched_exec() {
 }
 
 fn thread1() {
-  for i in 0..10 {
+  for i in 0..3 {
     println!("hi from thread1");
     sched::kyield();
   }
 }
 
 fn thread2() {
-  for i in 0..10 {
+  for i in 0..3 {
     println!("hi from thread2");
     sched::kyield();
   }

@@ -1,0 +1,31 @@
+extern {
+  pub fn cor_load_init() -> u64;
+
+  pub fn trampoline_to_user();
+
+  static mut trampoline_to_user_rip : u64;
+  static mut trampoline_to_user_rsp : u64;
+  static mut trampoline_to_user_codeseg : u64;
+}
+
+pub fn exec_init() {
+  println!("Starting init task! Or at least I hope so.");
+
+  unsafe {
+    let init_entry = cor_load_init();
+    if init_entry == 0 {
+      println!("error while exec'ing init!");
+      return;
+    }
+    trampoline_to_user_codeseg = 24 | 3; // 3*8=GDT offset, RPL=3
+    trampoline_to_user_rsp = 0x602000; // !!
+    trampoline_to_user_rip = init_entry;
+
+    println!("Trampolining to userspace at {:x} with stack at ", trampoline_to_user_rip);
+
+    trampoline_to_user();
+  }
+
+  // FIXME FIXME: this is superbad; better than overwriting kernel code, but still bad
+  //uint64_t rsp = (uint64_t)t->brk;
+}

@@ -1,7 +1,6 @@
 #include "common.h"
 #include "chrdev_console.h"
 #include "chrdev_serial.h"
-#include "elf.h"
 #include "tss.h"
 #include "mm.h"
 #include "pci.h"
@@ -11,8 +10,6 @@
 
 void rs_sched_init();
 void test_mock_main();
-extern char cor_stage2_init_data;
-extern int cor_stage2_init_data_len;
 
 unsigned long *timer = (unsigned long*)(0x81000|0x0000008000000000);
 
@@ -81,7 +78,6 @@ uint64_t syscall_exit(uint64_t ret64) {
 }
 
 void (*cor_current_writec)(const char c) = chrdev_console_writec;
-void init_task();
 
 // some compile-time sanity checks go here
 CASSERT(sizeof(uint8_t) == 1);
@@ -161,17 +157,9 @@ void kernel_main(void) {
   tss_setup();
   cor_printk("OK.\n");
 
-  // Rust will also set up init_task to boot
   cor_printk("Exec'ing Rust scheduler.. ");
   rs_sched_exec(); // The journey continues in `mod/block.rs`
 
   // we'll never return... if everything goes right
   cor_panic("reached the unreachable");
-}
-
-void init_task() {
-  cor_printk("Exec'ing init from task.. lol j/k\n");
-  //while(1){};
-  cor_elf_exec(&cor_stage2_init_data, cor_stage2_init_data_len);
-  // this should never, ever return.. right?
 }

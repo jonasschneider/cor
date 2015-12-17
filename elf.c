@@ -41,37 +41,40 @@ struct elf64_sectionheader {
 };
 #pragma pack(pop)
 
-int cor_elf_exec(char *elf, unsigned int len) {
+extern char cor_stage2_init_data;
+extern int cor_stage2_init_data_len;
+
+uint64_t cor_elf_load(char *elf, unsigned int len) {
   cor_printk("Called cor_elf_exec with elf=%x, len=%x\n",elf, len);
   if(sizeof(struct elf64_header) != 64) {
     cor_printk("assertion failed: elf64 header struct is size %x\n",sizeof(struct elf64_header));
-    return -1;
+    return 0;
   }
 
   if(len < sizeof(struct elf64_header)) {
     cor_printk("assertion failed: elf64 data too short at %x\n", len);
-    return -1;
+    return 0;
   }
 
   struct elf64_header *hdr = (struct elf64_header *)elf;
 
   if(0x464c457f != hdr->magic) {
     cor_printk("ERROR: magic of %x did not match ELF header of 0x464c457f\n", hdr->magic);
-    return -1;
+    return 0;
   } else {
     cor_printk("ELF magic looks OK.\n");
   }
 
   if(sizeof(struct elf64_sectionheader) != hdr->sh_entsize) {
     cor_printk("ERROR: ELF section header entry size invalid\n");
-    return -1;
+    return 0;
   }
 
   cor_printk("Nsections: %x\n", hdr->sh_entnum);
 
   if(hdr->sh_entnum > 30) {
     cor_printk("ELF: too many sections");
-    return -1;
+    return 0;
   }
 
   struct task_table_entry *t = task_new();
@@ -138,38 +141,22 @@ int cor_elf_exec(char *elf, unsigned int len) {
   if(t->brk == 0) {
     cor_panic("could not determine brk for init");
   }
+  cor_printk("init's brk is at: %x\n", t->brk);
 
   // memory sanity check; this is the "push rbp" opcode that should (always?) be the entry point
   // not really a good marker, but meh
   if(0x4855 != *((uint16_t *)(hdr->entrypoint))) {
     cor_printk("Virtual memory sanity check failed %x\n", *((uint16_t *)(hdr->entrypoint)));
-    return -1;
+    return 0;
   }
 
   void (*entry)() = (void(*)(void *))(hdr->entrypoint);
   cor_printk("entry = %x\n", entry);
 
-  int codeseg = 24;
-  int segsel = codeseg | 3; // set RPL=3
-
-  // FIXME FIXME: this is superbad; better than overwriting kernel code, but still bad
-  uint64_t rsp = (uint64_t)t->brk;
-
-  cor_printk("Hacked task's stack be at %p\n",rsp);
-
-  cor_printk("Trampolining to userspace at %x\n",entry);
-
-  // switch segments for the call
-  __asm__ volatile (
-    //"cli" // TODO later
-    "pushq $35\n" // new SS, probably ignored
-    "pushq %2\n" // new RSP, really have to fix this
-    "pushf\n"
-    "pushq %1\n" // new Code segment (important!)
-    "pushq %0\n"
-    "iretq\n"
-  : : "g"(entry), "g"(segsel), "p"(rsp) : "memory", "rax" );
-
   cor_printk("done?!\n");
-  return 0;
+  return (uint64_t)entry;
+}
+
+uint64_t cor_load_init() {
+  return cor_elf_load(&cor_stage2_init_data, cor_stage2_init_data_len);
 }
