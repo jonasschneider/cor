@@ -2,15 +2,21 @@ use core::mem;
 use kalloc::__rust_allocate as allocate;
 use kalloc::__rust_deallocate as deallocate;
 use core::slice;
-use core;
+use core::{self,fmt};
 
-#[derive(Debug)]
 pub struct Buf<'buflife> {
   pub s : &'buflife mut[u8],
   pub original_mem : *mut u8, // FIXME this should not be public, I guess
   original_size: usize,
   original_align: usize,
 }
+
+impl<'t> core::fmt::Debug for Buf<'t> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Buf({})", self.s.len())
+    }
+}
+
 
 pub fn new<'buflife>(name : &'buflife str) -> Buf<'buflife> {
   let size = 0x4000;
