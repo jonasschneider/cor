@@ -63,13 +63,17 @@ fn rust_pci_task() {
   println!("c-land pci_init exited");
 }
 
-#[no_mangle]
-fn rs_kyield() {
-  sched::kyield();
-}
+static mut called : bool = false;
 
 #[no_mangle]
 pub fn rs_sched_exec() {
+  unsafe {
+    if called {
+      sched::kyield();
+      return;
+    }
+    called = true;
+  }
   unsafe { sched::init(); }
   sched::add_task(thread1, "thread1");
   sched::add_task(thread2, "thread2");
@@ -83,6 +87,7 @@ pub fn rs_sched_exec() {
   // Add a hook so we can insert things here when running tests.
   unsafe { test_mock_main(); }
 
+  // we cannot yet yield back from the init task, so don't start it
   //sched::add_task(rust_init_task, "init task");
 
   // Finally, we can pass control to all the tasks that have been set up by

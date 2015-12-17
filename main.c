@@ -67,12 +67,14 @@ uint64_t syscall_write(uint64_t fd64, uint64_t buf64, size_t count64) {
   return 0;
 }
 
+void rs_sched_exec(void);
+
 uint64_t syscall_exit(uint64_t ret64) {
   int ret = (int)ret64;
   cor_printk("exit() ret=%x\n", ret);
-  cor_printk("fix your things, init exited...\n");
+  cor_printk("fix your things, init exited... I'll just shut up and yield now\n");
   while(1) {
-
+    rs_sched_exec();
   }
   cor_panic("init exited");
   return 0; // not really meaningful, but by convention, syscalls always return one 64-bit val
@@ -87,9 +89,6 @@ CASSERT(sizeof(uint16_t) == 2);
 CASSERT(sizeof(uint32_t) == 4);
 CASSERT(sizeof(uint64_t) == 8);
 
-void rs_sched_add_cfunc(void (*entry)(), const char *desc);
-void rs_sched_exec();
-
 void kernel_main(void) {
   chrdev_console_init();
   uint32_t revision = *((uint32_t*)0x6fffa);
@@ -101,7 +100,7 @@ void kernel_main(void) {
   cor_chrdev_serial_init();
   cor_printk("Switching to serial...\n");
   cor_current_writec = cor_chrdev_serial_write;
-  cor_printk("Switched to serial console.\n");
+  cor_printk("This is Cor rev. %xx, speaking on the serial console.\n\n", revision);
 
   // TODO: document this crazy rust stack-fixing thing
   uint64_t res = 1;
@@ -172,8 +171,7 @@ void kernel_main(void) {
 
 void init_task() {
   cor_printk("Exec'ing init from task.. lol j/k\n");
-  while(1);
-
-  //cor_elf_exec(&cor_stage2_init_data, cor_stage2_init_data_len);
+  //while(1){};
+  cor_elf_exec(&cor_stage2_init_data, cor_stage2_init_data_len);
   // this should never, ever return.. right?
 }
