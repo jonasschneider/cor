@@ -8,7 +8,7 @@ use collections::linked_list::LinkedList;
 
 mod context;
 
-type Tid = u64;
+type Tid = usize;
 
 #[derive(Debug)]
 struct Task {
@@ -52,19 +52,10 @@ extern {
 // TODO(smp): fix all of this
 static mut theState : *mut PerCoreState = 0 as *mut PerCoreState;
 
-// Interestingly, this shouldn't be CPU-local, but still global
-// Use an ArcRW or something?
-static mut nextTid : Tid = 0;
-fn makeNextTid() -> u64 {
-  // unsafe because global & nonatomic
-  unsafe {
-    nextTid += 1;
-    return nextTid
-  }
-}
-//
-// END STATE
-//
+use core::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
+
+// not per-cpu, but totally global
+static NEXT_TASK_ID: AtomicUsize = ATOMIC_USIZE_INIT;
 
 pub fn kyield() {
   reschedule();
@@ -174,7 +165,7 @@ pub fn init() {
 }
 
 pub fn add_task(entrypoint : fn(), desc : &'static str) {
-  let id = makeNextTid();
+  let id = NEXT_TASK_ID.fetch_add(1, Ordering::SeqCst);
 
   let stack = kbuf::new("task stack");
   let rsp = unsafe { (stack.original_mem as u64) } +0x3ff0;
