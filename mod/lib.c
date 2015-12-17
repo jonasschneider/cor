@@ -36,6 +36,13 @@ void _Unwind_Resume() {
 // the parts of the rust object file that we don't use.
 // Since we do that, I'll just keep them here for reference.
 
+
+void memcpy() {}
+void memset() {}
+void memcmp() {}
+void fmodf() {}
+void fmod() {}
+
 /*
 // http://linux.die.net/man/3/memset
 
