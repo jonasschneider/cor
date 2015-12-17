@@ -128,8 +128,8 @@ pub fn virtio_init(ioport : u16) {
   }
 
   unsafe { println!("the state is now {:?}, lol", state); }
-  //let a_device = unsafe { virtio::init(ioport) };
-  //println!("result of blockdevice init: {:?}", a_device);
+  let a_device = unsafe { virtio::init(ioport) };
+  println!("result of blockdevice init: {:?}", a_device);
 }
 
 #[lang = "stack_exhausted"] extern fn stack_exhausted() {}

@@ -42,7 +42,7 @@ pub type __uint64_t = libc::c_ulonglong;
 pub type __darwin_intptr_t = libc::c_long;
 pub type __darwin_natural_t = libc::c_uint;
 pub type __darwin_ct_rune_t = libc::c_int;
-#[repr(C)]
+#[repr(C, packed)]
 #[derive(Copy)]
 pub struct Union_Unnamed1 {
     pub _bindgen_data_: [u64; 16usize],
@@ -94,7 +94,7 @@ pub type __darwin_uid_t = __uint32_t;
 pub type __darwin_useconds_t = __uint32_t;
 pub type __darwin_uuid_t = [libc::c_uchar; 16usize];
 pub type __darwin_uuid_string_t = [libc::c_char; 37usize];
-#[repr(C)]
+#[repr(C, packed)]
 #[derive(Copy)]
 pub struct Struct___darwin_pthread_handler_rec {
     pub __routine: Option<unsafe extern "C" fn(arg1:
@@ -109,7 +109,7 @@ impl Clone for Struct___darwin_pthread_handler_rec {
 impl Default for Struct___darwin_pthread_handler_rec {
     fn default() -> Self { unsafe { zeroed() } }
 }
-#[repr(C)]
+#[repr(C, packed)]
 #[derive(Copy)]
 pub struct Struct__opaque_pthread_attr_t {
     pub __sig: libc::c_long,
@@ -121,7 +121,7 @@ impl Clone for Struct__opaque_pthread_attr_t {
 impl Default for Struct__opaque_pthread_attr_t {
     fn default() -> Self { unsafe { zeroed() } }
 }
-#[repr(C)]
+#[repr(C, packed)]
 #[derive(Copy)]
 pub struct Struct__opaque_pthread_cond_t {
     pub __sig: libc::c_long,
@@ -133,7 +133,7 @@ impl Clone for Struct__opaque_pthread_cond_t {
 impl Default for Struct__opaque_pthread_cond_t {
     fn default() -> Self { unsafe { zeroed() } }
 }
-#[repr(C)]
+#[repr(C, packed)]
 #[derive(Copy)]
 pub struct Struct__opaque_pthread_condattr_t {
     pub __sig: libc::c_long,
@@ -145,7 +145,7 @@ impl Clone for Struct__opaque_pthread_condattr_t {
 impl Default for Struct__opaque_pthread_condattr_t {
     fn default() -> Self { unsafe { zeroed() } }
 }
-#[repr(C)]
+#[repr(C, packed)]
 #[derive(Copy)]
 pub struct Struct__opaque_pthread_mutex_t {
     pub __sig: libc::c_long,
@@ -157,7 +157,7 @@ impl Clone for Struct__opaque_pthread_mutex_t {
 impl Default for Struct__opaque_pthread_mutex_t {
     fn default() -> Self { unsafe { zeroed() } }
 }
-#[repr(C)]
+#[repr(C, packed)]
 #[derive(Copy)]
 pub struct Struct__opaque_pthread_mutexattr_t {
     pub __sig: libc::c_long,
@@ -169,7 +169,7 @@ impl Clone for Struct__opaque_pthread_mutexattr_t {
 impl Default for Struct__opaque_pthread_mutexattr_t {
     fn default() -> Self { unsafe { zeroed() } }
 }
-#[repr(C)]
+#[repr(C, packed)]
 #[derive(Copy)]
 pub struct Struct__opaque_pthread_once_t {
     pub __sig: libc::c_long,
@@ -181,7 +181,7 @@ impl Clone for Struct__opaque_pthread_once_t {
 impl Default for Struct__opaque_pthread_once_t {
     fn default() -> Self { unsafe { zeroed() } }
 }
-#[repr(C)]
+#[repr(C, packed)]
 #[derive(Copy)]
 pub struct Struct__opaque_pthread_rwlock_t {
     pub __sig: libc::c_long,
@@ -193,7 +193,7 @@ impl Clone for Struct__opaque_pthread_rwlock_t {
 impl Default for Struct__opaque_pthread_rwlock_t {
     fn default() -> Self { unsafe { zeroed() } }
 }
-#[repr(C)]
+#[repr(C, packed)]
 #[derive(Copy)]
 pub struct Struct__opaque_pthread_rwlockattr_t {
     pub __sig: libc::c_long,
@@ -205,7 +205,7 @@ impl Clone for Struct__opaque_pthread_rwlockattr_t {
 impl Default for Struct__opaque_pthread_rwlockattr_t {
     fn default() -> Self { unsafe { zeroed() } }
 }
-#[repr(C)]
+#[repr(C, packed)]
 #[derive(Copy)]
 pub struct Struct__opaque_pthread_t {
     pub __sig: libc::c_long,
@@ -235,7 +235,7 @@ pub type uintmax_t = libc::c_ulong;
 pub type __virtio16 = uint16_t;
 pub type __virtio32 = uint32_t;
 pub type __virtio64 = uint64_t;
-#[repr(C)]
+#[repr(C, packed)]
 #[derive(Copy)]
 pub struct Struct_vring_desc {
     pub addr: __virtio64,
@@ -249,7 +249,7 @@ impl Clone for Struct_vring_desc {
 impl Default for Struct_vring_desc {
     fn default() -> Self { unsafe { zeroed() } }
 }
-#[repr(C)]
+#[repr(C, packed)]
 #[derive(Copy)]
 pub struct Struct_vring_avail {
     pub flags: __virtio16,
@@ -262,7 +262,7 @@ impl Clone for Struct_vring_avail {
 impl Default for Struct_vring_avail {
     fn default() -> Self { unsafe { zeroed() } }
 }
-#[repr(C)]
+#[repr(C, packed)]
 #[derive(Copy)]
 pub struct Struct_vring_used_elem {
     pub id: __virtio32,
@@ -274,7 +274,7 @@ impl Clone for Struct_vring_used_elem {
 impl Default for Struct_vring_used_elem {
     fn default() -> Self { unsafe { zeroed() } }
 }
-#[repr(C)]
+#[repr(C, packed)]
 #[derive(Copy)]
 pub struct Struct_vring_used {
     pub flags: __virtio16,
@@ -287,7 +287,7 @@ impl Clone for Struct_vring_used {
 impl Default for Struct_vring_used {
     fn default() -> Self { unsafe { zeroed() } }
 }
-#[repr(C)]
+#[repr(C, packed)]
 #[derive(Copy)]
 pub struct Struct_vring {
     pub num: libc::c_uint,

@@ -1,5 +1,15 @@
 pub type Port = u16;
 
+pub unsafe fn write32(port: Port, value : u32) {
+  asm! (
+    "outl %eax, %dx"
+    :
+    : "{dx}" (port as u16), "{eax}" (value)
+    :
+    : "volatile"
+  );
+}
+
 pub unsafe fn write8(port: Port, value : u8) {
   asm! (
     "outb %al, %dx"
