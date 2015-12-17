@@ -100,14 +100,14 @@ pub fn rs_sched_exec() {
 }
 
 fn thread1() {
-  while(true) {
+  for i in 0..10 {
     println!("hi from thread1");
     sched::kyield();
   }
 }
 
 fn thread2() {
-  while(true) {
+  for i in 0..10 {
     println!("hi from thread2");
     sched::kyield();
   }

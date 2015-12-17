@@ -173,6 +173,7 @@ void main();
 void _start() {
   printf("Hello from _start.\n");
   main();
+  while(1);
   exit(0xBABE);
 
   while(1);

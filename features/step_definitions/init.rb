@@ -13,8 +13,8 @@ Given(/^I use the following linker script for init:$/) do |string|
 end
 
 When(/^I run the machine$/) do
-  mk = (ENV["MAKE"]||"make").split(" ")
-  Subprocess.check_call(mk)
+  mk = Subprocess.check_output(%w(uname)).chomp == "Darwin" ? "vagrant ssh -- cd /vagrant && make" : "make"
+  Subprocess.check_call(mk.split(" "))
   if @process
     @process.terminate
     @process.wait
