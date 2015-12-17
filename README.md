@@ -2,7 +2,7 @@ Cor: a hobbyist x86_64 kernel
 =============================
 
 Cor explores how one could build a bare-metal kernel in 2015.
-It uses the [https://www.rust-lang.org/](Rust) programming language to achieve memory safety.
+It uses the [Rust](https://www.rust-lang.org/) programming language to achieve memory safety.
 
 We find that the complexity of modern CPU architectures doesn't necessarily mean that you can't build nice things yourself.
 
@@ -14,7 +14,7 @@ Non-goals
 
 Synopsis
 --------
-- If you're not running Linux, it's easiest to grab [https://www.vagrantup.com/](Vagrant) and run `vagrant up`.
+- If you're not running Linux, it's easiest to grab [Vagrant](https://www.vagrantup.com/) and run `vagrant up`.
 - Install dependencies: `build-essential`, qemu, xxd, Ruby, Go, Rust
 - `$ make`
 - `$ bin/run` to start the system, you'll be connected to the serial console of the machine
