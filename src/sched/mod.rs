@@ -25,6 +25,7 @@ struct Task {
 
   // parking/scheduling info
   exited : bool,
+  parked_for_irq: u16,
 }
 
 //
@@ -44,6 +45,8 @@ extern {
   static mut context_switch_jumpto : u64;
 
   fn context_switch();
+
+  static mut irq_log : [u8; 256];
 }
 // Okay, this should not be a static and Rust rightly slaps us in the face for
 // trying to use a mutable static thingie. However, we don't even have
@@ -61,6 +64,31 @@ pub fn kyield() {
   if reschedule() {
     unsafe { context_switch(); }
   }
+}
+
+pub fn reset_irq(irq: u16) {
+  unsafe { irq_log[irq as usize] = 0; }
+}
+
+pub fn park_until_irq(irq: u16) {
+  unsafe {
+    let ref mut c = (*theState).current;  // there should always be a current after context switch
+    match c {
+      &mut None => {
+        println!("no task after afterswitch?!");
+      }
+      &mut Some(ref mut t) => {
+        println!("sched: Parking {:?} until irq {}", t, irq);
+        t.parked_for_irq = irq
+      }
+    }
+  }
+  while unsafe { irq_log[irq as usize] == 0 } {
+    println!("Irq {} still hasn't been logged, continuing park..", irq);
+    kyield();
+  }
+  println!("Irq {} logged, exiting parking!", irq);
+  reset_irq(irq); // FIXME: need better global handling of this
 }
 
 
@@ -116,7 +144,7 @@ fn reschedule() -> bool {
 
     let next = match s.runnable.pop_front() {
       None => {
-        println!("No task to yield to found!");
+        println!("No other task to yield to found!");
         if let Some(ref t) = s.current {
           if t.exited {
             println!("Last task exited. Panic!");
@@ -193,7 +221,8 @@ pub fn add_task(entrypoint : fn(), desc : &'static str) {
     rsp: rsp,
     rbp: rsp,
     started: false,
-    exited: false};
+    exited: false,
+    parked_for_irq: 0};
 
   // unsafe because we have to access the global state.. ugh
   unsafe { (*theState).runnable.push_back(t); }

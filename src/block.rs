@@ -84,7 +84,6 @@ pub fn rs_sched_exec() {
   // Add a hook so we can insert things here when running tests.
   unsafe { test_mock_main(); }
 
-  // we cannot yet yield back from the init task, so don't start it
   sched::add_task(usertask::exec_init, "init task");
 
   // Finally, we can pass control to all the tasks that have been set up by

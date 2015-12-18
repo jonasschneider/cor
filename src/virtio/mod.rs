@@ -10,6 +10,7 @@ use core::fmt;
 use kbuf;
 use collections;
 use collections::vec::Vec;
+use super::sched;
 
 
 mod common_virtio {
@@ -229,8 +230,6 @@ pub unsafe fn init<'t>(io: u16) -> Result<Device<'t>, Error> {
   //   processed. The actual notification about "I did a thing, please go
   //   check" will in practice be delivered back to us via an interrupt.
 
-  // iowrite16(io_base+16, 0);
-  cpuio::write16(io+16, 0);
 
   // Done! The request has been dispatched and the host informed that it has
   // some work queued.
@@ -243,15 +242,15 @@ pub unsafe fn init<'t>(io: u16) -> Result<Device<'t>, Error> {
   // behaviour we're relying on here, but let's just skip the wait while we
   // can.
 
-  // TODO: not needed with interrupts
-  core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
-
-  // Now, magically, this index should have changed to "1" to indicate that
+  // Now, magically, this index will change to "1" to indicate that
   // the device has processed our request buffer.
-  println!("Number of readable queues after fake-wait: {}", used.idx);
-  if used.idx != 1 {
-    return Err(Error::VirtioHandshakeFailure);
+
+  while used.idx == 0 {
+    cpuio::write16(io+16, 0);
+    sched::park_until_irq(0x2b);
   }
+
+  println!("Number of readable queues after fake-wait: {}", used.idx);
 
   println!("Virtio call completed, retval={}", *donebuf);
   if *donebuf != 0 { // retval of 0 indicates success

@@ -57,7 +57,9 @@ CASSERT(sizeof(uint32_t) == 4);
 CASSERT(sizeof(uint64_t) == 8);
 
 void kernel_main(void) {
+#ifdef WITH_DEBUG_TRAP
   while(resume_boot_marker == 0) {}
+#endif
 
   chrdev_console_init();
   uint32_t revision = *((uint32_t*)0x6fffa);

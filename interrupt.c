@@ -68,8 +68,8 @@ void interrupt_init() {
   __asm__ ( "sti" );
 }
 
-uint64_t interrupt(char no, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4) {
-  cor_printk("oh god interrupt %x, 1=%lx, 2=%lx, 3=%lx, 4=%lx\n", (int)no, arg1, arg2, arg3, arg4);
+uint64_t interrupt(uint64_t no, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4) {
+  cor_printk("oh god interrupt %lu, 1=%lx, 2=%lx, 3=%lx, 4=%lx\n", no, arg1, arg2, arg3, arg4);
   if(no==0x31) {
     // this will never happen! see interrupthandler.s, syscalls are dispatched to the kernel task that trampolined
     // us to userspace.

@@ -2,17 +2,29 @@
 .globl   dummy_isr
 .align   4
 
+.globl irq_log
+irq_log:
+  .fill 256, 1, 0
+
 is_return_from_trampoline:
-  pop %rax
-  cli
+  pop %rax # restore original rax
+  cli # TODO
   jmp trampoline_from_user
 
 isr_dispatcher:
+  # no==49 (syscall): return from userspace
   sub $49, %rax
   jz is_return_from_trampoline
-  pop %rax
+  add $49, %rax
 
-  #push %rax # TODO: figure out why this breaks everything
+  # set the appropriate flag in irq_log
+  push %rbx
+  mov %rax, %rbx
+  movabs $irq_log, %rax
+  movb $1, (%rax, %rbx)
+  pop %rbx
+
+
   push %rbx
   push %rcx
   push %rdx
@@ -25,7 +37,7 @@ isr_dispatcher:
   # According to the ABI, the first 6 integer or pointer arguments to a function are
   # passed in registers. The first is placed in rdi, the second in rsi, the third in rdx,
   # and then rcx, r8 and r9. Only the 7th argument and onwards are passed on the stack.
-  mov 7*8(%rsp), %rdi #interrupt no
+  mov %rax, %rdi #interrupt no
 
   # TODO: should probably optimize these to only do this lifting on syscall interrupts, cycles everywhea!
   mov %rax, %rsi # arg1 (if syscall)
@@ -42,7 +54,7 @@ isr_dispatcher:
   pop %rdx
   pop %rcx
   pop %rbx
-  #pop %rax
+  pop %rax
 
   iretq
 
