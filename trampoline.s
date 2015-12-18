@@ -53,6 +53,13 @@ trampoline_from_user:
     mov %rdx, %rax
     movabs %rax, trampoline_from_user_arg4
 
+    mov (%rsp), %rax
+    movabs %rax, trampoline_from_user_rip
+    mov 8(%rsp), %rax
+    movabs %rax, trampoline_from_user_codeseg
+    mov 24(%rsp), %rax
+    movabs %rax, trampoline_from_user_rsp
+
     movabs trampoline_previous_kernel_rsp, %rax
     mov %rax, %rsp
 
@@ -76,4 +83,15 @@ trampoline_from_user_arg3:
   .quad 0
 .globl trampoline_from_user_arg4
 trampoline_from_user_arg4:
+  .quad 0
+
+
+.globl trampoline_from_user_rip
+trampoline_from_user_rip:
+  .quad 0
+.globl trampoline_from_user_rsp
+trampoline_from_user_rsp:
+  .quad 0
+.globl trampoline_from_user_codeseg
+trampoline_from_user_codeseg:
   .quad 0

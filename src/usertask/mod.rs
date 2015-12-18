@@ -13,6 +13,11 @@ extern {
   static mut trampoline_from_user_arg2 : u64;
   static mut trampoline_from_user_arg3 : u64;
   static mut trampoline_from_user_arg4 : u64;
+
+  static mut trampoline_from_user_rip : u64;
+  static mut trampoline_from_user_rsp : u64;
+  static mut trampoline_from_user_codeseg : u64;
+
 }
 
 pub fn exec_init() {
@@ -28,22 +33,30 @@ pub fn exec_init() {
     trampoline_to_user_rsp = 0x602000; // !!
     trampoline_to_user_rip = init_entry;
 
-    println!("Trampolining to userspace at {:x} with stack at {:x}", trampoline_to_user_rip, trampoline_to_user_rsp);
+    loop {
+      println!("Trampolining to userspace: rip@{:x} codeseg@{:x} rsp@{:x}", trampoline_to_user_rip, trampoline_to_user_codeseg, trampoline_to_user_rsp);
 
-    trampoline_to_user();
+      trampoline_to_user();
 
-    println!("Back from userspace!");
-    println!("IRQ49 with args: {:x} {:x} {:x} {:x}",
-      trampoline_from_user_arg1, trampoline_from_user_arg2, trampoline_from_user_arg3, trampoline_from_user_arg4);
+      println!("Back from userspace! rip@{:x} codeseg@{:x} rsp@{:x}", trampoline_from_user_rip, trampoline_from_user_codeseg, trampoline_from_user_rsp);
 
-    if trampoline_from_user_arg1 == 2 {
-      let fd = trampoline_from_user_arg2;
-      let buf = trampoline_from_user_arg3;
-      let len = trampoline_from_user_arg4;
-      println!("write() fd={:x}, buf={:x}, n={:x}", fd, buf, len);
-      let data = slice::from_raw_parts(buf as *const u8, len as usize);
-      let text = str::from_utf8(data).unwrap();
-      print!("    | {}", text);
+      println!("IRQ49 with args: {:x} {:x} {:x} {:x}",
+        trampoline_from_user_arg1, trampoline_from_user_arg2, trampoline_from_user_arg3, trampoline_from_user_arg4);
+
+      if trampoline_from_user_arg1 == 2 {
+        let fd = trampoline_from_user_arg2;
+        let buf = trampoline_from_user_arg3;
+        let len = trampoline_from_user_arg4;
+        println!("write() fd={:x}, buf={:x}, n={:x}", fd, buf, len);
+        let data = slice::from_raw_parts(buf as *const u8, len as usize);
+        let text = str::from_utf8(data).unwrap();
+        print!("    | {}", text);
+      } else {
+        println!("unknown syscall: {}", trampoline_from_user_arg1);
+      }
+
+      trampoline_to_user_rsp = trampoline_from_user_rsp;
+      trampoline_to_user_rip = trampoline_from_user_rip;
     }
   }
 
