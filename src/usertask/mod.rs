@@ -1,3 +1,5 @@
+use core::{slice, str};
+
 extern {
   pub fn cor_load_init() -> u64;
 
@@ -33,6 +35,16 @@ pub fn exec_init() {
     println!("Back from userspace!");
     println!("IRQ49 with args: {:x} {:x} {:x} {:x}",
       trampoline_from_user_arg1, trampoline_from_user_arg2, trampoline_from_user_arg3, trampoline_from_user_arg4);
+
+    if trampoline_from_user_arg1 == 2 {
+      let fd = trampoline_from_user_arg2;
+      let buf = trampoline_from_user_arg3;
+      let len = trampoline_from_user_arg4;
+      println!("write() fd={:x}, buf={:x}, n={:x}", fd, buf, len);
+      let data = slice::from_raw_parts(buf as *const u8, len as usize);
+      let text = str::from_utf8(data).unwrap();
+      print!("    | {}", text);
+    }
   }
 
   // FIXME FIXME: this is superbad; better than overwriting kernel code, but still bad
