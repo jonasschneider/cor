@@ -5,6 +5,18 @@ void *rust_allocate(size_t size, size_t align) {
   return tkalloc(size, "rust_allocate()", align);
 }
 
+// TODO: use the compiler intrinsics
+void memmove(void *dest, const void *source, size_t n) {
+  size_t i;
+
+  uint8_t *dest8 = (uint8_t *)dest;
+  uint8_t *source8 = (uint8_t *)source;
+  for (i = 0; i < n; i++) {
+    dest8[i] = source8[i];
+  }
+}
+
+
 void rust_deallocate(void *what, size_t old_size, size_t align) {
   cor_printk("bro, do you even free %p\n", what);
   // TODO

@@ -126,6 +126,17 @@ pub fn virtio_init(ioport : u16) {
   println!("result of blockdevice init: {:?}", a_device);
 }
 
+extern {
+  fn asm_abort() -> !;
+}
+
 #[lang = "stack_exhausted"] extern fn stack_exhausted() {}
 #[lang = "eh_personality"] extern fn eh_personality() {}
-#[lang = "panic_fmt"] fn panic_fmt() -> ! { loop {} }
+
+#[lang = "panic_fmt"]
+extern fn panic_fmt(args: &core::fmt::Arguments,
+                    file: &str,
+                    line: u32) -> ! {
+  println!("panic!: {}", line);
+  unsafe { asm_abort(); }
+}
