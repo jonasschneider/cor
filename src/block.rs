@@ -60,17 +60,8 @@ fn rust_pci_task() {
   println!("c-land pci_init exited");
 }
 
-static mut called : bool = false;
-
 #[no_mangle]
 pub fn rs_sched_exec() {
-  unsafe {
-    if called {
-      sched::kyield();
-      return;
-    }
-    called = true;
-  }
   unsafe { sched::init(); }
   //sched::add_task(thread1, "thread1");
   //sched::add_task(thread2, "thread2");

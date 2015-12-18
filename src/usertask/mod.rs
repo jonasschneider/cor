@@ -6,6 +6,7 @@ extern {
   pub fn cor_load_init() -> u64;
 }
 
+use ::sched;
 use self::state::StepResult::*;
 use self::state::SyscallType::*;
 
@@ -32,6 +33,7 @@ pub fn exec_init() {
         println!("unknown syscall: {:?}", r);
       }
     }
+    sched::kyield();
   }
 
   // FIXME FIXME: this is superbad; better than overwriting kernel code, but still bad

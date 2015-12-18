@@ -68,23 +68,11 @@ void interrupt_init() {
   __asm__ ( "sti" );
 }
 
-// TODO: header file for these
-uint64_t syscall_write(uint64_t fd64, uint64_t buf64, size_t count64);
-uint64_t syscall_exit(uint64_t ret64);
-uint64_t syscall_moremem(uint64_t insize);
-
 uint64_t interrupt(char no, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4) {
   cor_printk("oh god interrupt %x, 1=%lx, 2=%lx, 3=%lx, 4=%lx\n", (int)no, arg1, arg2, arg3, arg4);
   if(no==0x31) {
-    if(arg1 == SYSCALL_WRITE) {
-      return syscall_write(arg2, arg3, arg4);
-    }
-    if(arg1 == SYSCALL_EXIT) {
-      return syscall_exit(arg2);
-    }
-    if(arg1 == SYSCALL_MOREMEM) {
-      return syscall_moremem(arg2);
-    }
+    // this will never happen! see interrupthandler.s, syscalls are dispatched to the kernel task that trampolined
+    // us to userspace.
   }
   if(no==0x2b) {
     // TODO: this is exactly where we should wake up stuff waiting for virtio to finish

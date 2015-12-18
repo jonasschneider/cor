@@ -8,7 +8,7 @@
 #include "timer.h"
 #include "interrupt.h"
 
-void rs_sched_init();
+void rs_sched_exec(void);
 void test_mock_main();
 
 unsigned long *timer = (unsigned long*)(0x81000|0x0000008000000000);
@@ -44,37 +44,6 @@ void cor_dump_page_table(uint64_t *start, int level) {
 
 void cor_hitmarker() {
   cor_printk("FIRED! timer=%x\n", *timer);
-}
-
-uint64_t syscall_write(uint64_t fd64, uint64_t buf64, size_t count64) {
-  // TODO: make sure these are harmless
-  int fd = (int)fd64;
-  const void *buf = (const void *)buf64;
-  size_t count = (size_t)count64;
-
-  cor_printk("write() fd=%x, buf=%p, n=%x:\n", fd, buf, count);
-  cor_printk("    | ");
-  for(size_t i = 0; i < count; i++) {
-    char c = *((char*)buf+i);
-    putc(c);
-    if(c == '\n' && i < (count-1)) {
-      cor_printk("    | ");
-    }
-  }
-  return 0;
-}
-
-void rs_sched_exec(void);
-
-uint64_t syscall_exit(uint64_t ret64) {
-  int ret = (int)ret64;
-  cor_printk("exit() ret=%x\n", ret);
-  cor_printk("fix your things, init exited... I'll just shut up and yield now\n");
-  while(1) {
-    rs_sched_exec();
-  }
-  cor_panic("init exited");
-  return 0; // not really meaningful, but by convention, syscalls always return one 64-bit val
 }
 
 void (*cor_current_writec)(const char c) = chrdev_console_writec;

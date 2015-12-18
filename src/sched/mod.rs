@@ -58,8 +58,9 @@ use core::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
 static NEXT_TASK_ID: AtomicUsize = ATOMIC_USIZE_INIT;
 
 pub fn kyield() {
-  reschedule();
-  unsafe { context_switch(); }
+  if reschedule() {
+    unsafe { context_switch(); }
+  }
 }
 
 
@@ -94,7 +95,8 @@ fn starttask() {
 // on a different stack than the one that's present when leaving the function.
 // This breaks one of Rust's assumptions about the machine model. So, we'll do
 // it in asm!
-fn reschedule() {
+// Returns true if a context switch should follow, false otherwise.
+fn reschedule() -> bool {
   // unsafe because we have to access the global state..
   // we're doing lots more of unsafe operations in here.
   // TODO: finer-grained unsafe blocks here, and think harder about everything unsafe
@@ -111,11 +113,19 @@ fn reschedule() {
 
     let next = match s.runnable.pop_front() {
       None => {
-        println!("nothing to yield to! panic!");
-        while(true) {}
-        core::intrinsics::unreachable();
-        // FIXME: http://doc.rust-lang.org/std/macro.panic!.html
-        //panic!();
+        println!("No task to yield to found!");
+        if let Some(ref t) = s.current {
+          if t.exited {
+            println!("Last task exited. Panic!");
+            loop {}
+          } else {
+            println!("Continuing the last task.");
+            return false
+          }
+        } else {
+          println!("No current task during failing reschedule. Panic!");
+          loop {}
+        }
       }
       Some(mut boxt) => {
         context_switch_newrsp = boxt.rsp as u64; // POINTER SIZES FTW
@@ -130,7 +140,6 @@ fn reschedule() {
         Some(boxt)
       }
     };
-
 
     let old = mem::replace(&mut s.current, next);
     match old {
@@ -149,7 +158,7 @@ fn reschedule() {
     }
   }
 
-  // we don't do the actual context switch here, see yield
+  true
 }
 
 pub fn init() {
@@ -185,8 +194,6 @@ pub fn add_task(entrypoint : fn(), desc : &'static str) {
 pub fn exec() {
   kyield();
 }
-
-
 
 
 // impl core::fmt::Show for PerCoreState {
