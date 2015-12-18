@@ -44,14 +44,17 @@ Roadmap
   - [x] Fix page permissions (`|4`s in boot.s)
   - [x] Move to higher-half kernel
 - [x] Trampoline from C to Rust code after bootstrapping
-- [x] Simple serspace page table management
+- [x] Naive userspace page table setup for init
 - [ ] Concurrency / Multiprocessing
-  - [ ] Process lifecycle / identity management, Process table
   - [x] Enable PIT chip
-  - [x] Cooperative (yield-based) scheduler for kernel threads
+  - [x] Cooperative scheduler for kernel tasks (using kyield)
+  - [x] Idle task using HLT
+  - [x] Basic system calls from userland
   - [ ] Yielding from userspace
   - [ ] I/O blocking for kernel threads
-  - [ ] Timer-based preemptive scheduler
+  - [ ] Timer-based preemptive userland scheduling
+  - [ ] Process lifecycle / identity management, Process table
+  - [ ] Process memory space management
   - [ ] fork()
 - [ ] Build a userspace toolchain
   - [x] Make a "hello world" binary that runs on host Linux and is as static as it gets (no libc)
@@ -171,6 +174,8 @@ As this is an academic project, I'll try to document things I stumbled over.
   given entropy and all that
 
 - Continuity: The user space perspective is "do a syscall, then later *return* from the syscall", while the kernel has a completely different view.
+
+- Context-switching idea: make the kernel-level scheduling, yielding, parking etc. independent of the trampoline/userspace/syscall/interrupt logic. It looks like they are orthogonal problems, at least when approached naively. For maximum performance, it's probably faster to mix everything.
 
 The Story
 ---------

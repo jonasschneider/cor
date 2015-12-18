@@ -53,6 +53,7 @@ struct State {
 extern "C" {
   fn pci_init();
   fn test_mock_main();
+  fn asm_idle();
 }
 
 fn rust_pci_task() {
@@ -60,11 +61,19 @@ fn rust_pci_task() {
   println!("c-land pci_init exited");
 }
 
+fn idle_task() {
+  loop {
+    println!("Entering idle..");
+    unsafe { asm_idle(); }
+    println!("Exited idle.");
+    sched::kyield();
+  }
+}
+
 #[no_mangle]
 pub fn rs_sched_exec() {
   unsafe { sched::init(); }
-  //sched::add_task(thread1, "thread1");
-  //sched::add_task(thread2, "thread2");
+  sched::add_task(idle_task, "idle");
 
   // Okay, now that we have the scheduler set up, we can start doing things
   // that set up tasks to react to input from the outside. A perfect example

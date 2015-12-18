@@ -51,7 +51,7 @@ impl UsermodeState {
 
       trampoline_to_user();
 
-      println!("Back from userspace! rip@{:x} codeseg@{:x} rsp@{:x}", trampoline_from_user_rip, trampoline_from_user_codeseg, trampoline_from_user_rsp);
+      println!("Back from userspace! rip@{:x} codeseg@{:x} rsp@{:x} arg1=0d{}", trampoline_from_user_rip, trampoline_from_user_codeseg, trampoline_from_user_rsp, trampoline_from_user_arg1);
 
       self.rsp = trampoline_from_user_rsp;
       self.rip = trampoline_from_user_rip;

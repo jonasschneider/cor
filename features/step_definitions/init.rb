@@ -19,7 +19,8 @@ When(/^I run the machine$/) do
     @process.terminate
     @process.wait
   end
-  @process = Subprocess.popen(["bin/run"], stdout: Subprocess::PIPE)
+  q = "qemu-system-x86_64 -s -nographic -serial stdio -monitor null disk.bin #{ENV["QEMUOPT"]} -drive file=disk.bin,if=virtio"
+  @process = Subprocess.popen(q.split(" "), stdin: nil, stdout: Subprocess::PIPE, stderr: Subprocess::PIPE)
 end
 
 Then(/^I should see "([^"]*?)"$/) do |needle|
@@ -36,6 +37,7 @@ Then(/^I should see "([^"]*?)"$/) do |needle|
         end
       end
     rescue Timeout::Error
+      @out = @out.force_encoding('ASCII-8BIT')
       assert @out.include?(needle), "expected to find \"#{needle}\" in \"#{@out}\""
     end
   end

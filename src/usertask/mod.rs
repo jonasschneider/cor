@@ -30,11 +30,14 @@ pub fn exec_init() {
         break;
       },
       _ => {
-        println!("unknown syscall: {:?}", r);
+        println!("unknown syscall, crashing process: {:?}", r);
+        break
       }
     }
     sched::kyield();
   }
+
+  println!("User process exited normally or due to crash.");
 
   // FIXME FIXME: this is superbad; better than overwriting kernel code, but still bad
   //uint64_t rsp = (uint64_t)t->brk;

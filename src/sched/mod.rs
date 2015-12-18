@@ -90,6 +90,9 @@ fn starttask() {
   }
 }
 
+extern {
+  fn asm_abort() -> !;
+}
 
 // Defining the actual yield in Rust is unsafe because we enter the function
 // on a different stack than the one that's present when leaving the function.
@@ -119,8 +122,14 @@ fn reschedule() -> bool {
             println!("Last task exited. Panic!");
             loop {}
           } else {
-            println!("Continuing the last task.");
-            return false
+            // FIXME: this is horrible, but I want to halt somewhere.
+            if t.desc.as_bytes() == "idle".as_bytes() {
+              println!("Only the idle task remains. Bye!");
+              unsafe { asm_abort(); }
+            } else {
+              println!("Continuing the last task.");
+              return false
+            }
           }
         } else {
           println!("No current task during failing reschedule. Panic!");
