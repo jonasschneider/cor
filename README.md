@@ -56,6 +56,8 @@ Roadmap
   - [ ] Process lifecycle / identity management, Process table
   - [ ] Process memory space management
   - [ ] fork()
+  - [ ] Thread-local storage for user space
+  - [ ] CPU-local storage for kernel space (for SMP: eliminate mutable statics)
 - [ ] Build a userspace toolchain
   - [x] Make a "hello world" binary that runs on host Linux and is as static as it gets (no libc)
   - [ ] Mod dietlibc to fit our syscall mechanism
