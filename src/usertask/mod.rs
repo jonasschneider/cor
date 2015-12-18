@@ -1,62 +1,36 @@
 use core::{slice, str};
 
+mod state;
+
 extern {
   pub fn cor_load_init() -> u64;
-
-  pub fn trampoline_to_user();
-
-  static mut trampoline_to_user_rip : u64;
-  static mut trampoline_to_user_rsp : u64;
-  static mut trampoline_to_user_codeseg : u64;
-
-  static mut trampoline_from_user_arg1 : u64;
-  static mut trampoline_from_user_arg2 : u64;
-  static mut trampoline_from_user_arg3 : u64;
-  static mut trampoline_from_user_arg4 : u64;
-
-  static mut trampoline_from_user_rip : u64;
-  static mut trampoline_from_user_rsp : u64;
-  static mut trampoline_from_user_codeseg : u64;
-
 }
+
+use self::state::StepResult::*;
+use self::state::SyscallType::*;
 
 pub fn exec_init() {
   println!("Starting init task! Or at least I hope so.");
 
-  unsafe {
-    let init_entry = cor_load_init();
-    if init_entry == 0 {
-      println!("error while exec'ing init!");
-      return;
-    }
-    trampoline_to_user_codeseg = 24 | 3; // 3*8=GDT offset, RPL=3
-    trampoline_to_user_rsp = 0x602000; // !!
-    trampoline_to_user_rip = init_entry;
+  // FIXME: stack!
+  let mut s = state::UsermodeState::new(unsafe { cor_load_init() }, 0x602000);
 
-    loop {
-      println!("Trampolining to userspace: rip@{:x} codeseg@{:x} rsp@{:x}", trampoline_to_user_rip, trampoline_to_user_codeseg, trampoline_to_user_rsp);
-
-      trampoline_to_user();
-
-      println!("Back from userspace! rip@{:x} codeseg@{:x} rsp@{:x}", trampoline_from_user_rip, trampoline_from_user_codeseg, trampoline_from_user_rsp);
-
-      println!("IRQ49 with args: {:x} {:x} {:x} {:x}",
-        trampoline_from_user_arg1, trampoline_from_user_arg2, trampoline_from_user_arg3, trampoline_from_user_arg4);
-
-      if trampoline_from_user_arg1 == 2 {
-        let fd = trampoline_from_user_arg2;
-        let buf = trampoline_from_user_arg3;
-        let len = trampoline_from_user_arg4;
-        println!("write() fd={:x}, buf={:x}, n={:x}", fd, buf, len);
-        let data = slice::from_raw_parts(buf as *const u8, len as usize);
+  loop {
+    let r = s.step();
+    println!("Step result: {:?}", r);
+    match r {
+      Syscall(Write(fd, buf, len)) => {
+        let data = unsafe { slice::from_raw_parts(buf as *const u8, len as usize) };
         let text = str::from_utf8(data).unwrap();
         print!("    | {}", text);
-      } else {
-        println!("unknown syscall: {}", trampoline_from_user_arg1);
+      },
+      Syscall(Exit(ret)) => {
+        println!("Init exited with 0x{:x}!", ret);
+        break;
+      },
+      _ => {
+        println!("unknown syscall: {:?}", r);
       }
-
-      trampoline_to_user_rsp = trampoline_from_user_rsp;
-      trampoline_to_user_rip = trampoline_from_user_rip;
     }
   }
 

@@ -170,6 +170,7 @@ As this is an academic project, I'll try to document things I stumbled over.
 - Design goal should probably "as little resident/permanent state in C-land as possible",
   given entropy and all that
 
+- Continuity: The user space perspective is "do a syscall, then later *return* from the syscall", while the kernel has a completely different view.
 
 The Story
 ---------

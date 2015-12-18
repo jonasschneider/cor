@@ -7,7 +7,7 @@ int exit(int ret) {
             "movq %1, %%rbx\n"
             "int $49"
           :
-          : "r"((uint64_t)SYSCALL_EXIT), "r"((long)ret)
+          : "r"((uint64_t)SYSCALL_EXIT), "r"((uint64_t)ret)
           : "rax", "rbx", "rcx", "rdx", "r12", "r13", "r14", "r15"
           );
   return 0;
