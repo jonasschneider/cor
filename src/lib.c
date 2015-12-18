@@ -18,7 +18,7 @@ void memmove(void *dest, const void *source, size_t n) {
 
 
 void rust_deallocate(void *what, size_t old_size, size_t align) {
-  cor_printk("bro, do you even free %p\n", what);
+  cor_printk("bro, do you even free %p; %p\n", what, old_size);
   // TODO
   old_size = old_size;
   align = align;

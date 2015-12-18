@@ -80,6 +80,8 @@ Roadmap
   - [ ] TCP
   - [ ] Tiny webserver
 
+- model I/O ports as slices of a 0-dimensional data type
+
 More unicorns:
 
 - [ ] Page-table-based IPC ("send" a page to another process, zero copy yadda yadda)

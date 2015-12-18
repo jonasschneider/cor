@@ -19,14 +19,15 @@ impl IoPort {
     unsafe { write8(self.base+offset, val) }
   }
   pub fn write16(&self, offset: u16, val: u16) {
-    assert!(offset < self.width);
+    assert!(offset+1 < self.width);
     unsafe { write16(self.base+offset, val) }
   }
   pub fn write32(&self, offset: u16, val: u32) {
-    assert!(offset < self.width);
+    assert!(offset+3 < self.width);
     unsafe { write32(self.base+offset, val) }
   }
 
+  // TODO: check limit as well
   //fn read8(&self, offset: u16) { unsafe { read8(self.base+offset) } }
   pub fn read16(&self, offset: u16) -> u16 { unsafe { read16(self.base+offset) } }
   //n read32(&self, offset: u16) { unsafe { read32(self.base+offset) } }

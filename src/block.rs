@@ -1,5 +1,5 @@
 #![crate_type="staticlib"]
-#![feature(box_syntax)]
+#![feature(box_syntax,repr_simd)]
 #![feature(alloc,collections,core_intrinsics)]
 #![no_std]
 #![feature(lang_items,unsafe_destructor,asm,box_patterns)]
@@ -28,6 +28,7 @@ mod cpuio;
 mod virtio;
 
 mod kbuf;
+mod mem;
 
 pub mod sched;
 
@@ -59,6 +60,7 @@ extern "C" {
 fn rust_pci_task() {
   unsafe { pci_init(); }
   println!("c-land pci_init exited");
+  virtio_init(0xc040);
 }
 
 fn idle_task() {
@@ -122,7 +124,7 @@ pub fn virtio_init(ioport : u16) {
   }
 
   unsafe { println!("the state is now {:?}, lol", state); }
-  let port = cpuio::alloc(ioport, 32).unwrap();
+  let port = cpuio::alloc(ioport, 20).unwrap(); // 20 pins, see virtio spec
   let a_device = unsafe { virtio::init(port) };
   println!("result of blockdevice init: {:?}", a_device);
 }

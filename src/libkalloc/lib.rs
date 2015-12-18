@@ -15,17 +15,17 @@ extern "C" {
 }
 
 #[no_mangle]
-pub extern fn __rust_allocate(size: usize, _align: usize) -> *mut u8 {
-    unsafe { rust_allocate(size as libc::size_t, _align as libc::size_t) as *mut u8 }
+pub unsafe extern fn __rust_allocate(size: usize, _align: usize) -> *mut u8 {
+    rust_allocate(size as libc::size_t, _align as libc::size_t) as *mut u8
 }
 
 #[no_mangle]
-pub extern fn __rust_deallocate(ptr: *mut u8, _old_size: usize, _align: usize) {
-    unsafe { rust_deallocate(ptr as *mut libc::c_void, _old_size as libc::size_t, _align as libc::size_t) }
+pub unsafe extern fn __rust_deallocate(ptr: *mut u8, _old_size: usize, _align: usize) {
+    rust_deallocate(ptr as *mut libc::c_void, _old_size as libc::size_t, _align as libc::size_t)
 }
 
 #[no_mangle]
-pub extern fn __rust_reallocate(ptr: *mut u8, _old_size: usize, size: usize,
+pub unsafe extern fn __rust_reallocate(ptr: *mut u8, _old_size: usize, size: usize,
                                 _align: usize) -> *mut u8 {
     panic!("realloc()!");
     // unsafe {

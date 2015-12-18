@@ -21,7 +21,7 @@ pub fn exec_init() {
   println!("Load result: {:?}", loaded);
 
   let image = loaded.unwrap();
-  let mut s = state::UsermodeState::new(image.initial_rip, image.initial_rsp);
+  let mut s = state::UsermodeState::new(image.initial_rip as u64, image.initial_rsp as u64);
 
   loop {
     let r = s.step();

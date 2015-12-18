@@ -2,10 +2,12 @@ use core::{mem,slice};
 use core::ptr::copy;
 use core::iter::{Iterator,IntoIterator};
 
+use super::super::mem::*;
+
 #[derive(Debug)]
 pub struct Image {
-  pub initial_rsp: u64,
-  pub initial_rip: u64,
+  pub initial_rsp: usize,
+  pub initial_rip: usize,
 }
 
 #[derive(Debug)]
@@ -14,15 +16,7 @@ pub enum Error {
 }
 
 macro_rules! ensure {
-  ($x:expr) => (if(!$x) { return Err(Error::InvalidElf)} );
-}
-
-fn align_down(address: u64, granularity: u64) -> u64 {
-  address & (!(granularity-1))
-}
-
-fn align_up(address: u64, granularity: u64) -> u64 {
-  (address+granularity) & (!(granularity-1))
+  ($x:expr) => (if !$x { return Err(Error::InvalidElf)} );
 }
 
 type task = u8; // sigh
@@ -70,8 +64,8 @@ pub unsafe fn load(elf: &[u8]) -> Result<Image, Error> {
   for s in sections.iter().filter(|s| s.addr != 0 && s.size != 0) {
     println!("Found a nonempty section: [{:x}; {:x}] {:?}", s.addr, s.size, s);
 
-    let startpage = align_down(s.addr, 0x1000); // align down
-    let endpage = align_up(s.addr+s.size, 0x1000); // align up
+    let startpage = align_down(s.addr as usize, 0x1000); // align down
+    let endpage = align_up((s.addr+s.size) as usize, 0x1000); // align up
     println!("It needs these pages: {:x} - {:x}", startpage, endpage);
 
     assert!(endpage > startpage); // empty sections are disallowed
@@ -99,7 +93,7 @@ pub unsafe fn load(elf: &[u8]) -> Result<Image, Error> {
 
       // The least we can do is round up to the nearest page bound to cut us some slack.
       // (We allocated the entire page anyway in the above loop)
-      brk = align_up(section.addr + section.size, 0x1000);
+      brk = align_up((section.addr + section.size) as usize, 0x1000);
       println!("Found data section at {:x}, setting brk to {:x}", section.addr, brk);
     }
 
@@ -118,7 +112,7 @@ pub unsafe fn load(elf: &[u8]) -> Result<Image, Error> {
   let firstword = hdr.entrypoint as *const u16;
   ensure!(*firstword == 0x4855);
 
-  Ok(Image{initial_rip: hdr.entrypoint, initial_rsp: brk})
+  Ok(Image{initial_rip: hdr.entrypoint as usize, initial_rsp: brk})
 }
 
 #[derive(Debug)]
