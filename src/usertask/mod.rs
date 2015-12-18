@@ -1,9 +1,11 @@
 use core::{slice, str};
 
 mod state;
+mod elf;
 
 extern {
-  pub fn cor_load_init() -> u64;
+  static cor_stage2_init_data: u8;
+  static cor_stage2_init_data_len: usize;
 }
 
 use ::sched;
@@ -13,8 +15,13 @@ use self::state::SyscallType::*;
 pub fn exec_init() {
   println!("Starting init task! Or at least I hope so.");
 
-  // FIXME: stack!
-  let mut s = state::UsermodeState::new(unsafe { cor_load_init() }, 0x602000);
+  let elf: &[u8] = unsafe { slice::from_raw_parts(&cor_stage2_init_data, cor_stage2_init_data_len) };
+
+  let loaded = unsafe { elf::load(elf) };
+  println!("Load result: {:?}", loaded);
+
+  let image = loaded.unwrap();
+  let mut s = state::UsermodeState::new(image.initial_rip, image.initial_rsp);
 
   loop {
     let r = s.step();

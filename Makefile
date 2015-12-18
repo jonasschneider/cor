@@ -2,7 +2,7 @@ ROOT=.
 include Makefile.conf
 .PHONY: all clean
 
-OBJS=main.o printk.o chrdev_serial.o chrdev_console.o io.o elf.o interrupthandler.o tss.o mm.o task.o pci.o timer.o pic.o interrupt.o test_mock_supplement.o
+OBJS=main.o printk.o chrdev_serial.o chrdev_console.o io.o interrupthandler.o tss.o mm.o task.o pci.o timer.o pic.o interrupt.o test_mock_supplement.o
 OBJS+=context_switch.o trampoline.o idle.o
 
 all: disk.bin
@@ -60,9 +60,9 @@ disk.bin: arch/boot_stage1/mbr.bin stage2.o Makefile
 init_static.o: init_static.c~
 	$(CC) $(KCCFLAGS) -c -x c $< -o $@
 
-init_static.c~: userspace/*.c
+init_static.c~: userspace/*.c Makefile
 	$(MAKE) -C userspace
-	cat userspace/init | ruby -e 'b = $$stdin.read.bytes; puts "int cor_stage2_init_data_len = "+b.count.to_s+"; char cor_stage2_init_data[] = {";puts b.map{|x|"0x#{x.to_s(16)}"}.join(", ");puts "};"' > $@
+	cat userspace/init | ruby -e 'b = $$stdin.read.bytes; puts 35.chr+"include <stdint.h>\nsize_t cor_stage2_init_data_len = "+b.count.to_s+"; char cor_stage2_init_data[] = {";puts b.map{|x|"0x#{x.to_s(16)}"}.join(", ");puts "};"' > $@
 
 intstubs.s~: Makefile
 	ruby -e '0.upto(255) { |i| puts ".align 16\n.global intrstub_#{i}\nintrstub_#{i}:\n  push %rax\n  mov $$#{i}, %rax\n  jmp isr_dispatcher\n\n" }' > $@
