@@ -122,7 +122,8 @@ pub fn virtio_init(ioport : u16) {
   }
 
   unsafe { println!("the state is now {:?}, lol", state); }
-  let a_device = unsafe { virtio::init(ioport) };
+  let port = cpuio::alloc(ioport, 32).unwrap();
+  let a_device = unsafe { virtio::init(port) };
   println!("result of blockdevice init: {:?}", a_device);
 }
 

@@ -52,7 +52,7 @@ struct BlockRequest {
   sector: u64,
 }
 
-pub unsafe fn init<'t>(io: u16) -> Result<Device<'t>, Error> {
+pub unsafe fn init<'t>(port: cpuio::IoPort) -> Result<Device<'t>, Error> {
   // We can now talk to the actual virtio device
   // via the CPU's I/O pins directly. A couple of helpful references:
   //
@@ -70,35 +70,34 @@ pub unsafe fn init<'t>(io: u16) -> Result<Device<'t>, Error> {
   //     system.
 
   let mut state = 0u8;
-  println!("Initializing virtio block device starting at ioport {}..", io);
-  cpuio::write8(io+18, state);
+  println!("Initializing virtio block device with ioport {:?}..", port);
+  port.write8(18, state);
 
   state = state | VIRTIO_STATUS_ACKNOWLEDGE;
-  cpuio::write8(io+18, state);
+  port.write8(18, state);
 
   state = state | VIRTIO_STATUS_DRIVER;
-  cpuio::write8(io+18, state);
+  port.write8(18, state);
 
   // Feature negotiation
-  let offered_featureflags = unsafe { cpuio::read16(io+0) };
+  let offered_featureflags = port.read16(0);
   println!("The device offered us these feature bits: {:?}", offered_featureflags);
   // In theory, we'd do `negotiated = offered & supported`; we don't actually
   // support any flags, so we can just set 0.
-  cpuio::write16(io+4, 0);
+  port.write16(4, 0);
 
   // Now comes the block-device-specific setup.
   // (The configuration of a single virtqueue isn't device-specific though; it's the same
   // for i.e. the virtio network controller)
 
   // Discover virtqueues; the block devices only has one
-  cpuio::write16(io+4, 0);
-  if cpuio::read16(io+4) != 0 {
+  if port.read16(4) != 0 {
     return Err(Error::VirtioHandshakeFailure)
   }
 
   // Determine how many descriptors the queue has, and allocate memory for the
   // descriptor table and the ring arrays.
-  let qsz = cpuio::read16(io+12) as usize;
+  let qsz = port.read16(12) as usize;
 
   // size_t rsize = vring_size(qsz, 0x1000);
   // cor_printk("virtio's macros say that means a buffer size of %x\n", rsize);
@@ -137,12 +136,12 @@ pub unsafe fn init<'t>(io: u16) -> Result<Device<'t>, Error> {
   // effective address space on current x86_64 implementations.
 
   let physical_32 = physical_from_kernel(buf as usize) as u32; // FIXME: not really a safe cast
-  cpuio::write32(io+8, physical_32 >> 12);
+  port.write32(8, physical_32 >> 12);
 
   // Tell the device we're done setting it up
 
   state = state | VIRTIO_STATUS_DRIVER_OK;
-  cpuio::write8(io+18, state);
+  port.write8(18, state);
 
   println!("Device state is now: {}", state);
 
@@ -201,13 +200,12 @@ pub unsafe fn init<'t>(io: u16) -> Result<Device<'t>, Error> {
   hdr.ioprio = 1; // prio
   hdr.sector = 0; // first sector of the disk
 
-  *donebuf = 17; // debugging marker, so that we can check if it worked
+  *donebuf = 17; // debugging marker != 0, so that we can check if it worked
 
   // - Put the buffer into the virtqueue's "avail" array (the index-0 is actually
   //   `idx % qsz`, which wraps around after we've filled the avail array once,
   //   the value-0 is the index into the descriptor table above)
   avail.ring = 0 as *mut u16; // FIXME: wait, what?
-
 
   // - Now, place a memory barrier so the above read is seen for sure
   core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
@@ -224,15 +222,11 @@ pub unsafe fn init<'t>(io: u16) -> Result<Device<'t>, Error> {
     return Err(Error::VirtioHandshakeFailure);
   }
 
-  // - Finally, "kick" the device to tell it that it should look for something
-  //   to do. We could probably skip doing this and just wait for a while;
-  //   even after a kick, there's no guarantee that the request will have been
-  //   processed. The actual notification about "I did a thing, please go
-  //   check" will in practice be delivered back to us via an interrupt.
-
-
-  // Done! The request has been dispatched and the host informed that it has
-  // some work queued.
+  // Finally, we "kick" the device to tell it that it should look for
+  // something to do. We could probably skip doing this and just wait for a
+  // while; even after a kick, there's no guarantee that the request will have
+  // been processed. The actual notification about "I did a thing, please go
+  // check" will in practice be delivered back to us via an interrupt.
 
   // In reality, we'd now yield and wait until we receive virtio's interrupt that notifies
   // us of the completion of our request. We could also just spin for a bit.
@@ -242,15 +236,16 @@ pub unsafe fn init<'t>(io: u16) -> Result<Device<'t>, Error> {
   // behaviour we're relying on here, but let's just skip the wait while we
   // can.
 
-  // Now, magically, this index will change to "1" to indicate that
-  // the device has processed our request buffer.
-
   while used.idx == 0 {
-    cpuio::write16(io+16, 0);
+    port.write16(16, 0);
     sched::park_until_irq(0x2b);
   }
 
+  // Now, magically, this index will have changed to "1" to indicate that
+  // the device has processed our request buffer.
+
   println!("Number of readable queues after fake-wait: {}", used.idx);
+  assert_eq!(1, used.idx);
 
   println!("Virtio call completed, retval={}", *donebuf);
   if *donebuf != 0 { // retval of 0 indicates success
@@ -286,5 +281,5 @@ pub unsafe fn init<'t>(io: u16) -> Result<Device<'t>, Error> {
   let mybuf = kbuf::new("a buffer");
   let theq = common_virtio::virtqueue{buf: mybuf};
 
-  Ok(Device { q: theq, io_base: io, })
+  Ok(Device { q: theq, io_base: 0 })
 }
