@@ -8,7 +8,7 @@ int exit(int ret) {
             "int $49"
           :
           : "r"((uint64_t)SYSCALL_EXIT), "r"((long)ret)
-          : "rax", "rbx"
+          : "rax", "rbx", "rcx", "rdx", "r12", "r13", "r14", "r15"
           );
   return 0;
 }
@@ -21,7 +21,7 @@ int write(int fd, const void *buf, size_t count) {
             "int $49"
           :
           : "r"((uint64_t)SYSCALL_WRITE), "r"((uint64_t)fd), "r"((uint64_t)buf), "r"((uint64_t)count)
-          : "rax", "rbx", "rcx", "rdx"
+          : "rax", "rbx", "rcx", "rdx", "r12", "r13", "r14", "r15"
           );
   return 0;
 }
@@ -34,7 +34,7 @@ void *moremem(size_t size) {
             "movq %%rax, %0\n"
           : "=r"(ret)
           : "r"((uint64_t)SYSCALL_MOREMEM), "r"((uint64_t)size)
-          : "rax", "rbx"
+          : "rax", "rbx", "rcx", "rdx", "r12", "r13", "r14", "r15"
           );
   return ret;
 }
