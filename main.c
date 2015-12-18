@@ -13,6 +13,8 @@ void test_mock_main();
 
 unsigned long *timer = (unsigned long*)(0x81000|0x0000008000000000);
 
+volatile char resume_boot_marker = 0;
+
 void cor_panic(const char *msg) {
   cor_printk("\nPANIC: %s\n    (at t=%x)\n", msg, *timer);
   // panicking is actually pretty hard; we should clean up and disable as many interrupts
@@ -55,6 +57,8 @@ CASSERT(sizeof(uint32_t) == 4);
 CASSERT(sizeof(uint64_t) == 8);
 
 void kernel_main(void) {
+  while(resume_boot_marker == 0) {}
+
   chrdev_console_init();
   uint32_t revision = *((uint32_t*)0x6fffa);
   cor_printk("\n   Cor rev. %xx\n\n",revision);
