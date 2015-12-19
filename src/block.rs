@@ -17,13 +17,9 @@ mod print;
 mod std { pub use core::fmt; } // std-module-trick to fix expansion of `format_args!`
 
 mod usertask;
-
-// cpuio library
 mod cpuio;
-
-// import submodules
 mod virtio;
-
+mod fs;
 mod kbuf;
 mod mem;
 
@@ -57,7 +53,7 @@ extern "C" {
 fn rust_pci_task() {
   unsafe { pci_init(); }
   println!("c-land pci_init exited");
-  virtio_init(0xc040);
+  //virtio_init(0xc040);
 }
 
 fn idle_task() {
@@ -104,26 +100,6 @@ fn thread2() {
     println!("hi from thread2");
     sched::kyield();
   }
-}
-
-
-#[no_mangle]
-pub fn virtio_init(ioport : u16) {
-  // apparently, anything modifying global mutable state is considered unsafe...
-  unsafe { state = Some(State { number: 1337, string: "" }); }
-
-  // okay, even reading requires it
-  unsafe {
-    match state {
-      Some(ref mut s) => s.number = 1338,
-      None => (),
-    }
-  }
-
-  unsafe { println!("the state is now {:?}, lol", state); }
-  let port = cpuio::alloc(ioport, 20).unwrap(); // 20 pins, see virtio spec
-  let a_device = unsafe { virtio::init(port) };
-  println!("result of blockdevice init: {:?}", a_device);
 }
 
 extern {

@@ -49,6 +49,12 @@ pub struct Vring {
   used: Used,
 }
 
+impl fmt::Debug for Vring {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "(vring)")
+    }
+}
+
 struct Avail {
   flags: *mut u16,
   idx: *mut u16,

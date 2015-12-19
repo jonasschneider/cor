@@ -13,10 +13,10 @@ use collections;
 use collections::vec::Vec;
 use super::sched;
 
-
 #[derive(Debug)]
-pub struct Device {
-  io_base: cpuio::Port,
+pub struct Blockdev {
+  port: cpuio::IoPort, // exclusive access to the entire port, for now
+  q: queue::Virtqueue,
 }
 
 #[derive(Debug)]
@@ -31,7 +31,7 @@ const VIRTIO_STATUS_DRIVER_OK: u8 = 4;
 const VIRTIO_STATUS_FAILED: u8 = 128;
 
 
-pub unsafe fn init(port: cpuio::IoPort) -> Result<Device, Error> {
+pub unsafe fn init(port: cpuio::IoPort) -> Result<Blockdev, Error> {
   // We can now talk to the actual virtio device
   // via the CPU's I/O pins directly. A couple of helpful references:
   //
@@ -87,5 +87,5 @@ pub unsafe fn init(port: cpuio::IoPort) -> Result<Device, Error> {
     panic!("Self-test failed!")
   }
 
-  Ok(Device { io_base: 0 })
+  Ok(Blockdev { q: q, port: port })
 }

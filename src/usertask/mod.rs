@@ -8,16 +8,33 @@ extern {
   static cor_stage2_init_data_len: usize;
 }
 
+use super::{virtio,cpuio,fs};
+
 use ::sched;
 use self::state::StepResult::*;
 use self::state::SyscallType::*;
 
 pub fn exec_init() {
   println!("Starting init task! Or at least I hope so.");
+  let static_elf: &[u8] = unsafe { slice::from_raw_parts(&cor_stage2_init_data, cor_stage2_init_data_len) };
+  {
+    let port = cpuio::alloc(0xc040, 20).unwrap(); // 20 pins, see virtio spec
+    let blockdev = unsafe { virtio::init(port) }.unwrap();
+    println!("result of blockdevice init: {:?}", blockdev);
 
-  let elf: &[u8] = unsafe { slice::from_raw_parts(&cor_stage2_init_data, cor_stage2_init_data_len) };
+    let mut fs = fs::Arfs::new(blockdev);
 
-  let loaded = unsafe { elf::load(elf) };
+    let mut buf = vec!(0u8; cor_stage2_init_data_len+10);
+    let read = fs.read("/init", &mut buf);
+    println!("Read result: {:?}",read);
+    let n = read.unwrap();
+    println!("Lengths: expected {}, actual {}",cor_stage2_init_data_len,n);
+
+    let loaded_elf = &buf[0..n];
+    assert_eq!(static_elf, loaded_elf)
+  }
+
+  let loaded = unsafe { elf::load(static_elf) };
   println!("Load result: {:?}", loaded);
 
   let image = loaded.unwrap();

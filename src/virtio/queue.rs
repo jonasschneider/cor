@@ -24,6 +24,7 @@ pub struct BlockRequest {
   sector: u64,
 }
 
+#[derive(Debug)]
 pub struct Virtqueue {
   ring: vring::Vring,
 }
