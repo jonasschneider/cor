@@ -36,6 +36,13 @@ impl Fs for Arfs {
       return Err(Error::ReadFailed(e));
     }
 
+    let res3 = self.dev.read(0, &mut block);
+    println!("Blockdev read result: {:?}",res3);
+    if let Err(e) = res3 {
+      return Err(Error::ReadFailed(e));
+    }
+    println!("mbr sig2: {:?}", &block[510..512]);
+
     Ok(0)
   }
 }

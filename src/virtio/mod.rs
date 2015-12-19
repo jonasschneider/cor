@@ -63,13 +63,12 @@ impl Block for Blockdev {
       sched::park_until_irq(0x2b);
     }
 
-    println!("Virtio ISR register: {:b}", self.port.read8(19));// LOL! reset the ISR by **reading**
-    // no need to fence this because I/O isn't reordered?
+    // TODO: this whole IRQ handling is really bad.
+    // Especially, I feel like we should never call asm_eoi from Rustland
+    // (or from non-interrupt kernel land entirely).
+    // Mark the virtio irq as handled *before* EOI, otherwise we'd get another one right away.
+    self.port.read8(19); // The virtio IRQ status is reset by **reading** from this port
     unsafe { asm_eoi(); }
-
-
-    // Now, magically, this index will have changed to "1" to indicate that
-    // the device has processed our request buffer.
 
     println!("Virtio call completed, retval={}", done[0]);
 
