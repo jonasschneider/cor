@@ -58,18 +58,18 @@ Roadmap
   - [ ] fork()
   - [ ] Thread-local storage for user space
   - [ ] CPU-local storage for kernel space (for SMP: eliminate mutable statics)
+- [ ] Filesystem
+  - [x] Attach virtio (virtio-scsi, or preferredly virtio-blk) to QEMU
+  - [x] PCI device detection
+  - [x] virtio-blk block device driver
+  - [ ] tiniest filesystem imaginable (read-only single-level?) -> `ar` format
+  - [ ] read init from filesystem instead of baking it in
+  - [ ] file descriptors / opening files from userspace
 - [ ] Build a userspace toolchain
   - [x] Make a "hello world" binary that runs on host Linux and is as static as it gets (no libc)
   - [ ] Mod dietlibc to fit our syscall mechanism
   - [ ] Package that as libcorc or something
 - [ ] Build something like a shell that talks over serial (this will be our init)
-- [ ] Filesystem
-  - [x] Attach virtio (virtio-scsi, or preferredly virtio-blk) to QEMU
-  - [x] PCI device detection
-  - [x] virtio PCI block device driver POC
-  - [ ] virtio PCI block device driver
-  - [ ] block device abstraction (likely in C land, or maybe the scheduler in Rust)
-  - [ ] tiniest filesystem imaginable (read-only single-level?) -> tar format, FS state in rust
 - [ ] Userspace binaries (`ls` and such)
 - [ ] Networking:
   - [ ] virtio NIC
