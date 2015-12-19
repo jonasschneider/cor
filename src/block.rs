@@ -1,6 +1,6 @@
 #![crate_type="staticlib"]
 #![feature(box_syntax,repr_simd)]
-#![feature(alloc,collections,core_intrinsics)]
+#![feature(alloc,collections,core_intrinsics,clone_from_slice)]
 #![no_std]
 #![feature(lang_items,unsafe_destructor,asm,box_patterns)]
 

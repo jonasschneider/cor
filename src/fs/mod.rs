@@ -39,12 +39,12 @@ impl Arfs {
 impl Fs for Arfs {
   fn read(&mut self, filename: &str, buf: &mut[u8]) -> Result<usize, Error> {
     let filename_needle = &filename[1..filename.len()]; // strip off leading '/'
-    let mut block = [0u8; 512];
-    if let Err(e) = self.dev.read(0, &mut block) {
+    let mut firstblock = [0u8; 512];
+    if let Err(e) = self.dev.read(0, &mut firstblock) {
       return Err(Error::ReadFailed(e));
     }
 
-    let entry = &block[..];
+    let entry = &firstblock[..];
     println!("entry: {:?}", &entry[..]);
     let magic = (entry[0] as u16) | ((entry[1] as u16)<<8);
     if magic != 0o70707 {
@@ -73,10 +73,34 @@ impl Fs for Arfs {
       return Err(Error::Unknown);
     }
 
-    // Due to padding, the actual start of the data is a bit hard to find
+    // Due to padding, the actual start of the data is right here:
     let body_offset = mem::align_up(26+namelength, 2);
 
+    let mut next_sector = 1;
+    let mut sectorbuf = [0u8; 512];
 
-    Ok(0)
+    let mut written = 0;
+
+    while written < size {
+      let n = {
+        let src = if written == 0 {
+          &entry[body_offset..entry.len()]
+        } else {
+          &sectorbuf[..]
+        };
+        let mut dest = &mut buf[written..size];
+        dest.clone_from_slice(src)
+      };
+
+      written = written + n;
+      if written < n {
+        if let Err(e) = self.dev.read(next_sector, &mut sectorbuf) {
+          return Err(Error::ReadFailed(e));
+        }
+        next_sector = next_sector + 1;
+      }
+    }
+
+    Ok(size)
   }
 }
