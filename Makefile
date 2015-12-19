@@ -36,10 +36,10 @@ interrupthandler.o: interrupthandler.s include/cor/syscall.h intstubs.s~
 test_mock_supplement.o: $(wildcard ./test_mock_supplement.c~) test_mock_supplement_stub.c
 	if [ -e "test_mock_supplement.c~" ]; then f="test_mock_supplement.c~"; else f="test_mock_supplement_stub.c"; fi; $(CC) $(KCCFLAGS) -c -x c $$f -o $@
 
-stage2.o: $(OBJS) linkerscript stage2_entrypoint.o init_static.o src/block.kmo
+stage2.o: $(OBJS) linkerscript stage2_entrypoint.o src/block.kmo
 	echo LONG\(0x$(shell git rev-parse HEAD | cut -c 1-6)\) > versionstamp~
 	# -x here removes local symbols (like those from hello.kmo from the file -- maybe for "production"?)
-	$(LD) $(OBJS) stage2_entrypoint.o init_static.o src/block.kmo -T linkerscript -o stage2.o
+	$(LD) $(OBJS) stage2_entrypoint.o src/block.kmo -T linkerscript -o stage2.o
 
 stage2.bin: stage2.o
 	$(OBJCOPY) --only-section=.text -O binary stage2.o stage2.bin
@@ -58,13 +58,6 @@ disk.bin: arch/boot_stage1/mbr.bin stage2.o Makefile
 	# and add the data. ultra hacky to mess with the offsets here, and it's probably wrong, but meh...
 	dd if=stage2_data~ of=disk.bin~ conv=notrunc bs=512 seek=$$((1 + (0x40000/512)))
 	mv disk.bin~ disk.bin
-
-init_static.o: init_static.c~
-	$(CC) $(KCCFLAGS) -c -x c $< -o $@
-
-init_static.c~: userspace/*.c Makefile
-	$(MAKE) -C userspace
-	cat userspace/init | ruby -e 'b = $$stdin.read.bytes; puts 35.chr+"include <stdint.h>\nsize_t cor_stage2_init_data_len = "+b.count.to_s+"; char cor_stage2_init_data[] = {";puts b.map{|x|"0x#{x.to_s(16)}"}.join(", ");puts "};"' > $@
 
 intstubs.s~: Makefile
 	ruby -e '0.upto(255) { |i| puts ".align 16\n.global intrstub_#{i}\nintrstub_#{i}:\n  push %rax\n  mov $$#{i}, %rax\n  jmp isr_dispatcher\n\n" }' > $@
