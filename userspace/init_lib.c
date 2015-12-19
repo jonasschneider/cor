@@ -26,21 +26,11 @@ int write(int fd, const void *buf, size_t count) {
   return 0;
 }
 
-void *moremem(size_t size) {
-  void *ret;
-  __asm__ ( "movq %1, %%rax\n"
-            "movq %2, %%rbx\n"
-            "int $49\n"
-            "movq %%rax, %0\n"
-          : "=r"(ret)
-          : "r"((uint64_t)SYSCALL_MOREMEM), "r"((uint64_t)size)
-          : "rax", "rbx", "rcx", "rdx", "r12", "r13", "r14", "r15"
-          );
-  return ret;
-}
+void *mallocstart = (void*)0x50000;
 
 void *malloc(size_t size) {
-  return moremem(size);
+  mallocstart += size;
+  return mallocstart - size;
 }
 
 size_t strlen(const char *str) {

@@ -20,10 +20,11 @@ macro_rules! ensure {
 }
 
 type task = u8; // sigh
+type page = u8; // ...
 
 extern {
   fn task_new() -> *mut task;
-  fn task_addpage(t: *mut task, page: *const task);
+  fn task_addpage(t: *mut task, page: *const page);
   fn task_enter_memspace(t: *mut task);
 }
 
@@ -79,6 +80,8 @@ pub unsafe fn load(elf: &[u8]) -> Result<Image, Error> {
       page += 0x1000;
     }
   }
+
+  task_addpage(task, 0x50000 as *const u8); // add a dummy page for malloc
 
   task_enter_memspace(task); // This is super unsafe!
 
