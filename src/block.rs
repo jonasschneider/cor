@@ -4,9 +4,6 @@
 #![no_std]
 #![feature(lang_items,unsafe_destructor,asm,box_patterns)]
 
-// only for bindgen'd stuff!
-#![feature(libc)]
-
 // Use kalloc for heap memory
 extern crate kalloc;
 
