@@ -3,8 +3,12 @@ use super::virtio::{Block,Blockdev,Error as BlockError};
 #[derive(Debug)]
 enum Error {
   ReadFailed(BlockError),
+  InvalidDiskFormat,
   Unknown,
 }
+
+use super::mem;
+use core::str;
 
 pub trait Fs {
   fn read(&mut self, name: &str, buf: &mut[u8]) -> Result<usize, Error>;
@@ -20,28 +24,58 @@ impl Arfs {
   }
 }
 
+// 2 magic
+// 2 dev
+// 2 ino
+// 2 mode
+// 2 uid
+// 2 gid
+// 2 nlink
+// 2 rdev
+// 4 mtime
+// 2 namesize
+// 4 filesize
+
 impl Fs for Arfs {
-  fn read(&mut self, name: &str, buf: &mut[u8]) -> Result<usize, Error> {
+  fn read(&mut self, filename: &str, buf: &mut[u8]) -> Result<usize, Error> {
+    let filename_needle = &filename[1..filename.len()]; // strip off leading '/'
     let mut block = [0u8; 512];
-    let res = self.dev.read(0, &mut block);
-    println!("Blockdev read result: {:?}",res);
-    if let Err(e) = res {
-      return Err(Error::ReadFailed(e));
-    }
-    println!("mbr sig: {:?}", &block[510..512]);
-    let res2 = self.dev.read(1, &mut block);
-    println!("Blockdev read2 result: {:?}",res2);
-    println!("sector1: {:?}", &block[0..2]);
-    if let Err(e) = res2 {
+    if let Err(e) = self.dev.read(0, &mut block) {
       return Err(Error::ReadFailed(e));
     }
 
-    let res3 = self.dev.read(0, &mut block);
-    println!("Blockdev read result: {:?}",res3);
-    if let Err(e) = res3 {
-      return Err(Error::ReadFailed(e));
+    let entry = &block[..];
+    println!("entry: {:?}", &entry[..]);
+    let magic = (entry[0] as u16) | ((entry[1] as u16)<<8);
+    if magic != 0o70707 {
+      return Err(Error::InvalidDiskFormat);
     }
-    println!("mbr sig2: {:?}", &block[510..512]);
+
+    let mut namelength = ((entry[20] as u16) | ((entry[21] as u16)<<8)) as usize;
+    println!("name has length {} including nul",namelength);
+
+    // nice byte order, bro..
+    let size = (((entry[22] as u32)<<16) | ((entry[23] as u32)<<24) | (entry[24] as u32) | ((entry[25] as u32)<<8)) as usize;
+    println!("file size: {}, buffer length: {}",size, buf.len());
+
+    if size > buf.len() {
+      println!("Your buffer is too small, bye");
+      return Err(Error::Unknown);
+    }
+
+    let read_filename = match str::from_utf8(&&entry[26..(26+namelength-1)]) {
+        Ok(v) => v,
+        Err(e) => return Err(Error::Unknown)
+    };
+
+    println!("Name: got '{}', wanted '{}'", read_filename, filename_needle);
+    if read_filename.as_bytes() != filename_needle.as_bytes() {
+      return Err(Error::Unknown);
+    }
+
+    // Due to padding, the actual start of the data is a bit hard to find
+    let body_offset = mem::align_up(26+namelength, 2);
+
 
     Ok(0)
   }

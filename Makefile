@@ -5,7 +5,9 @@ include Makefile.conf
 OBJS=main.o printk.o chrdev_serial.o chrdev_console.o io.o interrupthandler.o tss.o mm.o task.o pci.o timer.o pic.o interrupt.o test_mock_supplement.o
 OBJS+=context_switch.o trampoline.o idle.o
 
-all: disk.bin
+all:
+	$(MAKE) disk.bin
+	$(MAKE) -C userspace/
 
 clean:
 	rm -f *.o *.bin *~ init *.so

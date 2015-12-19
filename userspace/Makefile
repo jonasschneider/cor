@@ -2,10 +2,13 @@ ROOT=..
 include ../Makefile.conf
 .PHONY: all clean
 
-all: init
+all: rootfs.bin
 
 clean:
-	rm -fr dietlibc-0.33{,.tar.bz2} init init.ld
+	rm -fr dietlibc-0.33{,.tar.bz2} init init.ld rootfs.bin
+
+rootfs.bin: init
+	echo init | cpio --create > $@
 
 init: init.c init_lib.c init.ld ../include/cor/*.h
 	$(CC) $(CCFLAGS) -include stdlib.h init.c init_lib.c -T init.ld -o init
