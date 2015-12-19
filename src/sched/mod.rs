@@ -118,10 +118,6 @@ fn starttask() {
   }
 }
 
-extern {
-  fn asm_abort() -> !;
-}
-
 // Defining the actual yield in Rust is unsafe because we enter the function
 // on a different stack than the one that's present when leaving the function.
 // This breaks one of Rust's assumptions about the machine model. So, we'll do
@@ -153,7 +149,7 @@ fn reschedule() -> bool {
             // FIXME: this is horrible, but I want to halt somewhere.
             if t.desc.as_bytes() == "idle".as_bytes() {
               println!("Only the idle task remains. Bye!");
-              unsafe { asm_abort(); }
+              panic!("Scheduler stop")
             } else {
               println!("Continuing the last task.");
               return false

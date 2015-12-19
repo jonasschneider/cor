@@ -109,10 +109,24 @@ extern {
 #[lang = "stack_exhausted"] extern fn stack_exhausted() {}
 #[lang = "eh_personality"] extern fn eh_personality() {}
 
+use collections::string::String;
+use core::fmt::Write;
+use print::Kio;
+
+// It seems like the important thing is that we *don't* do stuff in here directly,
+// because we might get inlined. Therefore, immediately do a call to somewhere
+// that's marked as non-inlineable.
 #[lang = "panic_fmt"]
-extern fn panic_fmt(args: &core::fmt::Arguments,
-                    file: &str,
-                    line: u32) -> ! {
-  println!("panic!: {}", line);
-  unsafe { asm_abort(); }
+extern fn handle_libcore_panic(msg: core::fmt::Arguments,
+                                   file: &'static str, line: u32) -> ! {
+  print_panic_and_abort(msg, file, line)
+}
+
+#[inline(never)] #[cold]
+fn print_panic_and_abort(msg: core::fmt::Arguments, file: &'static str, line: u32) -> ! {
+    let mut kio = Kio;
+    kio.write_fmt(format_args!("\npanic: "));
+    kio.write_fmt(msg);
+    kio.write_fmt(format_args!(" at {}:{}\n\n", file, line));
+    unsafe { asm_abort(); }
 }
