@@ -10,7 +10,7 @@ use core::borrow::{BorrowMut,Borrow};
 
 use super::super::cpuio::IoPort;
 
-use super::{types,vring};
+use super::vring;
 use super::super::mem::*;
 use super::super::sched;
 

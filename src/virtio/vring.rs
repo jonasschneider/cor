@@ -8,7 +8,6 @@ use collections;
 use collections::vec::Vec;
 use core::borrow::BorrowMut;
 use core::mem;
-use super::types;
 use super::super::mem::*;
 use super::super::sched;
 
@@ -20,7 +19,7 @@ const VRING_DESC_F_WRITE: u16 = 2; /* This marks a buffer as write-only (otherwi
 // avail is: flags: u16, index u16, ring: [u16, length], used_event: u16
 // used is: flags: u16, index u16, ring: [u64, length], avail_event: u16
 fn size(length: u16) -> usize {
-  let descriptors = length as usize * core::mem::size_of::<types::Struct_vring_desc>();
+  let descriptors = length as usize * core::mem::size_of::<Descriptor>();
   let avail = (length as usize + 3) * 2;
   let guest_write_side = descriptors + avail;
 
@@ -30,9 +29,14 @@ fn size(length: u16) -> usize {
   align_up(guest_write_side, 0x1000) + guest_read_side
 }
 
-type Descriptor = types::Struct_vring_desc;
-
 type BufferToken = u16;
+
+struct Descriptor {
+  addr: u64,
+  len: u32,
+  flags: u16,
+  next: BufferToken,
+}
 
 pub struct Vring {
   pub address: usize,

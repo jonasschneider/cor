@@ -1,4 +1,3 @@
-mod types;
 mod queue;
 mod vring;
 
