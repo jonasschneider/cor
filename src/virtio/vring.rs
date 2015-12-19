@@ -145,7 +145,7 @@ impl Vring {
     // `idx % qsz`, which wraps around after we've filled the avail array once,
     // the value-0 is the index into the descriptor table above)
     let availr = unsafe{ slice::from_raw_parts_mut(self.avail.ring, self.length) };
-    unsafe { availr[*self.avail.idx as usize] = 0 as u16; }
+    unsafe { availr[*self.avail.idx as usize] = i as u16; }
 
     // Now, place a memory barrier so the above read is seen for sure
     core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);

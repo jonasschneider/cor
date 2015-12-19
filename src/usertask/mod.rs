@@ -30,9 +30,24 @@ pub fn exec_init() {
     println!("Read result: {:?}",read);
     let n = read.unwrap();
     println!("Lengths: expected {}, actual {}",cor_stage2_init_data_len,n);
+    assert_eq!(cor_stage2_init_data_len, n);
 
     let loaded_elf = &buf[0..n];
-    assert_eq!(static_elf, loaded_elf)
+
+    let mut i = 0;
+    while i < n {
+      if loaded_elf[i] != static_elf[i] {
+        println!("at {}: read: {:?}, static: {:?}", i, &loaded_elf[i..i+20], &static_elf[i..i+20]);
+        break;
+      }
+      i = i + 1;
+    }
+
+
+    assert_eq!(static_elf, loaded_elf);
+
+    println!("it works!");
+    panic!();
   }
 
   let loaded = unsafe { elf::load(static_elf) };

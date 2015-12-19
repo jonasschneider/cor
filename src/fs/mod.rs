@@ -40,6 +40,9 @@ impl Fs for Arfs {
   fn read(&mut self, filename: &str, buf: &mut[u8]) -> Result<usize, Error> {
     let filename_needle = &filename[1..filename.len()]; // strip off leading '/'
     let mut firstblock = [0u8; 512];
+    if let Err(e) = self.dev.read(1, &mut firstblock) {
+      return Err(Error::ReadFailed(e));
+    }
     if let Err(e) = self.dev.read(0, &mut firstblock) {
       return Err(Error::ReadFailed(e));
     }
@@ -88,12 +91,14 @@ impl Fs for Arfs {
         } else {
           &sectorbuf[..]
         };
+        println!("copying, src: {:?}", &src[0..10]);
         let mut dest = &mut buf[written..size];
         dest.clone_from_slice(src)
       };
 
       written = written + n;
-      if written < n {
+      if written < size {
+        println!("Reading sector {}", next_sector);
         if let Err(e) = self.dev.read(next_sector, &mut sectorbuf) {
           return Err(Error::ReadFailed(e));
         }
