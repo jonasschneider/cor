@@ -13,16 +13,81 @@ use collections;
 use collections::vec::Vec;
 use super::sched;
 
+extern {
+  fn asm_eoi();
+}
+
+pub trait Block {
+  // Read a block. Raises if `buf` does not have size 512.
+  fn read(&mut self, sector: usize, buf: &mut [u8]) -> Result<(), Error>;
+}
+
 #[derive(Debug)]
 pub struct Blockdev {
   port: cpuio::IoPort, // exclusive access to the entire port, for now
   q: queue::Virtqueue,
 }
 
+#[repr(C, packed)]
+pub struct BlockRequest {
+  kind: u32,
+  ioprio: u32,
+  sector: u64,
+}
+
+impl Block for Blockdev {
+  fn read(&mut self, sector: usize, buf: &mut [u8]) -> Result<(), Error> {
+    assert_eq!(512, buf.len());
+
+    let mut hdr = BlockRequest {
+      kind: 0, // 0=read
+      ioprio: 1, // prio
+      sector: sector as u64,
+    };
+    let mut done = [17u8; 1]; // != 0 for checking that it was set by the host
+
+    {
+      let hdrbuf: &[u8] = unsafe{ slice::from_raw_parts(core::mem::transmute(&hdr), core::mem::size_of::<BlockRequest>()) };
+      self.q.ring.enqueue_rww(&hdrbuf, &mut buf[..], &mut done[..]);
+    }
+
+    // Finally, we "kick" the device to tell it that it should look for
+    // something to do. We could probably skip doing this and just wait for a
+    // while; even after a kick, there's no guarantee that the request will have
+    // been processed. The actual notification about "I did a thing, please go
+    // check" will be delivered back to us via an interrupt.
+    // Now we park ourselves until things change.
+
+    while let None = self.q.ring.take() {
+      self.port.write16(16, 0);
+      sched::park_until_irq(0x2b);
+    }
+
+    println!("Virtio ISR register: {:b}", self.port.read8(19));// LOL! reset the ISR by **reading**
+    // no need to fence this because I/O isn't reordered?
+    unsafe { asm_eoi(); }
+
+
+    // Now, magically, this index will have changed to "1" to indicate that
+    // the device has processed our request buffer.
+
+    println!("Virtio call completed, retval={}", done[0]);
+
+    if done[0] != 0 { // retval of 0 indicates success
+      return Err(Error::VirtioRequestFailed)
+    }
+
+    Ok(())
+  }
+}
+
+
+
 #[derive(Debug)]
 pub enum Error {
   VirtioHandshakeFailure,
   NoDiskMarker,
+  VirtioRequestFailed,
 }
 
 const VIRTIO_STATUS_ACKNOWLEDGE: u8 = 1;
@@ -81,11 +146,11 @@ pub unsafe fn init(port: cpuio::IoPort) -> Result<Blockdev, Error> {
 
   println!("Device state is now: {}", state);
 
-  if q.test(&port) {
-    println!("Virtio-blk device successfully initialized and tested!");
-  } else {
-    panic!("Self-test failed!")
-  }
+  // if q.test(&port) {
+  //   println!("Virtio-blk device successfully initialized and tested!");
+  // } else {
+  //   panic!("Self-test failed!")
+  // }
 
   Ok(Blockdev { q: q, port: port })
 }

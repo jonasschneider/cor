@@ -17,16 +17,11 @@ use super::super::sched;
 const VRING_DESC_F_NEXT: u16 = 1; /* This marks a buffer as continuing via the next field. */
 const VRING_DESC_F_WRITE: u16 = 2; /* This marks a buffer as write-only (otherwise read-only). */
 
-#[repr(C, packed)]
-pub struct BlockRequest {
-  kind: u32,
-  ioprio: u32,
-  sector: u64,
-}
+use super::BlockRequest;
 
 #[derive(Debug)]
 pub struct Virtqueue {
-  ring: vring::Vring,
+  pub ring: vring::Vring,
 }
 
 impl Virtqueue {

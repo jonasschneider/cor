@@ -9,6 +9,7 @@ extern {
 }
 
 use super::{virtio,cpuio,fs};
+use fs::Fs;
 
 use ::sched;
 use self::state::StepResult::*;

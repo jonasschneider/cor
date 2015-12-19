@@ -77,4 +77,12 @@ timer_isr:
   pop %rax
   iretq
 
+.global asm_eoi
+asm_eoi:
+  # set EOI
+  mov $0x20, %al # clear flag?
+  outb %al, $0x20 # command port of PIC1
+  outb %al, $0xa0 # command port of PIC2
+  ret
+
 #include "intstubs.s~"

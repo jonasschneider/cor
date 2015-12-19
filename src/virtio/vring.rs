@@ -11,7 +11,7 @@ use core::mem;
 use super::super::mem::*;
 use super::super::sched;
 
-use super::queue::BlockRequest;
+use super::BlockRequest;
 
 const VRING_DESC_F_NEXT: u16 = 1; /* This marks a buffer as continuing via the next field. */
 const VRING_DESC_F_WRITE: u16 = 2; /* This marks a buffer as write-only (otherwise read-only). */
@@ -42,6 +42,9 @@ pub struct Vring {
   pub address: usize,
   length: usize,
   buf: Box<[u8]>,
+
+  next_descriptor_i: u16,
+  next_to_read: u16,
 
   // These are stored in `buf`.
   desc: *mut Descriptor,
@@ -108,47 +111,57 @@ impl Vring {
         ring: core::mem::transmute(usedbuf.as_ptr().offset(4)),
       } };
     }
+    unsafe {
+      *avail.idx = 0;
+      *avail.flags = 0;
+    }
 
-    Vring { length: length as usize, buf: buf, address: address, desc: desc, avail: avail, used: used }
+    Vring { next_to_read: 0, next_descriptor_i: 0, length: length as usize, buf: buf, address: address, desc: desc, avail: avail, used: used }
   }
 
   pub fn enqueue_rww(&mut self, hdr: &[u8], data: &mut [u8], done: &mut [u8]) -> Result<BufferToken, ()> {
     let desc = unsafe { slice::from_raw_parts_mut(self.desc, self.length) };
 
+    let i = self.next_descriptor_i as usize;
     // These entries describe a single logical buffer, composed of 3 separate physical buffers.
     // This separation is needed because a physical buffer can only be written to by one side.
-    desc[0].addr = physical_from_kernel(hdr.as_ptr() as usize) as u64;
-    desc[0].len = hdr.len() as u32;
-    desc[0].flags = VRING_DESC_F_NEXT;
-    desc[0].next = 1;
+    desc[i].addr = physical_from_kernel(hdr.as_ptr() as usize) as u64;
+    desc[i].len = hdr.len() as u32;
+    desc[i].flags = VRING_DESC_F_NEXT;
+    desc[i].next = (i+1) as u16;
 
-    desc[1].addr = physical_from_kernel(data.as_ptr() as usize) as u64;
-    desc[1].len = data.len() as u32;
-    desc[1].flags = VRING_DESC_F_NEXT | VRING_DESC_F_WRITE;
-    desc[1].next = 2;
+    desc[i+1].addr = physical_from_kernel(data.as_ptr() as usize) as u64;
+    desc[i+1].len = data.len() as u32;
+    desc[i+1].flags = VRING_DESC_F_NEXT | VRING_DESC_F_WRITE;
+    desc[i+1].next = (i+2) as u16;
 
-    desc[2].addr = physical_from_kernel(done.as_ptr() as usize) as u64;
-    desc[2].len = done.len() as u32;
-    desc[2].flags = VRING_DESC_F_WRITE;
+    desc[i+2].addr = physical_from_kernel(done.as_ptr() as usize) as u64;
+    desc[i+2].len = done.len() as u32;
+    desc[i+2].flags = VRING_DESC_F_WRITE;
+
+    self.next_descriptor_i = self.next_descriptor_i + 3;
 
     // Put the buffer into the virtqueue's "avail" array (the index-0 is actually
     // `idx % qsz`, which wraps around after we've filled the avail array once,
     // the value-0 is the index into the descriptor table above)
     let availr = unsafe{ slice::from_raw_parts_mut(self.avail.ring, self.length) };
-    availr[0] = 0;
+    unsafe { availr[*self.avail.idx as usize] = 0 as u16; }
 
     // Now, place a memory barrier so the above read is seen for sure
     core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
 
     // Now, tell the device which index into the array is the highest available one
-    unsafe { *self.avail.idx = 1; }
+    unsafe { *self.avail.idx = *self.avail.idx + 1; }
+    println!("Next buffer avail is: {}",unsafe{*self.avail.idx});
 
     Ok(0 as BufferToken)
   }
 
   // TODO: incorrect (index is not number of available bufs)
   pub fn take(&mut self) -> Option<BufferToken> {
-    if unsafe { *self.used.idx as BufferToken } > 0 {
+    if unsafe { *self.used.idx as BufferToken } > self.next_to_read {
+      println!("Taking buffer {} from used",self.next_to_read);
+      self.next_to_read = self.next_to_read + 1;
       Some(0 as BufferToken)
     } else {
       None

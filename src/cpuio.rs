@@ -28,7 +28,7 @@ impl IoPort {
   }
 
   // TODO: check limit as well
-  //fn read8(&self, offset: u16) { unsafe { read8(self.base+offset) } }
+  pub fn read8(&self, offset: u16) -> u8 { unsafe { read8(self.base+offset) } }
   pub fn read16(&self, offset: u16) -> u16 { unsafe { read16(self.base+offset) } }
   //n read32(&self, offset: u16) { unsafe { read32(self.base+offset) } }
 }
@@ -70,6 +70,18 @@ pub unsafe fn read16(port: Port) -> u16 {
   asm! (
     "inw %dx, %ax"
     : "={ax}" (x)
+    : "{dx}" (port as u16)
+    :
+    : "volatile"
+  );
+  x
+}
+
+pub unsafe fn read8(port: Port) -> u8 {
+  let mut x : u8 = 0;
+  asm! (
+    "inb %dx, %al"
+    : "={al}" (x)
     : "{dx}" (port as u16)
     :
     : "volatile"
