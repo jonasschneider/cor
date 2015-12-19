@@ -25,6 +25,8 @@ Synopsis
 
 Roadmap
 -------
+In the [OSDev ontology](http://wiki.osdev.org/What_order_should_I_make_things_in), we're likely building a ["Nick Stacky"](http://wiki.osdev.org/What_order_should_I_make_things_in#Nick_Stacky) system.
+
 - [x] Boot *something*, and show a hello world on the Screen
 - [x] Enter 64-bit long mode and never worry about the 80s again
 - [x] Print something on the serial console
