@@ -195,3 +195,4 @@ Bibliography
 - http://wiki.osdev.org/Memory_Map_(x86)
 - Intel manual (TODO)
 - AMD manual (TODO)
+- http://idak.gop.edu.tr/esmeray/UnderStandingKernel.pdf
