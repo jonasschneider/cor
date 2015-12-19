@@ -6,6 +6,7 @@ use core::fmt;
 use kbuf;
 use collections;
 use collections::vec::Vec;
+use core::borrow::BorrowMut;
 
 use super::super::cpuio::IoPort;
 
@@ -136,110 +137,92 @@ impl<'t> Virtqueue<'t> {
     }
   }
 
-  pub unsafe fn test(&mut self, port: &IoPort) -> bool {
-    let hdrbuf = allocate(core::mem::size_of::<BlockRequest>(), 0x1);
-    let databuf = allocate(512, 0x1);
-    let donebuf = allocate(1, 0x1);
+  pub fn test(&mut self, port: &IoPort) -> bool {
+    let mut hdr = box BlockRequest {
+      kind: 0, // 0=read
+      ioprio: 1, // prio
+      sector: 0
+    };
+    let mut data = box [0u8; 512];
+    let mut done = box [17u8; 1]; // != 0 for checking that it was set by the host
 
-    // cor_printk("Telling virtio that target is at %p\n", (uint64_t)KTOP(payload));
-    println!("target buffers: hdr@{:p}, data@{:p}, done@{:p}", hdrbuf, databuf, donebuf);
+    {
+      // borrow our boxes -> the virtio device receives ownership
+      let hdr_p = hdr.borrow_mut() as *mut BlockRequest;
+      let data_p = data.borrow_mut() as *mut [u8; 512];
+      let done_p = done.borrow_mut() as *mut [u8; 1];
 
-    // These entries describe a single logical buffer, composed of 3 separate physical buffers.
-    // This separation is needed because a physical buffer can only be written to by one side.
-    self.descriptors[0].addr = physical_from_kernel(hdrbuf as usize) as u64;
-    self.descriptors[0].len = core::mem::size_of::<BlockRequest>() as u32;
-    self.descriptors[0].flags = VRING_DESC_F_NEXT;
-    self.descriptors[0].next = 1;
+      // These entries describe a single logical buffer, composed of 3 separate physical buffers.
+      // This separation is needed because a physical buffer can only be written to by one side.
+      self.descriptors[0].addr = physical_from_kernel(hdr_p as usize) as u64;
+      self.descriptors[0].len = core::mem::size_of::<BlockRequest>() as u32;
+      self.descriptors[0].flags = VRING_DESC_F_NEXT;
+      self.descriptors[0].next = 1;
 
-    self.descriptors[1].addr = physical_from_kernel(databuf as usize) as u64;
-    self.descriptors[1].len = 512;
-    self.descriptors[1].flags = VRING_DESC_F_NEXT | VRING_DESC_F_WRITE;
-    self.descriptors[1].next = 2;
+      self.descriptors[1].addr = physical_from_kernel(data_p as usize) as u64;
+      self.descriptors[1].len = 512;
+      self.descriptors[1].flags = VRING_DESC_F_NEXT | VRING_DESC_F_WRITE;
+      self.descriptors[1].next = 2;
 
-    self.descriptors[2].addr = physical_from_kernel(donebuf as usize) as u64;
-    self.descriptors[2].len = 1;
-    self.descriptors[2].flags = VRING_DESC_F_WRITE;
+      self.descriptors[2].addr = physical_from_kernel(done_p as usize) as u64;
+      self.descriptors[2].len = 1;
+      self.descriptors[2].flags = VRING_DESC_F_WRITE;
 
-    // Okay, this was the slow setup part. Now we get to actually have fun using
-    // these buffers. Firing off an actual I/O request involves these steps:
-    // - Find a free header+payload+done buffer (in our case we only have one,
-    //   so that's cool)
-    // - Fill in the written-by-us part; in the block-device case, that means
-    //   the request metadata header
-    let hdr: &mut BlockRequest = core::mem::transmute(hdrbuf);
-    hdr.kind = 0; // 0=read
-    hdr.ioprio = 1; // prio
-    hdr.sector = 0; // first sector of the disk
+      // Put the buffer into the virtqueue's "avail" array (the index-0 is actually
+      // `idx % qsz`, which wraps around after we've filled the avail array once,
+      // the value-0 is the index into the descriptor table above)
+      self.avail.ring[0] = 0;
 
-    *donebuf = 17; // debugging marker != 0, so that we can check if it worked
+      println!("Number of readable queues before kick: {}", self.used.idx);
+      if *self.used.idx != 0 {
+        return false;
+      }
 
-    // - Put the buffer into the virtqueue's "avail" array (the index-0 is actually
-    //   `idx % qsz`, which wraps around after we've filled the avail array once,
-    //   the value-0 is the index into the descriptor table above)
-    self.avail.ring[0] = 0;
+      // Now, place a memory barrier so the above read is seen for sure
+      core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
 
-    // - Now, place a memory barrier so the above read is seen for sure
-    core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
+      // Now, tell the device which index into the array is the highest available one
+      *self.avail.idx = 1;
 
-    // - Now, tell the device which index into the array is the highest available one
-    *self.avail.idx = 1;
+      // Finally, we "kick" the device to tell it that it should look for
+      // something to do. We could probably skip doing this and just wait for a
+      // while; even after a kick, there's no guarantee that the request will have
+      // been processed. The actual notification about "I did a thing, please go
+      // check" will be delivered back to us via an interrupt.
+      // Now we park ourselves until things change.
 
-    // // For reference, print out the current number of items available in the
-    // // "processed" part of the ring; this should be 0, since nothing has been
-    // // processed by the device yet.
-    // cor_printk("before: %x\n", used->idx);
-    println!("Number of readable queues before kick: {}", self.used.idx);
-    if *self.used.idx != 0 {
-      return false;
+      while *self.used.idx == 0 {
+        port.write16(16, 0);
+        sched::park_until_irq(0x2b);
+      }
+
+      // Now, magically, this index will have changed to "1" to indicate that
+      // the device has processed our request buffer.
+
+      println!("Number of readable queues after fake-wait: {}", self.used.idx);
+      assert_eq!(1, *self.used.idx);
     }
 
-    // Finally, we "kick" the device to tell it that it should look for
-    // something to do. We could probably skip doing this and just wait for a
-    // while; even after a kick, there's no guarantee that the request will have
-    // been processed. The actual notification about "I did a thing, please go
-    // check" will in practice be delivered back to us via an interrupt.
+    println!("Virtio call completed, retval={}", done[0]);
 
-    // In reality, we'd now yield and wait until we receive virtio's interrupt that notifies
-    // us of the completion of our request. We could also just spin for a bit.
-    // Interestingly, this doesn't even seem to be required under QEMU/OS X.
-    // Likely, the I/O write above directly triggers QEMU's virtio host driver
-    // to execute the request. Obviously, this is completely undefined
-    // behaviour we're relying on here, but let's just skip the wait while we
-    // can.
-
-    while *self.used.idx == 0 {
-      port.write16(16, 0);
-      sched::park_until_irq(0x2b);
-    }
-
-    // Now, magically, this index will have changed to "1" to indicate that
-    // the device has processed our request buffer.
-
-    println!("Number of readable queues after fake-wait: {}", self.used.idx);
-    assert_eq!(1, *self.used.idx);
-
-    println!("Virtio call completed, retval={}", *donebuf);
-    if *donebuf != 0 { // retval of 0 indicates success
+    if done[0] != 0 { // retval of 0 indicates success
       return false;
     }
 
     // On success, the "payload" part of the buffer will contain the 512 read bytes.
-    let data = slice::from_raw_parts_mut(databuf, 512);
     let needle = "DISK";
     let head = &data[0..20];
 
     let is_text = match core::str::from_utf8(head) {
       Ok(s) => {
         if &s.as_bytes()[0..needle.len()] == needle.as_bytes() {
-          println!("text! disk contains: {}",s);
+          println!("Disk text: {}",s);
           true
         } else {
-          println!("no text in disk header.");
           false
         }
       }
       Err(e) => {
-        println!("expected disk header 'DISK', got invalid utf8: {:?}, {:?}", head, e);
         false
       }
     };
@@ -247,6 +230,8 @@ impl<'t> Virtqueue<'t> {
     let is_mbr = {
       data[510] == 0x55 && data[511] == 0xaa
     };
+
+    println!("Text:{} Mbr:{}", is_text, is_mbr);
 
     is_text || is_mbr
   }
