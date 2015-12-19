@@ -8,7 +8,9 @@ clean:
 	rm -fr dietlibc-0.33{,.tar.bz2} init init.ld rootfs.bin
 
 rootfs.bin: init
-	echo init | cpio --create > $@
+	cp ../README.md . # cpio and paths...
+	echo "init\nREADME.md" | cpio --create > $@
+	rm README.md
 
 init: init.c init_lib.c init.ld ../include/cor/*.h
 	$(CC) $(CCFLAGS) -include stdlib.h init.c init_lib.c -T init.ld -o init

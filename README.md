@@ -18,8 +18,8 @@ Synopsis
 - Install dependencies: `build-essential`, qemu, xxd, Ruby, Go, Rust
 - `$ make`
 - `$ bin/run` to start the system, you'll be connected to the serial console of the machine
-- `$ bin/debug` to debug the kernel, runs qemu and tells you how to attach a `gdb`
-- `$ test/run` to run integration/blackbox tests
+- `$ bin/debug` to debug the kernel, runs qemu drops you into a gdb
+- `$ cucumber` to run integration/blackbox tests
 
 - `$ bin/debug_stage1` to debug the bootloader (also see how `bin/debug` skips it)
 
@@ -81,6 +81,8 @@ In the [OSDev ontology](http://wiki.osdev.org/What_order_should_I_make_things_in
   - [ ] Ping
   - [ ] TCP
   - [ ] Tiny webserver
+- [ ] Webserver in userspace
+- [ ] SSH server userspace
 
 - model I/O ports as slices of a 0-dimensional data type
 

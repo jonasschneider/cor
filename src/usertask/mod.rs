@@ -19,7 +19,15 @@ pub fn exec_init() {
 
   let mut fs = fs::Arfs::new(blockdev);
 
-  let size: usize = if let Ok(s) = fs.stat("/init") {
+  let index = fs.index("/").unwrap();
+  println!("||  $ ls");
+  for x in index {
+    println!("||  {}", x);
+  }
+
+  let s = fs.stat("/init");
+
+  let size: usize = if let Ok(s) = s {
     s
   } else {
     panic!("failed!");
@@ -27,7 +35,15 @@ pub fn exec_init() {
   println!("Init size: {:?}", size);
 
   let mut buf = vec!(0u8; size+1000);
-  let read = fs.read("/init", &mut buf);
+  let read = fs.slurp("/init", &mut buf);
+
+  {
+    let file1 = fs.open("/init");
+    let file2 = fs.open("/README.md");
+
+    println!("Files 1 and 2: {:?} {:?}",file1, file2);
+  }
+
   println!("Read result: {:?}",read);
   let n = read.unwrap();
   println!("Succesfully read init from disk.");
@@ -36,6 +52,7 @@ pub fn exec_init() {
 
   let loaded = unsafe { elf::load(loaded_elf) };
   println!("Load result: {:?}", loaded);
+
 
   let image = loaded.unwrap();
   let mut s = state::UsermodeState::new(image.initial_rip as u64, image.initial_rsp as u64);

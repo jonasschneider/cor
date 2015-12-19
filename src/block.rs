@@ -67,7 +67,7 @@ fn idle_task() {
 
 #[no_mangle]
 pub fn rs_sched_exec() {
-  unsafe { sched::init(); }
+  sched::init();
   sched::add_task(idle_task, "idle");
 
   // Okay, now that we have the scheduler set up, we can start doing things
@@ -85,7 +85,7 @@ pub fn rs_sched_exec() {
   // now; the first task started will be run, and once it yields, the next
   // task registered with the scheduler will be started; eventually, we'll
   // round-robin between all the tasks.
-  unsafe { sched::exec(); }
+  sched::exec();
 }
 
 fn thread1() {
