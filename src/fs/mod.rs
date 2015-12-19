@@ -11,6 +11,7 @@ use super::mem;
 use core::str;
 
 pub trait Fs {
+  fn stat(&mut self, name: &str) -> Result<usize, Error>;
   fn read(&mut self, name: &str, buf: &mut[u8]) -> Result<usize, Error>;
 }
 
@@ -37,12 +38,29 @@ impl Arfs {
 // 4 filesize
 
 impl Fs for Arfs {
+  fn stat(&mut self, filename: &str) -> Result<usize, Error> {
+    let filename_needle = &filename[1..filename.len()]; // strip off leading '/'
+    let mut firstblock = [0u8; 512];
+    if let Err(e) = self.dev.read(0, &mut firstblock) {
+      return Err(Error::ReadFailed(e));
+    }
+
+    let entry = &firstblock[..];
+    println!("entry: {:?}", &entry[..]);
+    let magic = (entry[0] as u16) | ((entry[1] as u16)<<8);
+    if magic != 0o70707 {
+      return Err(Error::InvalidDiskFormat);
+    }
+
+    // nice byte order, bro..
+    let size = (((entry[22] as u32)<<16) | ((entry[23] as u32)<<24) | (entry[24] as u32) | ((entry[25] as u32)<<8)) as usize;
+
+    Ok(size)
+  }
+
   fn read(&mut self, filename: &str, buf: &mut[u8]) -> Result<usize, Error> {
     let filename_needle = &filename[1..filename.len()]; // strip off leading '/'
     let mut firstblock = [0u8; 512];
-    if let Err(e) = self.dev.read(1, &mut firstblock) {
-      return Err(Error::ReadFailed(e));
-    }
     if let Err(e) = self.dev.read(0, &mut firstblock) {
       return Err(Error::ReadFailed(e));
     }

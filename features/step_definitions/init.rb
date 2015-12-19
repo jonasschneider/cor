@@ -19,7 +19,7 @@ When(/^I run the machine$/) do
     @process.terminate
     @process.wait
   end
-  q = "qemu-system-x86_64 -s -nographic -serial stdio -monitor null disk.bin #{ENV["QEMUOPT"]} -drive file=disk.bin,if=virtio"
+  q = "qemu-system-x86_64 -s -nographic -serial stdio -monitor null disk.bin #{ENV["QEMUOPT"]} -drive file=userspace/rootfs.bin,if=virtio"
   @process = Subprocess.popen(q.split(" "), stdin: nil, stdout: Subprocess::PIPE, stderr: Subprocess::PIPE)
 end
 
@@ -27,7 +27,7 @@ Then(/^I should see "([^"]*?)"$/) do |needle|
   @out = ""
   catch :bye do
     begin
-      Timeout.timeout(2) do
+      Timeout.timeout(5) do
         loop do
           l = @process.stdout.gets
           @out << l

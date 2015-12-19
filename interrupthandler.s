@@ -32,6 +32,7 @@ isr_dispatcher:
   push %r9
   push %r10
   push %r11
+  push %rdi
 
   # Reorder paramters:
   # According to the ABI, the first 6 integer or pointer arguments to a function are
@@ -47,6 +48,7 @@ isr_dispatcher:
 
   call interrupt
 
+  pop %rdi
   pop %r11
   pop %r10
   pop %r9
