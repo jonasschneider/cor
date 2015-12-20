@@ -55,6 +55,11 @@ pub fn virtio_init() {
   println!("virtio_init() called!");
 }
 
+#[no_mangle]
+pub extern "C" fn handle_irq(irq: u8) {
+  sched::irq::handle_irq(irq);
+}
+
 fn rust_pci_task() {
   unsafe { pci_init(); }
   println!("c-land pci_init exited");

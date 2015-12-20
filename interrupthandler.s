@@ -22,9 +22,11 @@ isr_dispatcher:
   mov %rax, %rbx
   movabs $irq_log, %rax
   movb $1, (%rax, %rbx)
+  mov %rbx, %rax
   pop %rbx
 
 
+  // TODO: only push/pop the x86-64 caller-saved registers here
   push %rbx
   push %rcx
   push %rdx
@@ -34,19 +36,15 @@ isr_dispatcher:
   push %r11
   push %rdi
 
-  # Reorder paramters:
-  # According to the ABI, the first 6 integer or pointer arguments to a function are
-  # passed in registers. The first is placed in rdi, the second in rsi, the third in rdx,
-  # and then rcx, r8 and r9. Only the 7th argument and onwards are passed on the stack.
-  mov %rax, %rdi #interrupt no
+  # Place the IRQ number parameter correctly:
+  # The first parameters are placed in the %rdi, %rsi, %rdx, %rcx, %r8, %r8 registers.
+  # More parameters go on the stack.
+  # We only need a single parameter, the IRQ number, which will go into %rdi.
+  # However, in Rust, this parameter is an u8, so Rust will read it back from the
+  # %dil register, which means the lowest 8 bytes of %rdi. We might be able to optimize this a bit further.
+  mov %rax, %rdi
 
-  # TODO: should probably optimize these to only do this lifting on syscall interrupts, cycles everywhea!
-  mov %rax, %rsi # arg1 (if syscall)
-  mov %rdx, %r8 # arg4 (if syscall)
-  mov %rbx, %rdx # arg2 (if syscall)
-  mov %rcx, %rcx # arg3 (if syscall)
-
-  call interrupt
+  call handle_irq
 
   pop %rdi
   pop %r11

@@ -67,15 +67,3 @@ void interrupt_init() {
   // Okay, from now on, we'll be able to sort-of-meaningfully handle interrupts.
   __asm__ ( "sti" );
 }
-
-uint64_t interrupt(uint64_t no, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4) {
-  cor_printk("oh god interrupt %lu, 1=%lx, 2=%lx, 3=%lx, 4=%lx\n", no, arg1, arg2, arg3, arg4);
-  if(no==0x31) {
-    // this will never happen! see interrupthandler.s, syscalls are dispatched to the kernel task that trampolined
-    // us to userspace.
-  }
-  if(no==0x2b) {
-    // TODO: this is exactly where we should wake up stuff waiting for virtio to finish
-  }
-  return 0; // TODO: wat
-}

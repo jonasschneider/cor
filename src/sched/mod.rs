@@ -7,6 +7,7 @@ use core;
 use collections::linked_list::LinkedList;
 
 mod context;
+pub mod irq;
 
 type Tid = usize;
 
