@@ -53,19 +53,22 @@ In the [OSDev ontology](http://wiki.osdev.org/What_order_should_I_make_things_in
   - [x] Idle task using HLT
   - [x] Basic system calls from userland
   - [ ] Yielding from userspace
-  - [ ] I/O blocking for kernel threads
-  - [ ] Timer-based preemptive userland scheduling
-  - [ ] Process lifecycle / identity management, Process table
-  - [ ] Process memory space management
+  - [ ] Well-defined I/O blocking for kernel threads (runqueue, waitqueues)
+  - [ ] Process memory space management (free everything on exit)
+  - [ ] Process lifecycle / identity management, multiple processes, process table
+  - [ ] Timer-based preemptive scheduling for userspace
   - [ ] fork()
   - [ ] Thread-local storage for user space
   - [ ] CPU-local storage for kernel space (for SMP: eliminate mutable statics)
+- [ ] Think harder about safe IRQ handling
+  - 'softirqs'/deferred processing for devices like virtio
+  - context layers: userspace, kernelspace, irq? -> explicit synchronization always needed
 - [ ] Filesystem
   - [x] Attach virtio (virtio-scsi, or preferredly virtio-blk) to QEMU
   - [x] PCI device detection
   - [x] virtio-blk block device driver
-  - [ ] tiniest filesystem imaginable (read-only single-level?) -> `ar` format
-  - [ ] read init from filesystem instead of baking it in
+  - [x] tiniest filesystem imaginable (read-only single-level?) -> `cpio` format
+  - [x] read init from filesystem instead of baking it in
   - [ ] file descriptors / opening files from userspace
 - [ ] Build a userspace toolchain
   - [x] Make a "hello world" binary that runs on host Linux and is as static as it gets (no libc)
