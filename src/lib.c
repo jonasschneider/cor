@@ -1,7 +1,10 @@
 #include "../common.h"
 
+size_t rust_allocd = 0;
+
 // TODO: rust actually has these as uint, not size_t... bad?
 void *rust_allocate(size_t size, size_t align) {
+  rust_allocd += size;
   return tkalloc(size, "rust_allocate()", align);
 }
 
@@ -17,7 +20,8 @@ void memmove(void *dest, const void *source, size_t n) {
 }
 
 void rust_deallocate(void *what, size_t old_size, size_t align) {
-  cor_printk("bro, do you even free %p; %p\n", what, old_size);
+  rust_allocd -= old_size;
+  cor_printk("bro, do you even free %p; %p (rust now holding %x bytes)\n", what, old_size, rust_allocd);
   // TODO
   old_size = old_size;
   align = align;
