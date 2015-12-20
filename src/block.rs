@@ -140,3 +140,8 @@ fn print_panic_and_abort(msg: core::fmt::Arguments, file: &'static str, line: u3
     kio.write_fmt(format_args!(" at {}:{}\n\n", file, line));
     unsafe { asm_abort(); }
 }
+
+#[no_mangle]
+pub extern fn rs_init_interrupts() {
+  sched::irq::init();
+}

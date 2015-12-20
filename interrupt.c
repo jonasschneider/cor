@@ -12,7 +12,12 @@ struct {
 } idtr;
 #pragma pack(pop)
 
+void rs_init_interrupts(void);
 void interrupt_init() {
+  // First, initialize the Rust IRQ dispatcher
+  rs_init_interrupts();
+
+  // Now write the IDT
   void *base = (void*)(0x6000|0x0000008000000000);
   const int entrysize = 16; // in bytes
   const int n_entry = 0x80; // 128
