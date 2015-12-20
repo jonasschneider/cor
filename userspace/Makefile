@@ -9,7 +9,7 @@ clean:
 
 rootfs.bin: init
 	cp ../README.md . # cpio and paths...
-	echo "init\nREADME.md" | cpio --create > $@
+	echo "README.md\ninit" | cpio --create > $@
 	rm README.md
 
 init: init.c init_lib.c init.ld ../include/cor/*.h

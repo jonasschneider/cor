@@ -20,7 +20,8 @@ use core::str;
 pub struct Entry {
   pub name: String,
   pub size: usize,
-  pub pos: (usize, usize),
+  pub header_pos: (usize, usize),
+  pub body_pos: (usize, usize),
 }
 
 pub struct Cursor<'t> {
@@ -86,6 +87,7 @@ impl<'t> Iterator for Cursor<'t> {
     if next_offset & 1 != 0 {
       next_offset += 1;
     }
+    let body_pos = next_offset;
     next_offset += size;
     if next_offset & 1 != 0 {
       next_offset += 1;
@@ -93,6 +95,6 @@ impl<'t> Iterator for Cursor<'t> {
 
     self.next_header = (sector + next_offset / 512, next_offset % 512);
 
-    Some(Ok(Entry{ pos: (sector, offset), size: size, name: name.to_string() }))
+    Some(Ok(Entry{ body_pos: (sector, body_pos), header_pos: (sector, offset), size: size, name: name.to_string() }))
   }
 }
