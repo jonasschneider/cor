@@ -17,24 +17,18 @@ pub fn exec_init() {
   let blockdev = unsafe { virtio::init(port) }.unwrap();
   println!("result of blockdevice init: {:?}", blockdev);
 
-  let mut fs = fs::Arfs::new(blockdev);
+  let mut fs = fs::Cpiofs::new(blockdev);
 
-  let index = fs.index("/").unwrap();
-  println!("||  $ ls");
-  for x in index {
+  println!("||\n||  $ ls");
+  for x in fs.index("/").unwrap() {
     println!("||  {}", x);
   }
 
-  let s = fs.stat("/init");
+  let size = fs.stat("/init").unwrap();
+  println!("||\n||  $ stat /init");
+  println!("||  size {}", size);
 
-  let size: usize = if let Ok(s) = s {
-    s
-  } else {
-    panic!("failed!");
-  };
-  println!("Init size: {:?}", size);
-
-  let mut buf = vec!(0u8; size+1000);
+  let mut buf = vec!(0u8; size);
   let read = fs.slurp("/init", &mut buf);
 
   {
