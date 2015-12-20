@@ -73,6 +73,7 @@ enum TableEntry {
 
 // This is super ugly and will bite us if we, at any point, want to modify/replace the table
 pub fn init() {
+  // AUDIT THIS PLEASE
   if unsafe {IRQTABLE != (0 as *mut u8)} {
     panic!("IRQTABLE already set up!");
   }
@@ -86,14 +87,28 @@ pub fn init() {
   }
 }
 
+// TODO: should we even be able to print from IRQ-land?
 pub fn handle_irq(num: u8) {
-  println!("[Whoop: IRQ 0x{:x}]",num);
+  println!("[Bang! IRQ 0x{:x}]",num);
+
+  // START AUDIT HERE
   if unsafe { IRQTABLE == (0 as *mut u8) } {
-    println!("WARN: You didn't set up IRQTABLE. I'll do it for you now, but this is just asking for trouble.")
-    init(); // FIXME FIXME FIXME: no, just no
+    println!("WARN: You didn't set up IRQTABLE. I'll do it for you now, but this is just asking for trouble.");
+    init(); // FIXME: no, just no
     //panic!("You didn't set up IRQTABLE correctly.");
   }
   let mut entry_mutex = unsafe { &mut (*(IRQTABLE as *mut Table))[num as usize] };
+  // END AUDIT HERE :)
   let entry = entry_mutex.lock(); // lock it down; this could have finer granularity
+
   println!("IRQTABLE entry: {:?}", entry);
+  if num == 0x30 {
+    println!("Is early test interrupt, OK.");
+    return;
+  }
+  match entry {
+    Uninitialized => {
+      panic!("Entry is uninitialized, so I didn't expect to receive this IRQ.");
+    }
+  }
 }
