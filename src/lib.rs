@@ -1,20 +1,18 @@
 #![crate_type="staticlib"]
+#![crate_name="cor"]
 #![feature(box_syntax,repr_simd)]
 #![feature(alloc,collections,core_intrinsics,clone_from_slice)]
-#![no_std]
 #![feature(lang_items,unsafe_destructor,asm,box_patterns)]
+#![no_std]
 
-// Use kalloc for heap memory
 extern crate kalloc;
-
 extern crate alloc;
-#[macro_use(vec)]
+
+#[macro_use(vec)] // for `vec!`
 extern crate collections;
 
-// Set up the `print!` and `println!` macros, printing to the kernel console
-#[macro_use]
+#[macro_use] // For `print!` and `println!`, writing to the kernel console
 mod print;
-mod std { pub use core::fmt; } // std-module-trick to fix expansion of `format_args!`
 
 mod usertask;
 mod cpuio;
@@ -22,31 +20,10 @@ mod virtio;
 mod fs;
 mod kbuf;
 mod mem;
-
-pub mod sched;
-
-
-
-
-/*let mut w = Vec::new();
-write!(&mut w, "test");*/
-
-static mut state : Option<State> = None;
-
-
-extern {
-  fn abort() -> !;
-}
-
-#[derive(Debug)]
-struct State {
-    number: u8,
-    string: &'static str
-}
+mod sched;
 
 extern "C" {
   fn pci_init();
-  fn test_mock_main();
   fn asm_idle();
 }
 
@@ -60,10 +37,9 @@ pub extern "C" fn handle_irq(irq: u8) {
   sched::irq::handle_irq(irq);
 }
 
-fn rust_pci_task() {
+fn explore_pci() {
   unsafe { pci_init(); }
   println!("c-land pci_init exited");
-
 }
 
 fn idle_task() {
@@ -84,10 +60,7 @@ pub fn rs_sched_exec() {
   // that set up tasks to react to input from the outside. A perfect example
   // is initializing PCI devices that occasionally send interrupts if they
   // have something to say to us.
-  sched::add_task(rust_pci_task, "PCI task");
-
-  // Add a hook so we can insert things here when running tests.
-  unsafe { test_mock_main(); }
+  sched::add_task(explore_pci, "PCI task");
 
   sched::add_task(usertask::exec_init, "init task");
 
@@ -96,20 +69,6 @@ pub fn rs_sched_exec() {
   // task registered with the scheduler will be started; eventually, we'll
   // round-robin between all the tasks.
   sched::exec();
-}
-
-fn thread1() {
-  for i in 0..3 {
-    println!("hi from thread1");
-    sched::kyield();
-  }
-}
-
-fn thread2() {
-  for i in 0..3 {
-    println!("hi from thread2");
-    sched::kyield();
-  }
 }
 
 extern {
@@ -135,9 +94,10 @@ extern fn handle_libcore_panic(msg: core::fmt::Arguments,
 #[inline(never)] #[cold]
 fn print_panic_and_abort(msg: core::fmt::Arguments, file: &'static str, line: u32) -> ! {
     let mut kio = Kio;
-    kio.write_fmt(format_args!("\npanic: "));
-    kio.write_fmt(msg);
-    kio.write_fmt(format_args!(" at {}:{}\n\n", file, line));
+    // ignore write errors and don't warn about them
+    let _ = kio.write_fmt(format_args!("\npanic: "));
+    let _ = kio.write_fmt(msg);
+    let _ = kio.write_fmt(format_args!(" at {}:{}\n\n", file, line));
     unsafe { asm_abort(); }
 }
 

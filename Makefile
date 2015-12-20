@@ -2,7 +2,7 @@ ROOT=.
 include Makefile.conf
 .PHONY: all clean
 
-OBJS=main.o printk.o chrdev_serial.o chrdev_console.o io.o interrupthandler.o tss.o mm.o task.o pci.o timer.o pic.o interrupt.o test_mock_supplement.o
+OBJS=main.o printk.o chrdev_serial.o chrdev_console.o io.o interrupthandler.o tss.o mm.o task.o pci.o timer.o pic.o interrupt.o
 OBJS+=context_switch.o trampoline.o idle.o
 
 all:
@@ -34,12 +34,9 @@ trampoline.o: trampoline.s
 interrupthandler.o: interrupthandler.s include/cor/syscall.h intstubs.s~
 	$(CC) $(KCFLAGS) -c -x assembler-with-cpp -Iinclude $< -o $@
 
-test_mock_supplement.o: $(wildcard ./test_mock_supplement.c~) test_mock_supplement_stub.c
-	if [ -e "test_mock_supplement.c~" ]; then f="test_mock_supplement.c~"; else f="test_mock_supplement_stub.c"; fi; $(CC) $(KCCFLAGS) -c -x c $$f -o $@
-
-stage2.o: $(OBJS) linkerscript stage2_entrypoint.o src/libblock.a
+stage2.o: $(OBJS) linkerscript stage2_entrypoint.o src/libcor.a
 	echo LONG\(0x$(shell git rev-parse HEAD | cut -c 1-6)\) > versionstamp~
-	$(LD) $(OBJS) stage2_entrypoint.o src/lib.o -L./src -lblock -T linkerscript -o stage2.o --gc-sections -e stage2_entrypoint
+	$(LD) $(OBJS) stage2_entrypoint.o src/lib.o -L./src -lcor -T linkerscript -o stage2.o --gc-sections -e stage2_entrypoint
 
 stage2.bin: stage2.o
 	$(OBJCOPY) --only-section=.text -O binary stage2.o stage2.bin

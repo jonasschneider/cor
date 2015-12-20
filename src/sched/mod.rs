@@ -111,8 +111,7 @@ fn starttask() {
         println!("task entrypoint returned, yielding away from us for the last time");
         t.exited = true;
         kyield();
-        println!("PANIC! kyield() returned after exit");
-        while(true) { }
+        panic!("kyield() returned after exit");
       }
     }
 

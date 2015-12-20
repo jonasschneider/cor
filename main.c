@@ -9,7 +9,6 @@
 #include "interrupt.h"
 
 void rs_sched_exec(void);
-void test_mock_main();
 
 unsigned long *timer = (unsigned long*)(0x81000|0x0000008000000000);
 

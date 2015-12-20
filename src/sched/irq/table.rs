@@ -38,7 +38,7 @@ type Table = [GlobalMutex<TableEntry>];
 static mut TABLE: Option<*mut Table> = None;
 
 pub fn init() {
-  if let Some(s) = unsafe { TABLE } {
+  if let Some(_) = unsafe { TABLE } {
     panic!("TABLE already set up!");
   }
 

@@ -49,9 +49,9 @@ pub fn myprintln_args(fmt: fmt::Arguments) -> Result<(), fmt::Error>  {
 }
 
 macro_rules! print {
-    ($($arg:tt)*) => (::print::myprint_args(format_args!($($arg)*)))
+    ($($arg:tt)*) => (::print::myprint_args(format_args!($($arg)*)).unwrap())
 }
 
 macro_rules! println {
-    ($($arg:tt)*) => (::print::myprintln_args(format_args!($($arg)*)))
+    ($($arg:tt)*) => (::print::myprintln_args(format_args!($($arg)*)).unwrap())
 }

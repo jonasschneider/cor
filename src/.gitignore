@@ -3,3 +3,4 @@ a.out
 *.kmo
 x
 rust
+*.rlib
