@@ -2,18 +2,16 @@ ROOT=..
 include ../Makefile.conf
 .PHONY: all clean
 
-KMOS=block.kmo
-
-all: $(KMOS)
+all: libblock.a lib.o
 
 clean:
-	rm -f $(KMOS)
+	rm -f libblock.a libkalloc/libkalloc.rlib lib.o
 
-block.kmo: *.rs **/*.rs lib.c libkalloc/libkalloc.rlib
-	rustc block.rs -C no-stack-check -C relocation-model=static -C code-model=large -L ./libkalloc
+lib.o: lib.c
 	gcc -o lib.o lib.c -c $(KCCFLAGS)
-	gcc lib.o -o block.kmo~ -e rs_sched_exec -Wl,--gc-sections,-lm,-L.,-lblock,-r $(KCCFLAGS)
-	objcopy block.kmo~ block.kmo -G rs_sched_exec -G virtio_init
+
+libblock.a: *.rs **/*.rs libkalloc/libkalloc.rlib
+	rustc block.rs -C no-stack-check -C relocation-model=static -C code-model=large -L ./libkalloc
 
 libkalloc/libkalloc.rlib: libkalloc/*.rs
 	rustc libkalloc/*.rs -C no-stack-check -C relocation-model=static -C code-model=large -O -o libkalloc/libkalloc.rlib

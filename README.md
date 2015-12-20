@@ -63,6 +63,8 @@ In the [OSDev ontology](http://wiki.osdev.org/What_order_should_I_make_things_in
 - [ ] Think harder about safe IRQ handling
   - 'softirqs'/deferred processing for devices like virtio
   - context layers: userspace, kernelspace, irq? -> explicit synchronization always needed
+  - variable scopes: per-CPU, per-task, system-global (items, and the IRQ table)
+  - need to handle case where interrupt space is spinlocking for something held by kernel space .. ?
 - [ ] Filesystem
   - [x] Attach virtio (virtio-scsi, or preferredly virtio-blk) to QEMU
   - [x] PCI device detection

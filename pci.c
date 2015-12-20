@@ -118,7 +118,7 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
   // I/O base port, we're golden.
 
   cor_printk("Letting Rustland set up the Virtio device..\n");
-  //virtio_init(io_base);
+  virtio_init(io_base);
 }
 
 // When a configuration access attempts to select a device that does not exist,

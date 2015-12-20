@@ -50,10 +50,15 @@ extern "C" {
   fn asm_idle();
 }
 
+#[no_mangle]
+pub fn virtio_init() {
+  println!("virtio_init() called!");
+}
+
 fn rust_pci_task() {
   unsafe { pci_init(); }
   println!("c-land pci_init exited");
-  //virtio_init(0xc040);
+
 }
 
 fn idle_task() {
