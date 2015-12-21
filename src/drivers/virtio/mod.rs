@@ -1,3 +1,20 @@
+// We can now talk to the actual virtio device
+// via the CPU's I/O pins directly. A couple of helpful references:
+//
+// http://ozlabs.org/~rusty/virtio-spec/virtio-0.9.5.pdf
+//     This is the actual virtio spec.
+//
+// http://ozlabs.org/~rusty/virtio-spec/virtio-paper.pdf
+//     This is an academic paper describing the virtio design and architecture,
+//     and how a virtqueue works and is implemented.
+//
+// https://www.freebsd.org/cgi/man.cgi?query=virtio&sektion=4
+//     This is actually a FreeBSD manpage that gives a pretty good high-
+//     level overview of how the guest kernel usually interacts with the
+//     virtio interfaces and how it presents them to the guest OS's file
+//     system.
+
+
 mod queue;
 mod vring;
 
@@ -13,16 +30,13 @@ use collections;
 use collections::vec::Vec;
 use sched;
 
-use block::{Client,ReadWaitToken,Error as Errorx};
+use block::{Client,ReadWaitToken,Error};
 
 extern {
   fn asm_eoi();
 }
 
-pub trait Block {
-  // Read a block. Raises if `buf` does not have size 512.
-  fn read(&mut self, sector: usize, buf: &mut [u8]) -> Result<(), Error>;
-}
+unsafe impl Sync for Blockdev {} // TODO
 
 #[derive(Debug)]
 pub struct Blockdev {
@@ -32,27 +46,8 @@ pub struct Blockdev {
 
 
 /*
-(Sched idea: for sleeping/yielding, require passing around a yield token that represents
-the permission to block the process. Would eliminate attempts to sleep from IRQ context
-at compile time.)
-
-pub fn init_virtio_block(ioport) -> (Box<BlockdevClient>, VirtioIRQHandler)
---> use Client in userspace, install IRQ handler
-
 impl ::sched::irq::Handler for VirtioIRQHandler {
   ..
-}
-
-pub trait BlockdevClient: Sync {
-  type ReadWaitToken;
-
-  // Submits a sequest to read the specified sector.
-  // Returns a token that can be used to block until the read is completed.
-  fn read(&self, sector: usize) -> Result<ReadWaitToken, Error>;
-
-  // Block until the read identified by the token is completed, then writes the read data
-  // into `buf` (which must be of size 512).
-  fn wait_read(&self, tok: ReadWaitToken, buf: &mut [u8]) -> Result<(), Error>;
 }
 
 // Handling the IRQs for a specific virtio device. (Multiple devices need multiple handlers.)
@@ -63,7 +58,6 @@ struct VirtioIRQHandler {
 }
 */
 
-
 #[repr(C, packed)]
 pub struct BlockRequest {
   kind: u32,
@@ -71,20 +65,11 @@ pub struct BlockRequest {
   sector: u64,
 }
 
-pub struct NewstyleClient(core::cell::UnsafeCell<Blockdev>);
+impl Client for Blockdev {
+  fn read_dispatch(&self, sector: u64) -> Result<ReadWaitToken, Error> { Ok(sector) }
+  fn read_await(&self, tok: ReadWaitToken, buf: &mut [u8]) -> Result<(), Error> {
+    let sector = tok as usize;
 
-unsafe impl Sync for NewstyleClient {} // TODO
-impl Client for NewstyleClient {
-  fn read(&self, sector: u64) -> Result<ReadWaitToken, Errorx> { Ok(sector) }
-  fn wait_read(&self, tok: ReadWaitToken, buf: &mut [u8]) -> Result<(), Errorx> {
-    let res = unsafe{(*self.0.get()).read(tok as usize, buf)};
-    println!("Result: {:?}", res);
-    Ok(())
-  }
-}
-
-impl Block for Blockdev {
-  fn read(&mut self, sector: usize, buf: &mut [u8]) -> Result<(), Error> {
     assert_eq!(512, buf.len());
 
     let mut hdr = BlockRequest {
@@ -121,7 +106,8 @@ impl Block for Blockdev {
     println!("Virtio call completed, retval={}", done[0]);
 
     if done[0] != 0 { // retval of 0 indicates success
-      return Err(Error::VirtioRequestFailed)
+      println!("Virtio retval is {} != 0", done[0]);
+      return Err(Error::InternalError)
     }
 
     Ok(())
@@ -131,7 +117,7 @@ impl Block for Blockdev {
 
 
 #[derive(Debug)]
-pub enum Error {
+pub enum InitError {
   VirtioHandshakeFailure,
   NoDiskMarker,
   VirtioRequestFailed,
@@ -142,62 +128,47 @@ const VIRTIO_STATUS_DRIVER: u8 = 2;
 const VIRTIO_STATUS_DRIVER_OK: u8 = 4;
 const VIRTIO_STATUS_FAILED: u8 = 128;
 
+impl Blockdev {
+  pub fn new(mut port: cpuio::IoPort) -> Result<Self, InitError> {
+    let mut state = 0u8;
+    println!("Initializing virtio block device with ioport {:?}..", port);
+    port.write8(18, state);
 
-pub unsafe fn init(mut port: cpuio::IoPort) -> Result<Blockdev, Error> {
-  // We can now talk to the actual virtio device
-  // via the CPU's I/O pins directly. A couple of helpful references:
-  //
-  // http://ozlabs.org/~rusty/virtio-spec/virtio-0.9.5.pdf
-  //     This is the actual virtio spec.
-  //
-  // http://ozlabs.org/~rusty/virtio-spec/virtio-paper.pdf
-  //     This is an academic paper describing the virtio design and architecture,
-  //     and how a virtqueue works and is implemented.
-  //
-  // https://www.freebsd.org/cgi/man.cgi?query=virtio&sektion=4
-  //     This is actually a FreeBSD manpage that gives a pretty good high-
-  //     level overview of how the guest kernel usually interacts with the
-  //     virtio interfaces and how it presents them to the guest OS's file
-  //     system.
+    state = state | VIRTIO_STATUS_ACKNOWLEDGE;
+    port.write8(18, state);
 
-  let mut state = 0u8;
-  println!("Initializing virtio block device with ioport {:?}..", port);
-  port.write8(18, state);
+    state = state | VIRTIO_STATUS_DRIVER;
+    port.write8(18, state);
 
-  state = state | VIRTIO_STATUS_ACKNOWLEDGE;
-  port.write8(18, state);
+    // Feature negotiation
+    let offered_featureflags = port.read16(0);
+    println!("The device offered us these feature bits: {:?}", offered_featureflags);
+    // In theory, we'd do `negotiated = offered & supported`; we don't actually
+    // support any flags, so we can just set 0.
+    port.write16(4, 0);
 
-  state = state | VIRTIO_STATUS_DRIVER;
-  port.write8(18, state);
+    // Now comes the block-device-specific setup.
+    // (The configuration of a single virtqueue isn't device-specific though; it's the same
+    // for i.e. the virtio network controller)
 
-  // Feature negotiation
-  let offered_featureflags = port.read16(0);
-  println!("The device offered us these feature bits: {:?}", offered_featureflags);
-  // In theory, we'd do `negotiated = offered & supported`; we don't actually
-  // support any flags, so we can just set 0.
-  port.write16(4, 0);
+    // Discover virtqueues; the block devices only has one
+    if port.read16(4) != 0 {
+      return Err(InitError::VirtioHandshakeFailure)
+    }
+    // initialize the first (and only, for block devices) virtqueue
+    let mut q = queue::Virtqueue::new(0, &mut port);
+    // Tell the device we're done setting it up
+    state = state | VIRTIO_STATUS_DRIVER_OK;
+    port.write8(18, state);
 
-  // Now comes the block-device-specific setup.
-  // (The configuration of a single virtqueue isn't device-specific though; it's the same
-  // for i.e. the virtio network controller)
+    println!("Device state is now: {}", state);
 
-  // Discover virtqueues; the block devices only has one
-  if port.read16(4) != 0 {
-    return Err(Error::VirtioHandshakeFailure)
+    // if q.test(&port) {
+    //   println!("Virtio-blk device successfully initialized and tested!");
+    // } else {
+    //   panic!("Self-test failed!")
+    // }
+
+    Ok(Blockdev { q: q, port: port })
   }
-  // initialize the first (and only, for block devices) virtqueue
-  let mut q = queue::Virtqueue::new(0, &mut port);
-  // Tell the device we're done setting it up
-  state = state | VIRTIO_STATUS_DRIVER_OK;
-  port.write8(18, state);
-
-  println!("Device state is now: {}", state);
-
-  // if q.test(&port) {
-  //   println!("Virtio-blk device successfully initialized and tested!");
-  // } else {
-  //   panic!("Self-test failed!")
-  // }
-
-  Ok(Blockdev { q: q, port: port })
 }

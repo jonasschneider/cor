@@ -1,6 +1,10 @@
 pub mod ramdev;
 
+use core::fmt;
+
+#[derive(Debug)]
 pub enum Error {
+  InternalError,
   Unknown,
 }
 
@@ -9,12 +13,12 @@ pub enum Error {
 pub type ReadWaitToken = u64;
 
 // The client should be threadsafe.
-pub trait Client: Sync {
+pub trait Client: Sync + fmt::Debug {
   // Submits a sequest to read the specified sector.
   // Returns a token that can be used to block until the read is completed.
-  fn read(&self, sector: u64) -> Result<ReadWaitToken, Error>;
+  fn read_dispatch(&self, sector: u64) -> Result<ReadWaitToken, Error>;
 
   // Block until the read identified by the token is completed, then writes the read data
   // into `buf` (which must be of size 512).
-  fn wait_read(&self, tok: ReadWaitToken, buf: &mut [u8]) -> Result<(), Error>;
+  fn read_await(&self, tok: ReadWaitToken, buf: &mut [u8]) -> Result<(), Error>;
 }

@@ -7,19 +7,24 @@ use drivers::virtio;
 use super::{cpuio,fs};
 use fs::Fs;
 
-use ::sched;
+use block;
+use sched;
+use core::cell::UnsafeCell;
 use self::state::StepResult::*;
 use self::state::SyscallType::*;
+use alloc::arc::Arc;
 
 pub fn exec_init() {
   println!("Starting init task! Or at least I hope so.");
 
   // TODO: request this from t
   let port = unsafe { cpuio::alloc(0xc040, 24).unwrap() }; // 24 pins, see virtio spec
-  let blockdev = unsafe { virtio::init(port) }.unwrap();
+  let blockdev: virtio::Blockdev = virtio::Blockdev::new(port).unwrap();
   println!("result of blockdevice init: {:?}", blockdev);
 
-  let mut fs = fs::Cpiofs::new(blockdev);
+  let mut fs = fs::Cpiofs::new(Arc::new(blockdev) as Arc<block::Client>);
+  println!("fs: {:?}", fs);
+
 
   println!("||\n||  $ ls");
   for x in fs.index("/").unwrap() {

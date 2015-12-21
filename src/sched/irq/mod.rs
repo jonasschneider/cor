@@ -59,7 +59,7 @@ impl UnsafeTableEntry {
         return;
       } else {
         println!("No handlers found, this interrupt is unexpected. Wut?");
-        panic!("strange interrupt");
+        //panic!("strange interrupt");
       }
     }
   }

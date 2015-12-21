@@ -1,5 +1,4 @@
 use super::Error;
-use drivers::virtio::{Block,Blockdev};
 use collections::string::String;
 use core::str;
 
@@ -24,8 +23,11 @@ pub struct Entry {
   pub body_pos: (usize, usize),
 }
 
+use block;
+use alloc::arc::Arc;
+
 pub struct Cursor<'t> {
-  dev: &'t mut Blockdev,
+  dev: Arc<block::Client>,
 
   buf: &'t mut [u8],
   loaded: usize,
@@ -35,7 +37,7 @@ pub struct Cursor<'t> {
 }
 
 impl<'t> Cursor<'t> {
-  pub fn new(dev: &'t mut Blockdev, buf: &'t mut [u8]) -> Cursor<'t> {
+  pub fn new(dev: Arc<block::Client>, buf: &'t mut [u8]) -> Cursor<'t> {
     assert_eq!(512, buf.len());
     Cursor { dev: dev, buf: buf, next_header: (0,0), loaded: !0 as usize }
   }
@@ -51,7 +53,8 @@ impl<'t> Iterator for Cursor<'t> {
     println!("Trying to read header at {:?}", self.next_header);
     let (sector, offset) = self.next_header;
     if self.loaded != sector {
-      if let Err(e) = self.dev.read(sector, &mut self.buf) {
+      let tok = self.dev.read_dispatch(sector as u64).unwrap();
+      if let Err(e) = self.dev.read_await(tok, &mut self.buf) {
         return Some(Err(Error::ReadFailed(e)));
       }
       self.loaded = sector;

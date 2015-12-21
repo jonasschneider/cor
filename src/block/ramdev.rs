@@ -5,12 +5,13 @@ use sync::global_mutex::GlobalMutex;
 use core::slice::bytes::copy_memory;
 
 // this could be SleepingMutex as well.
+#[derive(Debug)]
 pub struct Ramdev(GlobalMutex<Vec<u8>>);
 
 impl Client for Ramdev {
-  fn read(&self, sector: u64) -> Result<ReadWaitToken, Error> { Ok(sector) }
+  fn read_dispatch(&self, sector: u64) -> Result<ReadWaitToken, Error> { Ok(sector) }
 
-  fn wait_read(&self, tok: ReadWaitToken, mut buf: &mut [u8]) -> Result<(), Error> {
+  fn read_await(&self, tok: ReadWaitToken, mut buf: &mut [u8]) -> Result<(), Error> {
     // TODO: bounds check
     assert_eq!(buf.len(), 512);
     let offs = ((tok as u64) * 512) as usize;

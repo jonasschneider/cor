@@ -1,8 +1,11 @@
 mod cpio;
 
+use block;
+use alloc::arc::Arc;
+
 use alloc::boxed::Box;
 use ::mem;
-use ::drivers::virtio::{Block,Blockdev,Error as BlockError};
+use ::drivers::virtio::Blockdev;
 use core::str;
 use self::cpio::{Cursor,Entry};
 use collections::vec::Vec;
@@ -10,7 +13,7 @@ use collections::string::String;
 
 #[derive(Debug)]
 pub enum Error {
-  ReadFailed(BlockError),
+  ReadFailed(block::Error),
   InvalidDiskFormat,
   Unknown,
   NotFound,
@@ -70,17 +73,17 @@ pub trait Fs<'t> {
 
 #[derive(Debug)]
 pub struct Cpiofs {
-  dev: Blockdev,
+  dev: Arc<block::Client>,
   buf: Box<[u8]>,
 }
 
 impl Cpiofs {
-  pub fn new(dev: Blockdev) -> Self {
+  pub fn new(dev: Arc<block::Client>) -> Self {
     Cpiofs { dev: dev, buf: box [0u8; 512] }
   }
 
   fn cursor<'t>(&'t mut self) -> Cursor<'t> {
-    Cursor::new(&mut self.dev, &mut self.buf)
+    Cursor::new(self.dev.clone(), &mut self.buf)
   }
 }
 
@@ -120,7 +123,9 @@ impl<'t> Fs<'t> for Cpiofs {
     let mut written = 0;
     while written < entry.size {
       println!("Reading sector {}", next_sector);
-      if let Err(e) = self.dev.read(next_sector, &mut self.buf) {
+      // just dumb read & block immediately
+      let tok = self.dev.read_dispatch(next_sector as u64).unwrap();
+      if let Err(e) = self.dev.read_await(tok, &mut self.buf) {
         return Err(Error::ReadFailed(e));
       }
       next_sector = next_sector + 1;
