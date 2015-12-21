@@ -13,6 +13,8 @@ use collections;
 use collections::vec::Vec;
 use sched;
 
+use block::{Client,ReadWaitToken,Error as Errorx};
+
 extern {
   fn asm_eoi();
 }
@@ -67,6 +69,18 @@ pub struct BlockRequest {
   kind: u32,
   ioprio: u32,
   sector: u64,
+}
+
+pub struct NewstyleClient(core::cell::UnsafeCell<Blockdev>);
+
+unsafe impl Sync for NewstyleClient {} // TODO
+impl Client for NewstyleClient {
+  fn read(&self, sector: u64) -> Result<ReadWaitToken, Errorx> { Ok(sector) }
+  fn wait_read(&self, tok: ReadWaitToken, buf: &mut [u8]) -> Result<(), Errorx> {
+    let res = unsafe{(*self.0.get()).read(tok as usize, buf)};
+    println!("Result: {:?}", res);
+    Ok(())
+  }
 }
 
 impl Block for Blockdev {
