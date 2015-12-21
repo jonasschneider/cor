@@ -157,7 +157,7 @@ impl<T> GlobalMutex<T>
 
     /// Tries to lock the GlobalMutex. If it is already locked, it will return None. Otherwise it returns
     /// a guard within Some.
-    fn try_lock(&self) -> Option<GlobalMutexGuard<T>>
+    pub fn try_lock(&self) -> Option<GlobalMutexGuard<T>>
     {
         if self.lock.compare_and_swap(false, true, Ordering::SeqCst) == false
         {

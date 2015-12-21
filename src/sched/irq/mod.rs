@@ -1,4 +1,5 @@
 mod table;
+use ::sync::global_mutex::GlobalMutex;
 
 // Global should both lock for IRQs and other CPUs, and as such is the only
 // stuff that shuld be placed in static memory.
@@ -10,6 +11,7 @@ mod table;
 use alloc::boxed::Box;
 use collections::vec::Vec;
 use core::fmt;
+use core::sync::atomic::{AtomicBool,Ordering};
 
 trait InterruptHandler {
   fn critical(&mut self); // will be executed with interrupts disabled
@@ -22,14 +24,35 @@ impl fmt::Debug for Box<InterruptHandler> {
 }
 
 // Comparable to irq_desc_t (Table 4-4 in UTLK)
+// THIS HAS TO BE SYNC! Unsafe because we're not statically enforcing the Sync-ness
 #[derive(Debug)]
-struct TableEntry {
-  handlers: Vec<Box<InterruptHandler>>,
+struct UnsafeTableEntry {
+  again: AtomicBool,
+  handlers: GlobalMutex<Vec<Box<InterruptHandler>>>,
 }
 
-impl TableEntry {
+impl UnsafeTableEntry {
+  pub fn new() -> Self {
+    UnsafeTableEntry {
+      again: AtomicBool::new(false),
+      handlers: GlobalMutex::new(vec![]),
+    }
+  }
   pub fn trigger(&mut self, num: u8) {
-    println!("Triggering: {:?}", self);
+    // This is pretty much like Linux's IRQ_PENDING bit.
+    // See the UTLK section about __do_IRQ for more info.
+
+    // I think we can do Relaxed since other reads/writes are protected by the mutex.
+    self.again.store(true, Ordering::Relaxed);
+
+    let handlers = match self.handlers.try_lock() {
+      None => {
+        println!("Somebody else has the handler lock. Quitting.");
+        return;
+      },
+      Some(e) => e
+    };
+    println!("Triggering handlers: {:?}", *handlers);
     if num == 0x30 {
       println!("Is early test interrupt, OK.");
       return;

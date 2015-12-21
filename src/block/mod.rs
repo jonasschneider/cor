@@ -18,3 +18,14 @@ pub trait Client: Sync {
   // into `buf` (which must be of size 512).
   fn wait_read(&self, tok: ReadWaitToken, buf: &mut [u8]) -> Result<(), Error>;
 }
+
+use ::virtio::Blockdev as OldVirtioDev;
+
+// dumb, sleeping implementation
+// impl Client for OldVirtioDev {
+//   fn read(&self, sector: u64) -> Result<ReadWaitToken, Error> { Ok(sector) }
+
+//   fn wait_read(&self, tok: ReadWaitToken, buf: &mut [u8]) -> Result<(), Error> {
+
+//   }
+// }

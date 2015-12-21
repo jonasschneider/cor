@@ -194,7 +194,7 @@ The Story
 ---------
 I don't have a history with writing anything low-level. I usually write Ruby or other dynamic languages with GC, and never really cared about what actually went down inside the computer. UNIX syscalls were my primitive instructions. `gdb` always scared me with its pointers, and how it could crash my entire process so easily. Finding `.s` files in a project repo was always a good sign for me to avoid touching it with a 10ft pole.
 
-Takeaway: For high-level developers, the scare factor of low-level assembly programming might be so high because it's combined with the great complexity of a modern OS. If you take one of the factors away, you're back in a fairly comfortable zone; usually, you take away the low-level factor and deal with the complexity. It turns out that taking away the complexity works just as well.
+Takeaway: For high-level developers, the scare factor of low-level assembly programming might be so high because it's combined with the great complexity of a modern OS. If you take one of the factors away, you're back in a fairly comfortable zone; usually, you take away the low-level factor and deal with the complexity. It turns out that taking away the complexity works just as well. (Difficulty = Complexity x Scope)
 
 
 Bibliography
@@ -203,3 +203,13 @@ Bibliography
 - Intel manual (TODO)
 - AMD manual (TODO)
 - http://idak.gop.edu.tr/esmeray/UnderStandingKernel.pdf
+
+
+Lessons learned
+--------------
+- **Ownership is a powerful concept of resource management.** Case study: CPU I/O ports.
+  1. If you are able to access a port, nobody else can (=unique owner)
+  2. You can temporarily give somebody else access, but during that time, you don't have access yourself (=borrowing)
+  3. You can give away access to a *part* of a port (=slice splitting)
+- Linux `ops` structs do dynamic dispatch much like `vtables`
+- Rust is great at moving on the ladder of abstraction. (Generics/Traits vs inline asm)

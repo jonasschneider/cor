@@ -1,4 +1,4 @@
-use super::TableEntry;
+use super::UnsafeTableEntry;
 use alloc::boxed::Box;
 use collections::vec::Vec;
 use core::fmt;
@@ -13,17 +13,17 @@ use ::sync::global_mutex::GlobalMutex;
 // Well, only if ISRs don't need mutable access to their data. Which I don't think is true.
 // A better solution using UnsafeCell is described here:
 // https://internals.rust-lang.org/t/pre-rfc-remove-static-mut/1437
-type Table = [GlobalMutex<TableEntry>];
-static mut TABLE: Option<*mut Table> = None;
+static mut TABLE: Option<*mut [UnsafeTableEntry]> = None;
 
 pub fn init() {
   if let Some(_) = unsafe { TABLE } {
     panic!("TABLE already set up!");
   }
 
-  let mut tab: Vec<GlobalMutex<TableEntry>> = Vec::with_capacity(256);
+  let s = &UnsafeTableEntry::new() as &Sync;
+  let mut tab: Vec<UnsafeTableEntry> = Vec::with_capacity(256);
   for _ in 0..256 {
-    tab.push(GlobalMutex::new(TableEntry{ handlers: Vec::new() }));
+    tab.push(UnsafeTableEntry::new());
   }
 
   unsafe {
@@ -38,8 +38,7 @@ pub fn handle_irq(num: u8) {
   print!("\x1B[;31m");
   println!("[[[Bang! IRQ 0x{:x} handled by sched::irq",num);
 
-  let mut entry_mutex = unsafe { &mut (*(TABLE.unwrap()))[num as usize] };
-  let mut entry = entry_mutex.lock(); // lock it down; this could have finer granularity
+  let mut entry = unsafe { &mut (*(TABLE.unwrap()))[num as usize] };
 
   entry.trigger(num);
   println!("sched::irq is done with interrupt 0x{:x}]]]",num);
