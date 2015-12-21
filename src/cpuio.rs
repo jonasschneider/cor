@@ -3,6 +3,8 @@
 // struct PortAllocator {
 // }
 
+type Address = u16;
+
 #[derive(Debug)]
 pub struct IoPort {
   base: u16,

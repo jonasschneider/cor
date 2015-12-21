@@ -1,6 +1,6 @@
 // types of lock disciplines: Mutex, RWLock
 // types of blocking: Sleep(=Semaphore), Spin
-// types of lock scopes: Global, ..?
+// types of lock scopes: Global, Sleeping(=only for kernel tasks, not interrupt handlers), others?
 
 
 // 1. spinlock makes sure that nobody except us can enter (not even in interrupt etc.)

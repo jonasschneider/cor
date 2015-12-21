@@ -33,6 +33,7 @@ pub fn init() {
 }
 
 // TODO: should we even be able to print from IRQ-land?
+// this is like __do_IRQ in Linux
 pub fn handle_irq(num: u8) {
   print!("\x1B[;31m");
   println!("[[[Bang! IRQ 0x{:x} handled by sched::irq",num);

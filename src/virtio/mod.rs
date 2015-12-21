@@ -28,6 +28,40 @@ pub struct Blockdev {
   q: queue::Virtqueue,
 }
 
+
+/*
+(Sched idea: for sleeping/yielding, require passing around a yield token that represents
+the permission to block the process. Would eliminate attempts to sleep from IRQ context
+at compile time.)
+
+pub fn init_virtio_block(ioport) -> (Box<BlockdevClient>, VirtioIRQHandler)
+--> use Client in userspace, install IRQ handler
+
+impl ::sched::irq::Handler for VirtioIRQHandler {
+  ..
+}
+
+pub trait BlockdevClient: Sync {
+  type ReadWaitToken;
+
+  // Submits a sequest to read the specified sector.
+  // Returns a token that can be used to block until the read is completed.
+  fn read(&self, sector: usize) -> Result<ReadWaitToken, Error>;
+
+  // Block until the read identified by the token is completed, then writes the read data
+  // into `buf` (which must be of size 512).
+  fn wait_read(&self, tok: ReadWaitToken, buf: &mut [u8]) -> Result<(), Error>;
+}
+
+// Handling the IRQs for a specific virtio device. (Multiple devices need multiple handlers.)
+struct VirtioIRQHandler {
+  isr_status_register: cpuio::IoPort,
+  // The rings to receive on
+  rings: Vec<VringUsed>,
+}
+*/
+
+
 #[repr(C, packed)]
 pub struct BlockRequest {
   kind: u32,

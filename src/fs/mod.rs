@@ -25,6 +25,49 @@ pub trait Fs<'t> {
   fn index(&mut self, dirname: &str) -> Result<Vec<String>, Error>;
 }
 
+/*
+  note: `Mutex` will be GlobalMutex for now, but could become SleepingMutex later,
+    since we don't need to access files from interrupt space.
+
+  Every File is ultimately owned by its containing Fs. (for keeping state...?)
+  The Fs only hands out a Arc<Mutex<RefCell<File>>> to the caller. Once a file is closed,
+  the Fs can later reclaim it by dismantling the Arc.
+
+  Likely, the File will own a way to allow the file access to the underlying block device.
+  (A block::Client in some form.)
+
+  Every process then has a file descriptor table of type Fdt.
+
+  type Fd = u64;
+  type Fdt = Map<Fd, Arc<GlobalMutex<RefCell<File>>>>;
+
+  Given two processes A and B, each having opened the same File. (i.e. this is the reason for the mutex above)
+  Now A wants to read from the file. The File submits an I/O request to the Blockdev
+  (using a GlobalMutex<DescriptorsAndAvail> internally to control access to the vring's avail, making the Blockdev Sync).
+  This request is single-sector for now, but could potentially be a range.
+  The immediate return value of `enqueue`/`submit` is some kind of wait token (virtio_epoch,virtio_descriptor_id).
+  A, still in the read() call on the File object,
+  blocks on the completion of that wait token (maybe with a timeout?).
+
+  The virtio IRQ owns (due to the IRQ handler's GlobalMutex) the vring's `used`.
+  It checks the request IDs of returned buffers,
+  and builds the wait tokens of the completed requests from them.
+  (Epochs are probably going to be nasty here. Maybe we simply bump the epoch
+  once we observe a bufferid smaller than the previous one.)
+  `sched` uses the matching token to wake A.
+
+  Buffer handling: Zero-copy is annoying because of block sizes and alignment.. meeeh.
+  For now, the Blockdev will allocate a pool of buffers (this has the bonus of making the
+  descriptor table read-only). When `turning in` the wait token, the FS gives a buffer,
+  which the Virtio descriptor's buffer is copied into.
+
+  So, in summary:
+  (a) no worker threads per-file or per-filesystem
+  (b) parking is on block-device level, not on FS-level (the FS operation is buried in the blocked stack)
+  (c) File's need not be Sync
+  (d) Blockdev's *do* need to be Sync
+*/
+
 #[derive(Debug)]
 pub struct Cpiofs {
   dev: Blockdev,
