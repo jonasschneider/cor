@@ -1,6 +1,6 @@
 #![crate_type="staticlib"]
 #![crate_name="cor"]
-#![feature(box_syntax,repr_simd)]
+#![feature(box_syntax,repr_simd,const_fn)]
 #![feature(alloc,collections,core_intrinsics,clone_from_slice)]
 #![feature(lang_items,unsafe_destructor,asm,box_patterns)]
 #![no_std]
@@ -21,6 +21,7 @@ mod fs;
 mod kbuf;
 mod mem;
 mod sched;
+mod sync;
 
 extern "C" {
   fn pci_init();

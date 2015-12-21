@@ -3,28 +3,7 @@ use alloc::boxed::Box;
 use collections::vec::Vec;
 use core::fmt;
 
-// types of lock disciplines: Mutex, RWLock
-// types of blocking: Sleep(=Semaphore), Spin
-// types of lock scopes: Global, ..?
-
-// 1. spinlock makes sure that nobody except us can enter (not even in interrupt etc.)
-// 2. however, interrupts create a deadlock condition: while kernel has spinlock, irq on same CPU spins for lock -> dead
-// 3. solution: disable local interrupts *before* acquiring the lock to prevent the deadlock condition
-//    (the lock is still needed to protect against accesses by other CPUs, which we don't really care about yet)
-// -> GlobalMutex = CLI + Spinlock
-
-struct GlobalMutex<T> {
-  inner: T
-}
-impl<T> GlobalMutex<T> {
-  fn new(x: T) -> Self {
-    GlobalMutex { inner: x }
-  }
-  fn lock<'t>(&'t mut self) -> &'t mut T {
-    // FIXME: this is not actually doing anything
-    &mut self.inner
-  }
-}
+use ::sync::global_mutex::GlobalMutex;
 
 // This is where the magic happens. This table is shared between interrupt handlers and
 // "normal" kernel space, so we need to make sure that we appropriately lock it.
@@ -56,12 +35,12 @@ pub fn init() {
 // TODO: should we even be able to print from IRQ-land?
 pub fn handle_irq(num: u8) {
   print!("\x1B[;31m");
-  println!("[[[Bang! IRQ 0x{:x} handled by sched::irq::table",num);
+  println!("[[[Bang! IRQ 0x{:x} handled by sched::irq",num);
 
   let mut entry_mutex = unsafe { &mut (*(TABLE.unwrap()))[num as usize] };
-  let entry = entry_mutex.lock(); // lock it down; this could have finer granularity
+  let mut entry = entry_mutex.lock(); // lock it down; this could have finer granularity
 
   entry.trigger(num);
-  println!("sched::irq::table is done with interrupt 0x{:x}]]]",num);
+  println!("sched::irq is done with interrupt 0x{:x}]]]",num);
   print!("\x1B[0m");
 }
