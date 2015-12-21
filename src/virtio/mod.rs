@@ -129,7 +129,7 @@ const VIRTIO_STATUS_DRIVER_OK: u8 = 4;
 const VIRTIO_STATUS_FAILED: u8 = 128;
 
 
-pub unsafe fn init(port: cpuio::IoPort) -> Result<Blockdev, Error> {
+pub unsafe fn init(mut port: cpuio::IoPort) -> Result<Blockdev, Error> {
   // We can now talk to the actual virtio device
   // via the CPU's I/O pins directly. A couple of helpful references:
   //
@@ -172,7 +172,7 @@ pub unsafe fn init(port: cpuio::IoPort) -> Result<Blockdev, Error> {
     return Err(Error::VirtioHandshakeFailure)
   }
   // initialize the first (and only, for block devices) virtqueue
-  let mut q = queue::Virtqueue::new(0, &port);
+  let mut q = queue::Virtqueue::new(0, &mut port);
   // Tell the device we're done setting it up
   state = state | VIRTIO_STATUS_DRIVER_OK;
   port.write8(18, state);

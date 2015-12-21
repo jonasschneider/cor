@@ -26,7 +26,7 @@ pub struct Virtqueue {
 
 impl Virtqueue {
   // queue_index is the index on the virtio device to initialize
-  pub fn new(queue_index: u16, port: &IoPort) -> Self {
+  pub fn new(queue_index: u16, port: &mut IoPort) -> Self {
     // TODO: set queue_select
 
     // Determine how many descriptors the queue has, and allocate memory for the
@@ -48,7 +48,7 @@ impl Virtqueue {
     }
   }
 
-  pub fn test(&mut self, port: &IoPort) -> bool {
+  pub fn test(&mut self, port: &mut IoPort) -> bool {
     let mut hdr = BlockRequest {
       kind: 0, // 0=read
       ioprio: 1, // prio
