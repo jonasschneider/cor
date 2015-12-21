@@ -1,5 +1,5 @@
 use super::Error;
-use ::virtio::{Block,Blockdev};
+use drivers::virtio::{Block,Blockdev};
 use collections::string::String;
 use core::str;
 

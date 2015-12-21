@@ -8,11 +8,11 @@ use collections;
 use collections::vec::Vec;
 use core::borrow::{BorrowMut,Borrow};
 
-use super::super::cpuio::IoPort;
+use cpuio::IoPort;
 
 use super::vring;
-use super::super::mem::*;
-use super::super::sched;
+use mem::*;
+use sched;
 
 const VRING_DESC_F_NEXT: u16 = 1; /* This marks a buffer as continuing via the next field. */
 const VRING_DESC_F_WRITE: u16 = 2; /* This marks a buffer as write-only (otherwise read-only). */

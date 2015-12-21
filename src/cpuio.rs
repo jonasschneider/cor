@@ -11,10 +11,12 @@ pub struct IoPort {
   pub width: u16,
 }
 
-pub fn alloc(base: u16, width: u16) -> Result<IoPort, ()> {
+// Unsafe because you could call it multiple times.
+pub unsafe fn alloc(base: u16, width: u16) -> Result<IoPort, ()> {
   Ok(IoPort{ base: base, width: width })
 }
 
+// these should probably just be debug_assert!'s
 impl IoPort {
   pub fn write8(&mut self, offset: u16, val: u8) {
     assert!(offset < self.width);

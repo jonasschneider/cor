@@ -19,7 +19,7 @@ pub trait Client: Sync {
   fn wait_read(&self, tok: ReadWaitToken, buf: &mut [u8]) -> Result<(), Error>;
 }
 
-use ::virtio::Blockdev as OldVirtioDev;
+//use drivers::virtio::Blockdev as OldVirtioDev;
 
 // dumb, sleeping implementation
 // impl Client for OldVirtioDev {

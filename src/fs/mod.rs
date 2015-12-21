@@ -2,7 +2,7 @@ mod cpio;
 
 use alloc::boxed::Box;
 use ::mem;
-use ::virtio::{Block,Blockdev,Error as BlockError};
+use ::drivers::virtio::{Block,Blockdev,Error as BlockError};
 use core::str;
 use self::cpio::{Cursor,Entry};
 use collections::vec::Vec;

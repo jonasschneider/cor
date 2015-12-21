@@ -3,7 +3,7 @@ use alloc::boxed::Box;
 use collections::vec::Vec;
 use core::fmt;
 
-use ::sync::global_mutex::GlobalMutex;
+use sync::global_mutex::GlobalMutex;
 
 // This is where the magic happens. This table is shared between interrupt handlers and
 // "normal" kernel space, so we need to make sure that we appropriately lock it.

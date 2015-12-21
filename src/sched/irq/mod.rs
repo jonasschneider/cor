@@ -1,5 +1,5 @@
 mod table;
-use ::sync::global_mutex::GlobalMutex;
+use sync::global_mutex::GlobalMutex;
 
 // Global should both lock for IRQs and other CPUs, and as such is the only
 // stuff that shuld be placed in static memory.
@@ -53,9 +53,14 @@ impl UnsafeTableEntry {
       Some(e) => e
     };
     println!("Triggering handlers: {:?}", *handlers);
-    if num == 0x30 {
-      println!("Is early test interrupt, OK.");
-      return;
+    if handlers.len() == 0 {
+      if num == 0x30 {
+        println!("Is early test interrupt, OK.");
+        return;
+      } else {
+        println!("No handlers found, this interrupt is unexpected. Wut?");
+        panic!("strange interrupt");
+      }
     }
   }
 }

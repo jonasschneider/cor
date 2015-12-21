@@ -11,7 +11,7 @@ use core::fmt;
 use kbuf;
 use collections;
 use collections::vec::Vec;
-use super::sched;
+use sched;
 
 extern {
   fn asm_eoi();

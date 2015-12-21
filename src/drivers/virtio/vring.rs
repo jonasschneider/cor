@@ -8,8 +8,8 @@ use collections;
 use collections::vec::Vec;
 use core::borrow::BorrowMut;
 use core::mem;
-use super::super::mem::*;
-use super::super::sched;
+use mem::*;
+use sched;
 
 use super::BlockRequest;
 

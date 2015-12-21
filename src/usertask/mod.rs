@@ -3,7 +3,8 @@ use core::{slice, str};
 mod state;
 mod elf;
 
-use super::{virtio,cpuio,fs};
+use drivers::virtio;
+use super::{cpuio,fs};
 use fs::Fs;
 
 use ::sched;
@@ -13,7 +14,8 @@ use self::state::SyscallType::*;
 pub fn exec_init() {
   println!("Starting init task! Or at least I hope so.");
 
-  let port = cpuio::alloc(0xc040, 24).unwrap(); // 24 pins, see virtio spec
+  // TODO: request this from t
+  let port = unsafe { cpuio::alloc(0xc040, 24).unwrap() }; // 24 pins, see virtio spec
   let blockdev = unsafe { virtio::init(port) }.unwrap();
   println!("result of blockdevice init: {:?}", blockdev);
 

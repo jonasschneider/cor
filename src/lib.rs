@@ -16,7 +16,7 @@ mod print;
 
 mod usertask;
 mod cpuio;
-mod virtio;
+mod drivers;
 mod fs;
 mod kbuf;
 mod mem;
