@@ -1,6 +1,6 @@
 use kbuf;
 
-use alloc::boxed::Box;
+use alloc::boxed::{Box,FnBox};
 use core::prelude::*;
 use core::mem;
 use core;
@@ -22,11 +22,19 @@ struct Task {
   stack: kbuf::Buf<'static>,
   rsp: u64,
   rbp: u64,
-  entrypoint: fn(),
+  entrypoint: Option<Entrypoint>, // will be None after launch
 
   // parking/scheduling info
   exited : bool,
   parked_for_irq: u16,
+}
+
+struct Entrypoint(Box<FnBox()>);
+
+impl core::fmt::Debug for Entrypoint {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "(task entrypoint)")
+    }
 }
 
 //
@@ -107,7 +115,9 @@ fn starttask() {
       }
       &mut Some(ref mut t) => {
         println!("launching task entrypoint");
-        (t.entrypoint)();
+        let entryp = mem::replace(&mut t.entrypoint, None).unwrap();
+        let lebox = entryp.0;
+        FnBox::call_box(lebox, ());
         println!("task entrypoint returned, yielding away from us for the last time");
         t.exited = true;
         kyield();
@@ -206,13 +216,19 @@ pub fn init() {
   }
 }
 
-pub fn add_task(entrypoint : fn(), desc : &'static str) {
+// This is where we enforce that only Send things can cross a task boundary.
+pub fn add_task<F, T>(entrypoint: F, desc: &'static str)
+  where F: FnOnce() -> T, F: Send + 'static, T: Send + 'static {
   let id = NEXT_TASK_ID.fetch_add(1, Ordering::SeqCst);
 
   let stack = kbuf::new("task stack");
   let rsp = unsafe { (stack.original_mem as u64) } +0x3ff0;
   println!("Task RSP: 0x{:x}", rsp);
-  let t = box Task{id: id, desc: desc, entrypoint: entrypoint,
+  let main = move || {
+    entrypoint();
+  };
+
+  let t = box Task{id: id, desc: desc, entrypoint: Some(Entrypoint(box main)),
     stack: stack,
     rsp: rsp,
     rbp: rsp,
