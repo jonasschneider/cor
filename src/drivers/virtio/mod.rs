@@ -29,7 +29,6 @@ use kbuf;
 use collections;
 use collections::vec::Vec;
 use sched;
-
 use block::{Client,ReadWaitToken,Error};
 
 extern {
@@ -43,50 +42,44 @@ use core::cell::RefCell;
 #[derive(Debug)]
 pub struct Blockdev {
   port: RefCell<cpuio::IoPort>, // exclusive access to the entire port, for now
-  q: RefCell<queue::Virtqueue>,
+  pool: RefCell<queue::BufferPool>,
+  used: RefCell<vring::Used>,
 }
 
 
-/*
-impl ::sched::irq::Handler for VirtioIRQHandler {
-  ..
-}
+// // Handles IRQs for a specific virtio device.
+// // (Multiple devices need multiple handlers.)
+// struct IRQRx {
+//   isr_status_port: cpuio::IoPort,
 
-// Handling the IRQs for a specific virtio device. (Multiple devices need multiple handlers.)
-struct VirtioIRQHandler {
-  isr_status_register: cpuio::IoPort,
-  // The rings to receive on
-  rings: Vec<VringUsed>,
-}
-*/
+//   // The rings to receive on
+//   rings: Vec<VringUsed>,
+// }
 
-#[repr(C, packed)]
-pub struct BlockRequest {
-  kind: u32,
-  ioprio: u32,
-  sector: u64,
-}
+// impl sched::irq::Handler for IRQRx {
+// }
+
+use byteorder::{ByteOrder,NativeEndian};
 
 impl Client for Blockdev {
   fn read_dispatch(&self, sector: u64) -> Result<ReadWaitToken, Error> { Ok(sector) }
   fn read_await(&self, tok: ReadWaitToken, buf: &mut [u8]) -> Result<(), Error> {
     let sector = tok as usize;
-    let mut q = self.q.borrow_mut();
+    let mut pool = self.pool.borrow_mut();
     let mut port = self.port.borrow_mut();
+    let mut used = self.used.borrow_mut();
 
     assert_eq!(512, buf.len());
 
-    let mut hdr = BlockRequest {
-      kind: 0, // 0=read
-      ioprio: 1, // prio
-      sector: sector as u64,
-    };
+    let mut hdr = [0u8; 16];
+    NativeEndian::write_u32(&mut hdr[0..], 0); // kind: 0=read
+    NativeEndian::write_u32(&mut hdr[4..], 1); // ioprio
+    NativeEndian::write_u64(&mut hdr[8..], sector as u64);
     let mut done = [17u8; 1]; // != 0 for checking that it was set by the host
 
-    {
-      let hdrbuf: &[u8] = unsafe{ slice::from_raw_parts(core::mem::transmute(&hdr), core::mem::size_of::<BlockRequest>()) };
-      q.ring.enqueue_rww(&hdrbuf, &mut buf[..], &mut done[..]);
-    }
+    pool.enqueue_rww(&hdr, &mut buf[..], &mut done[..]);
+
+    println!("enqueued it: {:?}", &pool.avail.mem[128*16..]);
 
     // Finally, we "kick" the device to tell it that it should look for
     // something to do. We could probably skip doing this and just wait for a
@@ -95,9 +88,10 @@ impl Client for Blockdev {
     // check" will be delivered back to us via an interrupt.
     // Now we park ourselves until things change.
 
-    while let None = q.ring.take() {
+    while let None = used.take_from_ring() {
       port.write16(16, 0);
       sched::park_until_irq(0x2b);
+      println!("After park: {:?}", used);
     }
 
     // TODO: this whole IRQ handling is really bad.
@@ -136,37 +130,40 @@ impl Blockdev {
   pub fn new(mut port: cpuio::IoPort) -> Result<Self, InitError> {
     println!("Initializing virtio block device with ioport {:?}..", port);
 
-    let (mut negotiationport, mut operationsport) = port.split_at_masks("XXXXXXXX----------X-XXXX", "--------XXXXXXXXXX-X----");
+    let (mut configport, mut operationsport) = port.split_at_masks(
+      "XXXXXXXX----------X-XXXX",  // feature negotiation flags, device status, MSI-X fields
+      "--------XXXXXXXXXX-X----"); // queue address, size, select, notify, ISR status
 
     let mut state = 0u8;
-    negotiationport.write8(18, state);
+    configport.write8(18, state);
 
     state = state | VIRTIO_STATUS_ACKNOWLEDGE;
-    negotiationport.write8(18, state);
+    configport.write8(18, state);
 
     state = state | VIRTIO_STATUS_DRIVER;
-    negotiationport.write8(18, state);
+    configport.write8(18, state);
 
     // Feature negotiation
-    let offered_featureflags = negotiationport.read16(0);
+    let offered_featureflags = configport.read16(0);
     println!("The device offered us these feature bits: {:?}", offered_featureflags);
     // In theory, we'd do `negotiated = offered & supported`; we don't actually
     // support any flags, so we can just set 0.
-    negotiationport.write16(4, 0);
+    configport.write16(4, 0);
 
     // Now comes the block-device-specific setup.
     // (The configuration of a single virtqueue isn't device-specific though; it's the same
     // for i.e. the virtio network controller)
 
     // Discover virtqueues; the block devices only has one
-    if negotiationport.read16(4) != 0 {
+    if configport.read16(4) != 0 {
       return Err(InitError::VirtioHandshakeFailure)
     }
     // initialize the first (and only, for block devices) virtqueue
-    let mut q = queue::Virtqueue::new(0, &mut operationsport);
+
+    let (mut pool, mut used) = queue::setup(0, &mut operationsport);
     // Tell the device we're done setting it up
     state = state | VIRTIO_STATUS_DRIVER_OK;
-    negotiationport.write8(18, state);
+    configport.write8(18, state);
 
     println!("Device state is now: {}", state);
 
@@ -176,6 +173,6 @@ impl Blockdev {
     //   panic!("Self-test failed!")
     // }
 
-    Ok(Blockdev { q: RefCell::new(q), port: RefCell::new(operationsport) })
+    Ok(Blockdev { pool: RefCell::new(pool), used: RefCell::new(used), port: RefCell::new(operationsport) })
   }
 }

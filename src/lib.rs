@@ -14,6 +14,8 @@ extern crate collections;
 #[macro_use] // For `print!` and `println!`, writing to the kernel console
 mod print;
 
+mod byteorder;
+
 mod usertask;
 mod cpuio;
 mod drivers;
