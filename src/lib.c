@@ -5,17 +5,29 @@ size_t rust_allocd = 0;
 // TODO: rust actually has these as uint, not size_t... bad?
 void *rust_allocate(size_t size, size_t align) {
   rust_allocd += size;
-  return tkalloc(size, "rust_allocate()", align);
+  void *ptr = tkalloc(size, "rust_allocate()", align);
+  __builtin_memset(ptr, 0, size);
+  return ptr;
 }
 
-// TODO: use the compiler intrinsics
-void memmove(void *dest, const void *source, size_t n) {
-  size_t i;
-
-  uint8_t *dest8 = (uint8_t *)dest;
-  uint8_t *source8 = (uint8_t *)source;
-  for (i = 0; i < n; i++) {
-    dest8[i] = source8[i];
+// TODO: review these.
+void memset(void *dst, int fill, size_t n) {
+  size_t i = n;
+  while(i-- > 0) {
+    *((uint8_t*)dst++) = fill;
+  }
+}
+void memcpy(void *dst, void *src, size_t n) {
+  size_t i = n;
+  while(i-- > 0) {
+    *((uint8_t*)dst++) = *((uint8_t*)src++);
+  }
+}
+// FIXME: memmove breaks for overlapping areas
+void memmove(void *dst, void *src, size_t n) {
+  size_t i = n;
+  while(i-- > 0) {
+    *((uint8_t*)dst++) = *((uint8_t*)src++);
   }
 }
 

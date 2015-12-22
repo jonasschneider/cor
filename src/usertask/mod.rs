@@ -18,7 +18,7 @@ pub fn exec_init() {
   println!("Starting init task! Or at least I hope so.");
 
   // TODO: request this from t
-  let port = unsafe { cpuio::alloc(0xc040, 24).unwrap() }; // 24 pins, see virtio spec
+  let port = unsafe { cpuio::alloc(0xc040, 24, "XXXXXXXXXXXXXXXXXXXXXXXX").unwrap() };
   let blockdev: virtio::Blockdev = virtio::Blockdev::new(port).unwrap();
   println!("result of blockdevice init: {:?}", blockdev);
 

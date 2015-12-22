@@ -2,7 +2,7 @@
 #![crate_name="cor"]
 #![feature(box_syntax,repr_simd,const_fn,slice_bytes,fnbox)]
 #![feature(alloc,collections,core_intrinsics,clone_from_slice)]
-#![feature(lang_items,unsafe_destructor,asm,box_patterns)]
+#![feature(lang_items,unsafe_destructor,asm,box_patterns,str_char)]
 #![no_std]
 
 extern crate kalloc;
@@ -93,8 +93,12 @@ extern fn handle_libcore_panic(msg: core::fmt::Arguments,
   print_panic_and_abort(msg, file, line)
 }
 
+#[no_mangle]
+pub extern "C" fn rust_panicmarker() {}
+
 #[inline(never)] #[cold]
 fn print_panic_and_abort(msg: core::fmt::Arguments, file: &'static str, line: u32) -> ! {
+    rust_panicmarker();
     let mut kio = Kio;
     // ignore write errors and don't warn about them
     let _ = kio.write_fmt(format_args!("\npanic: "));

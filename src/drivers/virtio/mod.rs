@@ -38,10 +38,12 @@ extern {
 
 unsafe impl Sync for Blockdev {} // TODO
 
+use core::cell::RefCell;
+
 #[derive(Debug)]
 pub struct Blockdev {
-  port: cpuio::IoPort, // exclusive access to the entire port, for now
-  q: queue::Virtqueue,
+  port: RefCell<cpuio::IoPort>, // exclusive access to the entire port, for now
+  q: RefCell<queue::Virtqueue>,
 }
 
 
@@ -69,6 +71,8 @@ impl Client for Blockdev {
   fn read_dispatch(&self, sector: u64) -> Result<ReadWaitToken, Error> { Ok(sector) }
   fn read_await(&self, tok: ReadWaitToken, buf: &mut [u8]) -> Result<(), Error> {
     let sector = tok as usize;
+    let mut q = self.q.borrow_mut();
+    let mut port = self.port.borrow_mut();
 
     assert_eq!(512, buf.len());
 
@@ -81,7 +85,7 @@ impl Client for Blockdev {
 
     {
       let hdrbuf: &[u8] = unsafe{ slice::from_raw_parts(core::mem::transmute(&hdr), core::mem::size_of::<BlockRequest>()) };
-      self.q.ring.enqueue_rww(&hdrbuf, &mut buf[..], &mut done[..]);
+      q.ring.enqueue_rww(&hdrbuf, &mut buf[..], &mut done[..]);
     }
 
     // Finally, we "kick" the device to tell it that it should look for
@@ -91,8 +95,8 @@ impl Client for Blockdev {
     // check" will be delivered back to us via an interrupt.
     // Now we park ourselves until things change.
 
-    while let None = self.q.ring.take() {
-      self.port.write16(16, 0);
+    while let None = q.ring.take() {
+      port.write16(16, 0);
       sched::park_until_irq(0x2b);
     }
 
@@ -100,7 +104,7 @@ impl Client for Blockdev {
     // Especially, I feel like we should never call asm_eoi from Rustland
     // (or from non-interrupt kernel land entirely).
     // Mark the virtio irq as handled *before* EOI, otherwise we'd get another one right away.
-    self.port.read8(19); // The virtio IRQ status is reset by **reading** from this port
+    port.read8(19); // The virtio IRQ status is reset by **reading** from this port
     unsafe { asm_eoi(); }
 
     println!("Virtio call completed, retval={}", done[0]);
@@ -130,36 +134,39 @@ const VIRTIO_STATUS_FAILED: u8 = 128;
 
 impl Blockdev {
   pub fn new(mut port: cpuio::IoPort) -> Result<Self, InitError> {
-    let mut state = 0u8;
     println!("Initializing virtio block device with ioport {:?}..", port);
-    port.write8(18, state);
+
+    let (mut negotiationport, mut operationsport) = port.split_at_masks("XXXXXXXX----------X-XXXX", "--------XXXXXXXXXX-X----");
+
+    let mut state = 0u8;
+    negotiationport.write8(18, state);
 
     state = state | VIRTIO_STATUS_ACKNOWLEDGE;
-    port.write8(18, state);
+    negotiationport.write8(18, state);
 
     state = state | VIRTIO_STATUS_DRIVER;
-    port.write8(18, state);
+    negotiationport.write8(18, state);
 
     // Feature negotiation
-    let offered_featureflags = port.read16(0);
+    let offered_featureflags = negotiationport.read16(0);
     println!("The device offered us these feature bits: {:?}", offered_featureflags);
     // In theory, we'd do `negotiated = offered & supported`; we don't actually
     // support any flags, so we can just set 0.
-    port.write16(4, 0);
+    negotiationport.write16(4, 0);
 
     // Now comes the block-device-specific setup.
     // (The configuration of a single virtqueue isn't device-specific though; it's the same
     // for i.e. the virtio network controller)
 
     // Discover virtqueues; the block devices only has one
-    if port.read16(4) != 0 {
+    if negotiationport.read16(4) != 0 {
       return Err(InitError::VirtioHandshakeFailure)
     }
     // initialize the first (and only, for block devices) virtqueue
-    let mut q = queue::Virtqueue::new(0, &mut port);
+    let mut q = queue::Virtqueue::new(0, &mut operationsport);
     // Tell the device we're done setting it up
     state = state | VIRTIO_STATUS_DRIVER_OK;
-    port.write8(18, state);
+    negotiationport.write8(18, state);
 
     println!("Device state is now: {}", state);
 
@@ -169,6 +176,6 @@ impl Blockdev {
     //   panic!("Self-test failed!")
     // }
 
-    Ok(Blockdev { q: q, port: port })
+    Ok(Blockdev { q: RefCell::new(q), port: RefCell::new(operationsport) })
   }
 }
