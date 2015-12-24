@@ -40,22 +40,23 @@ fn size(length: u16) -> (usize, usize) {
   (guest_write_side, guest_read_side)
 }
 
+
+// TODO: like all static muts this is a race condition waiting to bite us.
+// Should find a better way to allocate stuff aligned.
+extern "C" {
+  static mut corlib_alignoverride: u64;
+}
+
 // Allocate two memory blocks, page-aligned, next to each other.
 // The padding between the end of the first slice and the start of the second block
 // is *not* allocated and has undefined contents.
-// TODO: Zero this out!
 fn alloc_pagealigned(size1: usize, size2: usize) -> (Box<[u8]>, Box<[u8]>) {
-  // unsafe {
-  //   let mem1: *mut u8 = allocate(size1, 0x1000);
-  //   let mem2: *mut u8 = allocate(size2, 0x1000);
-
-  //   // make sure the allocator did what we expect
-  //   assert_eq!(mem2 as usize, align_up(mem1 as usize + size1, 0x1000));
-
-  //   (Vec::from_raw_parts(mem1, size1, size1).into_boxed_slice(),
-  //    Vec::from_raw_parts(mem2, size2, size2).into_boxed_slice())
-  // }
-  (vec![0u8; size1].into_boxed_slice(), vec![0u8; size2].into_boxed_slice())
+  let prev = unsafe { corlib_alignoverride };
+  unsafe { corlib_alignoverride = 0x1000; }
+  let (a,b) = (vec![0u8; size1].into_boxed_slice(), vec![0u8; size2].into_boxed_slice());
+  assert_eq!(b.as_ptr() as usize, align_up(a.as_ptr() as usize + size1, 0x1000));
+  unsafe { corlib_alignoverride = prev; }
+  (a,b)
 }
 
 pub struct Descriptor {

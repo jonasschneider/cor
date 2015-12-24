@@ -2,11 +2,16 @@
 
 size_t rust_allocd = 0;
 
+uint64_t corlib_alignoverride = 0;
+
 // TODO: rust actually has these as uint, not size_t... bad?
 void *rust_allocate(size_t size, size_t align) {
+  if(corlib_alignoverride != 0) {
+    align = corlib_alignoverride;
+  }
   rust_allocd += size;
   align = align;
-  void *ptr = tkalloc(size, "rust_allocate()", 0x1000);
+  void *ptr = tkalloc(size, "rust_allocate()", align);
   void *x = ptr;
   while(x < ptr) {
     *((uint8_t*)x++) = 0;
