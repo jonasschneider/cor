@@ -45,6 +45,8 @@ impl<'t> Cursor<'t> {
 
 use collections::string::ToString;
 
+use core::slice::bytes::copy_memory;
+
 impl<'t> Iterator for Cursor<'t> {
   // On error, you can retry or break.
   type Item = Result<Entry, Error>;
@@ -53,9 +55,12 @@ impl<'t> Iterator for Cursor<'t> {
     println!("Trying to read header at {:?}", self.next_header);
     let (sector, offset) = self.next_header;
     if self.loaded != sector {
-      let tok = self.dev.read_dispatch(sector as u64).unwrap();
-      if let Err(e) = self.dev.read_await(tok, &mut self.buf) {
-        return Some(Err(Error::ReadFailed(e)));
+      // just dumb read & block immediately
+      let b = vec![0u8;512].into_boxed_slice();
+      let tok = self.dev.read_dispatch(sector as u64, b).unwrap();
+      match self.dev.read_await(tok) {
+        Err(e) => { return Some(Err(Error::ReadFailed(e))); }
+        Ok(b) => { copy_memory(&b, &mut self.buf); }
       }
       self.loaded = sector;
     }

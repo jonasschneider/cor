@@ -38,12 +38,15 @@ extern {
 unsafe impl Sync for Blockdev {} // TODO
 
 use core::cell::RefCell;
+use collections::btree_map::BTreeMap;
 
 #[derive(Debug)]
 pub struct Blockdev {
   port: RefCell<cpuio::IoPort>, // exclusive access to the entire port, for now
   pool: RefCell<queue::BufferPool>,
   used: RefCell<vring::Used>,
+
+  in_flight: GlobalMutex<BTreeMap<ReadWaitToken,(Box<[u8]>,Box<[u8]>)>>,
 }
 
 
@@ -58,16 +61,16 @@ pub struct Blockdev {
 
 // impl sched::irq::Handler for IRQRx {
 // }
+use sync::global_mutex::GlobalMutex;
+use core::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
+static NEXT_TOKEN: AtomicUsize = ATOMIC_USIZE_INIT;
 
 use byteorder::{ByteOrder,NativeEndian};
 
 impl Client for Blockdev {
-  fn read_dispatch(&self, sector: u64) -> Result<ReadWaitToken, Error> { Ok(sector) }
-  fn read_await(&self, tok: ReadWaitToken, buf: &mut [u8]) -> Result<(), Error> {
-    let sector = tok as usize;
+  fn read_dispatch(&self, sector: u64, mut buf: Box<[u8]>) -> Result<ReadWaitToken, Error> {
     let mut pool = self.pool.borrow_mut();
     let mut port = self.port.borrow_mut();
-    let mut used = self.used.borrow_mut();
 
     assert_eq!(512, buf.len());
 
@@ -75,18 +78,27 @@ impl Client for Blockdev {
     NativeEndian::write_u32(&mut hdr[0..], 0); // kind: 0=read
     NativeEndian::write_u32(&mut hdr[4..], 1); // ioprio
     NativeEndian::write_u64(&mut hdr[8..], sector as u64);
-    let mut done = [17u8; 1]; // != 0 for checking that it was set by the host
+    let mut done = box [17u8; 1]; // != 0 for checking that it was set by the host
 
     pool.enqueue_rww(&hdr, &mut buf[..], &mut done[..]);
 
     println!("enqueued it: {:?}", &pool.avail.mem[128*16..]);
 
-    // Finally, we "kick" the device to tell it that it should look for
-    // something to do. We could probably skip doing this and just wait for a
-    // while; even after a kick, there's no guarantee that the request will have
-    // been processed. The actual notification about "I did a thing, please go
-    // check" will be delivered back to us via an interrupt.
-    // Now we park ourselves until things change.
+    // always kick here, TODO: chaining for performance
+    port.write16(16, 0);
+
+    let tok = NEXT_TOKEN.fetch_add(1, Ordering::SeqCst) as ReadWaitToken;
+    self.in_flight.lock().insert(tok, (done,buf));
+
+    println!("Now in flight: {:?}", self.in_flight);
+    Ok(tok)
+  }
+
+  fn read_await(&self, tok: ReadWaitToken) -> Result<Box<[u8]>, Error> {
+    let mut port = self.port.borrow_mut();
+    let mut used = self.used.borrow_mut();
+
+    let (done, buf) = self.in_flight.lock().remove(&tok).unwrap(); // panics on invalid token / double read?
 
     while let None = used.take_from_ring() {
       port.write16(16, 0);
@@ -108,7 +120,7 @@ impl Client for Blockdev {
       return Err(Error::InternalError)
     }
 
-    Ok(())
+    Ok(buf)
   }
 }
 
@@ -173,6 +185,7 @@ impl Blockdev {
     //   panic!("Self-test failed!")
     // }
 
-    Ok(Blockdev { pool: RefCell::new(pool), used: RefCell::new(used), port: RefCell::new(operationsport) })
+    Ok(Blockdev { pool: RefCell::new(pool), used: RefCell::new(used), port: RefCell::new(operationsport),
+      in_flight: GlobalMutex::new(BTreeMap::new()) })
   }
 }

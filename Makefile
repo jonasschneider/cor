@@ -36,7 +36,7 @@ cor.iso: cor.elf
 
 cor.elf: $(OBJS) src/lib.o Makefile arch/boot_multiboot/boot.o arch/boot_multiboot/multiboot.ld
 	echo LONG\(0x$(shell git rev-parse HEAD | cut -c 1-6)\) > versionstamp~
-	gcc -mcmodel=large -Wl,-n,--build-id=none -ffreestanding -O2 -nostdlib -lgcc -o $@ $(OBJS) src/lib.o -L./src -lcor arch/boot_multiboot/boot.o -T arch/boot_multiboot/multiboot.ld
+	gcc -mcmodel=large -Wl,-n,--build-id=none,--gc-sections -ffreestanding -O2 -nostdlib -lgcc -o $@ $(OBJS) src/lib.o -L./src -lcor arch/boot_multiboot/boot.o -T arch/boot_multiboot/multiboot.ld
 
 intstubs.s~: Makefile
 	ruby -e '0.upto(255) { |i| puts ".align 16\n.global intrstub_#{i}\nintrstub_#{i}:\n  push %rax\n  mov $$#{i}, %rax\n  jmp isr_dispatcher\n\n" }' > $@

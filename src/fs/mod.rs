@@ -112,6 +112,7 @@ impl<'t> Fs<'t> for Cpiofs {
     }
   }
 
+
   fn slurp(&mut self, filename: &str, buf: &mut[u8]) -> Result<usize, Error> {
     let filename_needle = &filename[1..filename.len()]; // strip off leading '/'
     let entry = match self.cursor().map(|e| e.unwrap()).find(|e| e.name.as_bytes() == filename_needle.as_bytes()) {
@@ -122,11 +123,15 @@ impl<'t> Fs<'t> for Cpiofs {
 
     let mut written = 0;
     while written < entry.size {
+      use core::slice::bytes::copy_memory;
+
       println!("Reading sector {}", next_sector);
       // just dumb read & block immediately
-      let tok = self.dev.read_dispatch(next_sector as u64).unwrap();
-      if let Err(e) = self.dev.read_await(tok, &mut self.buf) {
-        return Err(Error::ReadFailed(e));
+      let b = vec![0u8;512].into_boxed_slice();
+      let tok = self.dev.read_dispatch(next_sector as u64, b).unwrap();
+      match self.dev.read_await(tok) {
+        Err(e) => { return Err(Error::ReadFailed(e)); }
+        Ok(b) => { copy_memory(&b, &mut self.buf); }
       }
       next_sector = next_sector + 1;
 

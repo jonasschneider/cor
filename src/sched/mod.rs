@@ -175,7 +175,7 @@ fn reschedule() -> bool {
         context_switch_newrbp = boxt.rbp as u64;
         println!("loading sp=0x{:x}, bp=0x{:x}", context_switch_newrsp, context_switch_newrbp);
 
-        if(boxt.started == false) {
+        if !boxt.started {
           boxt.started = true;
           context_switch_jumpto = starttask as u64;
         }
