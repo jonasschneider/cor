@@ -72,10 +72,11 @@ In the [OSDev ontology](http://wiki.osdev.org/What_order_should_I_make_things_in
   - [x] tiniest filesystem imaginable (read-only single-level?) -> `cpio` format
   - [x] read init from filesystem instead of baking it in
   - [ ] file descriptors / opening files from userspace
-- [ ] Build a userspace toolchain
+- [ ] Better toolchain for userspace
   - [x] Make a "hello world" binary that runs on host Linux and is as static as it gets (no libc)
   - [ ] Mod dietlibc to fit our syscall mechanism
   - [ ] Package that as libcorc or something
+- [ ] Use an actual `i686-elf` cross-compiler instead of mingling with gcc-linux
 - [ ] Build something like a shell that talks over serial (this will be our init)
 - [ ] Userspace binaries (`ls` and such)
 - [ ] Networking:

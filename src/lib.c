@@ -31,6 +31,10 @@ void memmove(void *dst, void *src, size_t n) {
   }
 }
 
+void memcmp() { cor_panic("memcmp()"); }
+void fmodf() { cor_panic("fmodf()"); }
+void fmod() { cor_panic("fmod()"); }
+
 void rust_deallocate(void *what, size_t old_size, size_t align) {
   rust_allocd -= old_size;
   cor_printk("bro, do you even free %p; %p (rust now holding %x bytes)\n", what, old_size, rust_allocd);

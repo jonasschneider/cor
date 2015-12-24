@@ -4,7 +4,7 @@
 # FIXME: the race condition in case qemu is slow. But i think gdb retries.
 
 DEBUGFLAGS="-DWITH_DEBUG_TRAP" make clean all
-qemu-system-x86_64 -d int,pcall,cpu_reset,ioport,unimp,guest_errors -s -nographic -serial stdio -monitor null disk.bin $QEMUOPT -drive file=disk.bin,if=virtio &
+qemu-system-x86_64 -S -d int,pcall,cpu_reset,ioport,unimp,guest_errors -s -nographic -serial stdio -monitor null -cdrom cor.iso $QEMUOPT &
 Q=$!
 sleep 3
 gdb --command scripts/stage2.gdb

@@ -192,14 +192,15 @@ done:
 dap:
   .byte 0x10 # struct size (16 bytes)
   .byte 0 # reserved 0
-  .word (0x60000 / 512) # number of sectors to read
+  .byte 0xff # number of sectors to read using EDD3
+  .byte 0 # reserved 0
 
    # target position for read, offset then segment because of little endian
-  .word 0x0000
-  .word 0x1000
+  .word 0xffff
+  .word 0xffff
 
-  .long 1 # first sector to read
-  .long 0 # high address
+  .quad 1 # first sector to read
+  .quad 0x10000 # target address
 
 # This is some strange metadata struct that points to the GDT.
 gdt_descriptor:
@@ -277,6 +278,10 @@ in_prot32:
   # instructions, registers and addresses. Let's tell the assembler about his
   # new toys:
 .code32
+
+  # Set up the data segment for protmode
+  mov $0x10, %bx
+  mov %bx, %ds
 
   # Now we are officially in 32-bit Protected Mode. Our various segment
   # selector registers are still 0, which is murkily defined to be somewhat

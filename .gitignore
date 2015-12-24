@@ -7,3 +7,5 @@
 
 .vagrant
 lit
+**/*.elf
+**/*.iso

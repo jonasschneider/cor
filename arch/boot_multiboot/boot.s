@@ -180,14 +180,10 @@ in_long64:
   # disk and placed its entrypoint at 0x10000.) For some reason, I can't do an
   # absolute jump with an immediate operand. Our job here is done, we'll go
   # and never return.
-  mov $kernel_main, %rax
+  movabs $kernel_main, %rax
   mov $0x0000008000000000, %rbx
   or %rbx, %rax
   jmp *%rax
-
-
-kernel_main:
-  jmp kernel_main
 
 broken:
   # It's rather unclear how to actually stop the processor in case of failure.
