@@ -17,24 +17,27 @@ struct region {
 struct region source_region;
 
 void mm_init() {
-  unsigned int i = 0;
+  //unsigned int i = 0;
   size_t largest_limit = 0;
   void *largest_base = 0;
 
-  while(1) {
-    if(i > 32) { // TODO: figure out this limit
-      cor_panic("too many memory map entries");
-    }
-    void *p = (void*)0x8000+(i++*32);
-    struct memmap_entry *e = (struct memmap_entry *)p;
-    if(e->base == 0xdeadbeef) break;
-    cor_printk("memory region %u: base=%lx, siz=%lx, t=%x, flags=%x\n",
-      i, e->base, e->length, e->type, e->flags);
-    if(e->length > largest_limit) {
-      largest_base = (void*)e->base;
-      largest_limit = e->length;
-    }
-  }
+  // while(1) {
+  //   if(i > 32) { // TODO: figure out this limit
+  //     cor_panic("too many memory map entries");
+  //   }
+  //   void *p = (void*)0x8000+(i++*32);
+  //   struct memmap_entry *e = (struct memmap_entry *)p;
+  //   if(e->base == 0xdeadbeef) break;
+  //   cor_printk("memory region %u: base=%lx, siz=%lx, t=%x, flags=%x\n",
+  //     i, e->base, e->length, e->type, e->flags);
+  //   if(e->length > largest_limit) {
+  //     largest_base = (void*)e->base;
+  //     largest_limit = e->length;
+  //   }
+  // }
+
+  largest_base = (void*)0x8000200000;
+  largest_limit =            0x80000;
 
   /*
     We do pretty much the best implementation ever: just ignore all segments but the biggest.

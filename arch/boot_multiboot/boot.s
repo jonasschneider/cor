@@ -71,18 +71,19 @@ go:
   add $0x1000, %edi
   movl $0x3003, (%edi)
   add $0x1000, %edi
-  movl $0x4003, (%edi)
+  movl $0x4003, (%edi) # link to innermost page table for 0-1mb
+  movl $0x5003, 8(%edi) # link to innermost page table for 1-2mb
 
   # Now all that's left is the innermost level. We want to identity map the
-  # first megabyte. Set %edi to the address of the first page table entry.
+  # first two megabytes. Set %edi to the address of the first page table entry.
   add $0x1000, %edi
 
   # This is the page table entry for the first page, it has offset 0 and
   # the same bits as above set.
   mov $0x00000003, %ebx
 
-  # Run the following block 512 times:
-  mov $512, %ecx
+  # one innermost page table is for 1meg and has 512 entries
+  mov $1024, %ecx
 
 next_page_entry:
   # write out the next page table entry
@@ -168,6 +169,11 @@ in_long64:
   mov $0x0000008000000000, %rbx
   or %rbx, %rax
   mov %rax, %rsp
+
+  # Use sane stack & data segments, otherwise GP faults will be thrown at us
+  mov $0x10, %bx
+  mov %bx, %ds
+  mov %bx, %ss
 
   # Another thing you normally would never even think about disabling, so we'll set
   # it here for you: Set bit 9 of CR4, the OSFXSR bit, to enable SSE instructions

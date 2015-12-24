@@ -45,16 +45,17 @@ fn size(length: u16) -> (usize, usize) {
 // is *not* allocated and has undefined contents.
 // TODO: Zero this out!
 fn alloc_pagealigned(size1: usize, size2: usize) -> (Box<[u8]>, Box<[u8]>) {
-  unsafe {
-    let mem1: *mut u8 = allocate(size1, 0x1000);
-    let mem2: *mut u8 = allocate(size2, 0x1000);
+  // unsafe {
+  //   let mem1: *mut u8 = allocate(size1, 0x1000);
+  //   let mem2: *mut u8 = allocate(size2, 0x1000);
 
-    // make sure the allocator did what we expect
-    assert_eq!(mem2 as usize, align_up(mem1 as usize + size1, 0x1000));
+  //   // make sure the allocator did what we expect
+  //   assert_eq!(mem2 as usize, align_up(mem1 as usize + size1, 0x1000));
 
-    (Vec::from_raw_parts(mem1, size1, size1).into_boxed_slice(),
-     Vec::from_raw_parts(mem2, size2, size2).into_boxed_slice())
-  }
+  //   (Vec::from_raw_parts(mem1, size1, size1).into_boxed_slice(),
+  //    Vec::from_raw_parts(mem2, size2, size2).into_boxed_slice())
+  // }
+  (vec![0u8; size1].into_boxed_slice(), vec![0u8; size2].into_boxed_slice())
 }
 
 pub struct Descriptor {

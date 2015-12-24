@@ -23,15 +23,19 @@ SECTIONS
   /* Higher-half stuff goes here */
   . = 0x8000130000;
 
-  .stuff : AT(0x130000)
+  .text : AT(0x130000)
   {
     *(.text)
     *(.text*)
+  }
+
+  . = 0x80001a0000;
+
+  .data : AT(0x1a0000) {
     *(.rodata*)
     *(.data*)
     *(COMMON)
     *(.bss)
-
   }
 
   . = 0x8000200000;

@@ -5,8 +5,13 @@ size_t rust_allocd = 0;
 // TODO: rust actually has these as uint, not size_t... bad?
 void *rust_allocate(size_t size, size_t align) {
   rust_allocd += size;
-  void *ptr = tkalloc(size, "rust_allocate()", align);
-  __builtin_memset(ptr, 0, size);
+  align = align;
+  void *ptr = tkalloc(size, "rust_allocate()", 0x1000);
+  void *x = ptr;
+  while(x < ptr) {
+    *((uint8_t*)x++) = 0;
+  }
+  //ptr = __builtin_memset(ptr, 0, size);
   return ptr;
 }
 

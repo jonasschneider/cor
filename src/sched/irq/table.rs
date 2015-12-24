@@ -30,6 +30,7 @@ pub fn init() {
     TABLE = Some(Box::into_raw(tab.into_boxed_slice()));
     // will "leak" the data into TABLE
   }
+  println!("sched::irq::table set up!!");
 }
 
 // TODO: should we even be able to print from IRQ-land?

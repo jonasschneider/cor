@@ -11,7 +11,7 @@ all:
 	$(MAKE) -C userspace/
 
 clean:
-	rm -f *.o *.bin *~ init *.so
+	rm -f *.o *.bin *~ init *.so cor.elf cor.iso
 	$(MAKE) -C userspace clean
 	$(MAKE) -C arch/boot_stage1 clean
 	$(MAKE) -C src clean
