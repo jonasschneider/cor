@@ -26,20 +26,16 @@ pub struct Entry {
 use block;
 use alloc::arc::Arc;
 
-pub struct Cursor<'t> {
-  dev: Arc<block::Client>,
-
-  buf: &'t mut [u8],
-  loaded: usize,
+pub struct Cursor {
+  dev: Arc<block::Cache>,
 
   // as (sector, offset)
   next_header: (usize, usize),
 }
 
-impl<'t> Cursor<'t> {
-  pub fn new(dev: Arc<block::Client>, buf: &'t mut [u8]) -> Cursor<'t> {
-    assert_eq!(512, buf.len());
-    Cursor { dev: dev, buf: buf, next_header: (0,0), loaded: !0 as usize }
+impl Cursor {
+  pub fn new(dev: Arc<block::Cache>) -> Cursor {
+    Cursor { dev: dev, next_header: (0,0) }
   }
 }
 
@@ -47,27 +43,17 @@ use collections::string::ToString;
 
 use core::slice::bytes::copy_memory;
 
-impl<'t> Iterator for Cursor<'t> {
+impl Iterator for Cursor {
   // On error, you can retry or break.
   type Item = Result<Entry, Error>;
 
   fn next(&mut self) -> Option<Result<Entry, Error>> {
     println!("Trying to read header at {:?}", self.next_header);
     let (sector, offset) = self.next_header;
-    if self.loaded != sector {
-      // just dumb read & block immediately
-      let b = vec![0u8;512].into_boxed_slice();
-      let tok = self.dev.read_dispatch(sector as u64, b).unwrap();
-      match self.dev.read_await(tok) {
-        Err(e) => { return Some(Err(Error::ReadFailed(e))); }
-        Ok(b) => { copy_memory(&b, &mut self.buf); }
-      }
-      self.loaded = sector;
-    }
 
-    //println!("sector {}: {:?}", self.loaded, &self.buf[..]);
+    let sectorbuf = self.dev.get(sector as u64).unwrap();
 
-    let entry = &mut self.buf[offset..];
+    let entry = &sectorbuf[offset..];
     //println!("entry: {:?}", &entry);
     let magic = (entry[0] as u16) | ((entry[1] as u16)<<8);
     if magic != 0o70707 {

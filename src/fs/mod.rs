@@ -37,7 +37,7 @@ pub trait Fs<'t> {
   the Fs can later reclaim it by dismantling the Arc.
 
   Likely, the File will own a way to allow the file access to the underlying block device.
-  (A block::Client in some form.)
+  (A block::Cache in some form.)
 
   Every process then has a file descriptor table of type Fdt.
 
@@ -73,17 +73,17 @@ pub trait Fs<'t> {
 
 #[derive(Debug)]
 pub struct Cpiofs {
-  dev: Arc<block::Client>,
+  dev: Arc<block::Cache>,
   buf: Box<[u8]>,
 }
 
 impl Cpiofs {
-  pub fn new(dev: Arc<block::Client>) -> Self {
+  pub fn new(dev: Arc<block::Cache>) -> Self {
     Cpiofs { dev: dev, buf: box [0u8; 512] }
   }
 
-  fn cursor<'t>(&'t mut self) -> Cursor<'t> {
-    Cursor::new(self.dev.clone(), &mut self.buf)
+  fn cursor(&mut self) -> Cursor {
+    Cursor::new(self.dev.clone())
   }
 }
 
@@ -126,20 +126,14 @@ impl<'t> Fs<'t> for Cpiofs {
       use core::slice::bytes::copy_memory;
 
       println!("Reading sector {}", next_sector);
-      // just dumb read & block immediately
-      let b = vec![0u8;512].into_boxed_slice();
-      let tok = self.dev.read_dispatch(next_sector as u64, b).unwrap();
-      match self.dev.read_await(tok) {
-        Err(e) => { return Err(Error::ReadFailed(e)); }
-        Ok(b) => { copy_memory(&b, &mut self.buf); }
-      }
+      let sectorbuf = self.dev.get(next_sector as u64).unwrap();
       next_sector = next_sector + 1;
 
       let n = {
         let src = if written == 0 {
-          &self.buf[initial_body_offset..]
+          &sectorbuf[initial_body_offset..]
         } else {
-          &self.buf[..]
+          &sectorbuf[..]
         };
         println!("copying, src: {:?}", &src[0..10]);
         let mut dest = &mut buf[written..entry.size];

@@ -11,6 +11,8 @@ extern crate alloc;
 #[macro_use(vec)] // for `vec!`
 extern crate collections;
 
+mod prelude;
+
 #[macro_use] // For `print!` and `println!`, writing to the kernel console
 mod print;
 
