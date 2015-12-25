@@ -1,3 +1,9 @@
-pub use core::fmt;
+pub use core::fmt::{self,Write};
 pub use alloc::boxed::Box;
 pub use core::ops::{Deref,DerefMut};
+pub use core::slice;
+pub use core;
+pub use collections;
+pub use collections::vec::Vec;
+pub use alloc::arc::Arc;
+pub use collections::string::String;

@@ -31,6 +31,7 @@ In the [OSDev ontology](http://wiki.osdev.org/What_order_should_I_make_things_in
 - [x] Enter 64-bit long mode and never worry about the 80s again
 - [x] Print something on the serial console
 - [x] Set up debugging symbols & stack traces for stage2 kernel code
+- [x] Switch to Multiboot/GRUB2 for reduced headaches
 - [x] Minimal ELF userspace binary loader
   - [x] Make a minimal ELF that uses statically linked kernel functions to print something
   - [x] Make a minimal ELF that somehow signals that it's executing (HLT)
@@ -60,7 +61,9 @@ In the [OSDev ontology](http://wiki.osdev.org/What_order_should_I_make_things_in
   - [ ] fork()
   - [ ] Thread-local storage for user space
   - [ ] CPU-local storage for kernel space (for SMP: eliminate mutable statics)
+- [x] Low-level non-spinning synchronization between kernel processes using wait/signal tokens
 - [ ] Think harder about safe IRQ handling
+  - strict separation between IRQ handler data and regular kernel data (Rust's ownership principles)
   - 'softirqs'/deferred processing for devices like virtio
   - context layers: userspace, kernelspace, irq? -> explicit synchronization always needed
   - special variable scopes: per-CPU, per-task, system-global (items, and the IRQ table)

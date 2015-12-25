@@ -13,7 +13,7 @@ use collections::vec::Vec;
 use core::fmt;
 use core::sync::atomic::{AtomicBool,Ordering};
 
-trait InterruptHandler {
+pub trait InterruptHandler: Send {
   fn critical(&mut self); // will be executed with interrupts disabled
   fn noncritical(&self); // will be executed with interrupts disabled, ISR shared
 }
@@ -45,7 +45,7 @@ impl UnsafeTableEntry {
     // I think we can do Relaxed since other reads/writes are protected by the mutex.
     self.again.store(true, Ordering::Relaxed);
 
-    let handlers = match self.handlers.try_lock() {
+    let mut handlers = match self.handlers.try_lock() {
       None => {
         println!("Somebody else has the handler lock. Quitting.");
         return;
@@ -61,6 +61,10 @@ impl UnsafeTableEntry {
         println!("No handlers found, this interrupt is unexpected. Wut?");
         //panic!("strange interrupt");
       }
+    } else {
+      for mut h in handlers.iter_mut() {
+        h.critical();
+      }
     }
   }
 }
@@ -72,3 +76,5 @@ pub fn init() {
 pub fn handle_irq(num: u8) {
   table::handle_irq(num);
 }
+
+pub use self::table::add_handler;

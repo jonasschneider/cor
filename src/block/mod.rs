@@ -16,8 +16,7 @@ pub use self::cached::Cache;
 // which sucks. If you need >64bit, you could always interpret the token as a pointer, I guess..
 pub type ReadWaitToken = u64;
 
-// The client should be threadsafe.
-pub trait Client: Sync + fmt::Debug {
+pub trait Client: fmt::Debug {
   // Submits a sequest to read the specified sector.
   // Returns a token that can be used to block until the read is completed.
   fn read_dispatch(&self, sector: u64, buf: Box<[u8]>) -> Result<ReadWaitToken, Error>;

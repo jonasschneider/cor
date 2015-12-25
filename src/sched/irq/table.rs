@@ -45,3 +45,9 @@ pub fn handle_irq(num: u8) {
   println!("sched::irq is done with interrupt 0x{:x}]]]",num);
   print!("\x1B[0m");
 }
+
+pub fn add_handler(num: u8, handler: Box<super::InterruptHandler>) {
+  let mut entry = unsafe { &mut (*(TABLE.unwrap()))[num as usize] };
+  let mut list = entry.handlers.lock();
+  list.push(handler);
+}
