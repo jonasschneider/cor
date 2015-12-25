@@ -74,12 +74,11 @@ pub trait Fs<'t> {
 #[derive(Debug)]
 pub struct Cpiofs {
   dev: Arc<block::Cache>,
-  buf: Box<[u8]>,
 }
 
 impl Cpiofs {
   pub fn new(dev: Arc<block::Cache>) -> Self {
-    Cpiofs { dev: dev, buf: box [0u8; 512] }
+    Cpiofs { dev: dev }
   }
 
   fn cursor(&mut self) -> Cursor {
