@@ -3,15 +3,14 @@ use alloc::boxed::Box;
 use collections::vec::Vec;
 use sync::global_mutex::GlobalMutex;
 use core::slice::bytes::copy_memory;
+use core::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
 
 use collections::btree_map::BTreeMap;
 
 // this could be SleepingMutex as well.
 #[derive(Debug)]
-pub struct Ramdev(GlobalMutex<Vec<u8>>, GlobalMutex<BTreeMap<ReadWaitToken,Box<[u8]>>>);
+pub struct Ramdev(GlobalMutex<Vec<u8>>, GlobalMutex<BTreeMap<ReadWaitToken,Box<[u8]>>>, AtomicUsize);
 
-use core::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
-static NEXT_TOKEN: AtomicUsize = ATOMIC_USIZE_INIT;
 
 // TODO: bounds check (sector vs. length)
 impl Client for Ramdev {
@@ -24,7 +23,7 @@ impl Client for Ramdev {
     copy_memory(&mem[offs..offs+512], &mut buf); // this could be a short read
 
     let mut map = self.1.lock();
-    let tok = NEXT_TOKEN.fetch_add(1, Ordering::SeqCst) as ReadWaitToken;
+    let tok = self.2.fetch_add(1, Ordering::SeqCst) as ReadWaitToken;
     map.insert(tok, buf);
 
     Ok(tok)
@@ -44,6 +43,6 @@ impl Ramdev {
       let data = [(i % 256) as u8; 512];
       copy_memory(&data, &mut mem[(i*512)..(i*512)+512]);
     }
-    Ramdev(GlobalMutex::new(mem), GlobalMutex::new(BTreeMap::new()))
+    Ramdev(GlobalMutex::new(mem), GlobalMutex::new(BTreeMap::new()), ATOMIC_USIZE_INIT)
   }
 }
