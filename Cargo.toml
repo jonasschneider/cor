@@ -1,0 +1,13 @@
+[package]
+name = "cor"
+version = "0.0.1"
+authors = ["Jonas Schneider <mail@jonasschneider.com>"]
+
+[lib]
+crate_type = ["staticlib"]
+
+[dependencies]
+core = { path = "src/lib/libcore" }
+kalloc = { path = "src/lib/libkalloc" }
+alloc = { path = "src/lib/liballoc" }
+collections = { path = "src/lib/libcollections" }

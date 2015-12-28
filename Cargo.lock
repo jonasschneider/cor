@@ -1,0 +1,44 @@
+[root]
+name = "cor"
+version = "0.0.1"
+dependencies = [
+ "alloc 0.0.1",
+ "collections 0.0.1",
+ "core 0.0.1",
+ "kalloc 0.0.1",
+]
+
+[[package]]
+name = "alloc"
+version = "0.0.1"
+dependencies = [
+ "core 0.0.1",
+]
+
+[[package]]
+name = "collections"
+version = "0.0.1"
+dependencies = [
+ "alloc 0.0.1",
+ "core 0.0.1",
+ "rustc_unicode 0.0.1",
+]
+
+[[package]]
+name = "core"
+version = "0.0.1"
+
+[[package]]
+name = "kalloc"
+version = "0.0.1"
+dependencies = [
+ "core 0.0.1",
+]
+
+[[package]]
+name = "rustc_unicode"
+version = "0.0.1"
+dependencies = [
+ "core 0.0.1",
+]
+

@@ -1,0 +1,12 @@
+[package]
+name = "collections"
+version = "0.0.1"
+authors = ["Jonas Schneider <mail@jonasschneider.com>"]
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+core = { path = "../libcore" }
+rustc_unicode = { path = "../librustc_unicode" }
+alloc = { path = "../liballoc" }
