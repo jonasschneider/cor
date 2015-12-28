@@ -22,7 +22,6 @@ struct Task {
   started : bool,
   stack: kbuf::Buf<'static>,
   rsp: u64,
-  rbp: u64,
   entrypoint: Option<Entrypoint>, // will be None after launch
 
   // parking/scheduling info
@@ -49,9 +48,7 @@ struct PerCoreState {
 // FIXME(smp): this should be per-core as well, but we have to access it from C-land, sooo...
 extern {
   static mut context_switch_oldrsp_dst : u64;
-  static mut context_switch_oldrbp_dst : u64;
   static mut context_switch_newrsp : u64;
-  static mut context_switch_newrbp : u64;
   static mut context_switch_jumpto : u64;
 
   fn context_switch();
@@ -141,13 +138,11 @@ fn reschedule() -> bool {
   unsafe {
     // eep
     context_switch_oldrsp_dst = 0;
-    context_switch_oldrbp_dst = 0;
     context_switch_newrsp = 0;
-    context_switch_newrbp = 0;
     context_switch_jumpto = 0;
 
     let ref mut s = *theState;
-    println!("yielding with state={:?}, data={:?}", s, context_switch_oldrbp_dst);
+    println!("yielding with state={:?}, data={:?}", s, context_switch_oldrsp_dst);
 
     let next = match s.runnable.pop_front() {
       None => {
@@ -173,8 +168,7 @@ fn reschedule() -> bool {
       }
       Some(mut boxt) => {
         context_switch_newrsp = boxt.rsp as u64; // POINTER SIZES FTW
-        context_switch_newrbp = boxt.rbp as u64;
-        println!("loading sp=0x{:x}, bp=0x{:x}", context_switch_newrsp, context_switch_newrbp);
+        println!("loading sp=0x{:x}", context_switch_newrsp);
 
         if !boxt.started {
           boxt.started = true;
@@ -192,7 +186,6 @@ fn reschedule() -> bool {
           println!("task marked as exited, not rescheduling");
         } else {
           context_switch_oldrsp_dst = mem::transmute(&old_t.rsp);
-          context_switch_oldrbp_dst = mem::transmute(&old_t.rbp);
           s.runnable.push_back(old_t); // TODO(perf): this allocates!!! LinkedList sucks, apparently
         }
       },
@@ -232,7 +225,6 @@ pub fn add_task<F, T>(entrypoint: F, desc: &'static str)
   let t = box Task{id: id, desc: desc, entrypoint: Some(Entrypoint(box main)),
     stack: stack,
     rsp: rsp,
-    rbp: rsp,
     started: false,
     exited: false,
     parked_for_irq: 0};

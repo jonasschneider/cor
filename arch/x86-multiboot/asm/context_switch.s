@@ -4,14 +4,8 @@
 .globl context_switch_oldrsp_dst
 context_switch_oldrsp_dst:
   .quad 0
-.globl context_switch_oldrbp_dst
-context_switch_oldrbp_dst:
-  .quad 0
 .globl context_switch_newrsp
 context_switch_newrsp:
-  .quad 0
-.globl context_switch_newrbp
-context_switch_newrbp:
   .quad 0
 .globl context_switch_jumpto
 context_switch_jumpto:
@@ -36,29 +30,25 @@ context_switch:
 
     # awfully, we can only movabs into %rax.
     # TODO(perf): the entire method of passing parameters here.. can't rust just be smart about it?
-    movabs context_switch_oldrbp_dst, %rax
-    mov %rax, %rcx
     movabs context_switch_newrsp, %rax
     mov %rax, %r8
-    movabs context_switch_newrbp,%rax
-    mov %rax,  %r9
     movabs context_switch_jumpto, %rax
     mov %rax, %r10
     movabs context_switch_oldrsp_dst, %rax
 
-
     cmp $0, %rax
     je context_switch_discard_old # skip saving the old values, this is only needed when a task exits
+    push %rbp
     mov %rsp, (%rax)
-    mov %rbp, (%rcx)
   context_switch_discard_old:
     mov %r8, %rsp
-    mov %r9, %rbp
     cmp $0, %r10
     jne context_switch_jmp_to_starttask
 
+    pop %rbp
     ret # this will "return" to the new stack
 
   context_switch_jmp_to_starttask:
+    mov %rsp, %rbp
     jmp *%r10
 
