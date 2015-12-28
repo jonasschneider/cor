@@ -10,7 +10,7 @@ $(PREFIX)/cor-x86_64-multiboot.iso: $(PREFIX)/cor.elf
 	cp $(PREFIX)/cor.elf $(PREFIX)/iso/boot
 	grub-mkrescue -d /usr/lib/grub/i386-pc/ -o $@ $(PREFIX)/iso
 
-$(PREFIX)/libcor.a: ../../src/**/*.rs
+$(PREFIX)/libcor.a: $(shell find ../../src)
 	cargo rustc --release --target=`pwd`/x86_64-none-elf.json -- -C no-stack-check -C relocation-model=static -C code-model=large -Z no-landing-pads
 
 $(PREFIX)/cor.elf: boot.o asm/* runtime.o $(PREFIX)/libcor.a
