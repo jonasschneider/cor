@@ -1,0 +1,13 @@
+ash
+builtins.c
+builtins.h
+mknodes
+mksyntax
+nodes.c
+nodes.h
+mksignames
+signames.c
+signames.h
+mksyntax
+syntax.c
+syntax.h

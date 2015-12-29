@@ -39,13 +39,13 @@ extern char nullstr[1];                /* null string */
 char *trap[MAXSIG+1];                /* trap handler commands */
 MKINIT char sigmode[MAXSIG];        /* current value of signal */
 char gotsig[MAXSIG];                /* indicates specified signal received */
-int sigpending;                        /* indicates some signal received */
+int ash_sigpending;                        /* indicates some signal received */
 
 
 #ifdef SYSV
-typedef void (*sigaction)();        /* type returned by signal(2) */
+typedef void (*ash_sigaction)();        /* type returned by signal(2) */
 #else
-typedef int (*sigaction)();        /* type returned by signal(2) */
+typedef int (*ash_sigaction)();        /* type returned by signal(2) */
 #endif
 
 /*
@@ -114,7 +114,7 @@ clear_traps() {
 int
 setsignal(signo) {
       int action;
-      sigaction sigact;
+      ash_sigaction sigact;
       char *t;
       extern void onsig();
 
@@ -164,7 +164,7 @@ setsignal(signo) {
             return 0;
       switch (action) {
             case S_DFL:           sigact = SIG_DFL;                break;
-            case S_CATCH:  sigact = (sigaction)onsig;        break;
+            case S_CATCH:  sigact = (ash_sigaction)onsig;        break;
             case S_IGN:           sigact = SIG_IGN;                break;
       }
       *t = action;
@@ -205,13 +205,13 @@ SHELLPROC {
 
 void
 onsig(signo) {
-      signal(signo, (sigaction)onsig);
+      signal(signo, (ash_sigaction)onsig);
       if (signo == SIGINT && trap[SIGINT] == NULL) {
             onint();
             return;
       }
       gotsig[signo - 1] = 1;
-      sigpending++;
+      ash_sigpending++;
 }
 
 /*
@@ -234,7 +234,7 @@ dotrap() {
             evalstring(trap[i]);
       }
 done:
-      sigpending = 0;
+      ash_sigpending = 0;
 }
 
 /*

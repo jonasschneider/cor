@@ -20,13 +20,6 @@
 
 #ifdef BSD
 
-#ifdef __STDC__
-int stat(char *, struct stat *);
-#else
-int stat();
-#endif
-
-
 /*
  * The BSD opendir routine doesn't check that what is being opened is a
  * directory, so we have to include the check in a wrapper routine.

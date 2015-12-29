@@ -7,7 +7,7 @@
 FILES=main.o options.o parser.o eval.o expand.o jobs.o redir.o exec.o\
 	builtins.o cd.o miscbltin.o mail.o var.o input.o output.o nodes.o syntax.o\
 	signames.o memalloc.o error.o trap.o show.o dirent.o mystring.o\
-	init.o
+#	init.o
 
 CFILES=main.c options.c parser.c eval.c expand.c jobs.c redir.c exec.c\
 	builtins.c cd.c miscbltin.c mail.c var.c input.c output.c nodes.c syntax.c\
@@ -18,10 +18,12 @@ GENERATEDFILES=syntax.h syntax.c signames.h signames.c nodes.c nodes.c\
 
 #MALLOC=mymalloc.o
 
+HOSTCC=gcc
+HOSTCFLAGS=
 
-#CC=gcc
+CC=x86_64-elf-gcc
 DEBUG=-g
-CFLAGS=$(DEBUG)
+CFLAGS=$(DEBUG) -I/vagrant/userspace/include -I/usr/include -D__LP64__ -D__x86_64__ -nodefaultlibs -w -DBUFSIZ=1024 -DNTTYDISC=1
 LDFLAGS=
 BLTIN=bltin
 
@@ -42,9 +44,7 @@ clobber: clean
 
 
 ash:$P $(FILES) $(BLTIN)/bltinlib.a $(MALLOC)
-	$(CC) -o temp $(LDFLAGS) $(DEBUG) $(FILES) $(BLTIN)/bltinlib.a $(MALLOC)
-#        ld -o temp crt0.o $(FILES) $(BLTIN)/bltinlib.a $(MALLOC) -lc
-	mv -f temp $@
+	$(CC) $(CFLAGS) -o $@ $(LDFLAGS) $(DEBUG) $(FILES) $(BLTIN)/bltinlib.a $(MALLOC)
 
 lint:
 	lint $(CFILES) init.c
@@ -53,35 +53,41 @@ syntax.c syntax.h: mksyntax
 	./mksyntax
 
 mksyntax: mksyntax.c parser.h
-	$(CC) -o mksyntax mksyntax.c
+	$(HOSTCC) $(HOSTCFLAGS) -o mksyntax mksyntax.c
 
 signames.c signames.h: mksignames
 	./mksignames
 
 mksignames: mksignames.c
-	$(CC) -o mksignames mksignames.c
+	$(HOSTCC) $(HOSTCFLAGS) -o mksignames mksignames.c
 
 nodes.c nodes.h: mknodes nodetypes nodes.c.pat
 	./mknodes
 
 mknodes: mknodes.c
-	$(CC) -o mknodes -g mknodes.c
+	$(HOSTCC) $(HOSTCFLAGS) -o mknodes -g mknodes.c
 
 token.def: mktokens
 	sh mktokens
 
-builtins.h builtins.c: mkbuiltins builtins
+builtins.h builtins.c: mkbuiltins builtinlist
 	sh mkbuiltins
 	rm -f builtins.o
 
+builtins: builtins.o
+	$(CC) -c $(CFLAGS) $< -o $@
+
 .c:
 	echo make is confused, it but should recover
+
+%.o: %.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $< -o $@
 
 init.o: mkinit $(CFILES)
 	./mkinit '$(CC) -c $(CFLAGS) init.c' $(CFILES)
 
 mkinit: mkinit.c
-	$(CC) -o mkinit mkinit.c
+	$(HOSTCC) $(HOSTCFLAGS) -o mkinit mkinit.c
 
 
 cd.o: shell.h var.h nodes.h jobs.h options.h output.h memalloc.h error.h\

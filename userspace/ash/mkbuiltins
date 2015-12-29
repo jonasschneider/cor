@@ -17,7 +17,7 @@ cat <<\!
 #include "builtins.h"
 
 !
-awk '/^[^#]/ {if('$havejobs' || $2 != "-j") print $0}' builtins |
+awk '/^[^#]/ {if('$havejobs' || $2 != "-j") print $0}' builtinlist |
         sed 's/-j//' > $temp
 awk '{        printf "int %s();\n", $1}' $temp
 echo '

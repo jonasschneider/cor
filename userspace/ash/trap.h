@@ -4,7 +4,7 @@
  * by the Ash General Public License.  See the file named LICENSE.
  */
 
-extern int sigpending;
+//extern int sigpending;
 
 #ifdef __STDC__
 void clear_traps(void);

@@ -13,6 +13,9 @@ rootfs.bin: init
 init: init.c init_lib.c init.ld ../include/cor/*.h
 	$(CC) $(CCFLAGS) -include stdlib.h init.c init_lib.c -T init.ld -o init
 
+crt0.o: init_lib.c
+	$(CC) $(CCFLAGS) -c init_lib.c -o $@
+
 init.ld: init.ld_default
 	cp $< $@
 

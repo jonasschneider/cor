@@ -2,6 +2,67 @@
 #include <vendor/stdarg.h>
 #include <stdint.h>
 
+
+#define stub(n) void n() { while(1); }
+
+int stdin = 0;
+int stderr = 1;
+int stdout = 2;
+
+int *__errno_location;
+
+stub(abort);
+stub(closedir);
+stub(execve);
+stub(fork);
+stub(getenv);
+stub(getpgrp);
+stub(getpid);
+stub(init);
+stub(initshellproc);
+stub(ioctl);
+stub(kill);
+stub(killpg);
+stub(_longjmp);
+stub(raise);
+stub(readdir);
+stub(reset);
+stub(_setjmp);
+stub(setpgrp);
+stub(sigsetmask);
+stub(wait3);
+stub(execl);
+stub(pipe);
+stub(fcntl);
+stub(realloc);
+stub(chdir);
+stub(strcat);
+stub(readlink);
+stub(lstat);
+stub(free);
+stub(signal);
+stub(atoi);
+stub(opendir);
+stub(_exit);
+stub(strcpy);
+stub(fgets);
+stub(putc);
+stub(fopen);
+stub(strcmp);
+stub(putchar);
+stub(fwrite);
+stub(atol);
+stub(sprintf);
+stub(stat);
+stub(puts);
+stub(geteuid);
+stub(getegid);
+stub(fprintf);
+stub(close);
+stub(isatty);
+stub(fputs);
+stub(umask);
+
 int exit(int ret) {
   __asm__ ( "movq %0, %%rax\n"
             "movq %1, %%rbx\n"

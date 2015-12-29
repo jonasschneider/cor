@@ -15,7 +15,7 @@
 #ifdef __STDC__
 #include "stdarg.h"
 #else
-#include <varargs.h>        
+#include <varargs.h>
 #endif
 #include "myerrno.h"
 
@@ -38,7 +38,7 @@ char *commandname;
  */
 
 void
-raise(e) {
+raise_e(e) {
       if (handler == NULL)
             abort();
       exception = e;
@@ -67,7 +67,7 @@ onint() {
       sigsetmask(0);
 #endif
       if (rootshell && iflag)
-            raise(EXINT);
+            raise_e(EXINT);
       else
             _exit(128 + SIGINT);
 }
@@ -120,7 +120,7 @@ error(va_alist)
       }
       va_end(ap);
       flushall();
-      raise(EXERROR);
+      raise_e(EXERROR);
 }
 
 /*
@@ -164,7 +164,7 @@ STATIC const struct errname errormsg[] = {
 #endif
       ENOMEM, ALL,        "not enough memory",
 #ifdef ENOLINK
-      ENOLINK, ALL,        "remote access failed"
+      ENOLINK, ALL,        "remote access failed",
 #endif
 #ifdef EMULTIHOP
       EMULTIHOP, ALL,        "remote access failed",

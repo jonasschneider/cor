@@ -45,8 +45,7 @@ int nstr;                        /* number of structures */
 struct str str[MAXTYPES];        /* the structures */
 struct str *curstr;                /* current structure */
 
-
-FILE *infp = stdin;
+FILE *infp;
 char line[1024];
 int linno;
 char *linep;
@@ -59,6 +58,7 @@ char *savestr();
 main(argc, argv)
       char **argv;
       {
+      infp = stdin;
       if ((infp = fopen("nodetypes", "r")) == NULL)
             error("Can't open nodetypes");
       while (readline()) {

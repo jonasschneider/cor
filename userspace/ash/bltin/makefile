@@ -5,8 +5,8 @@
 LIBFILES=catfcmd.o echocmd.o exprcmd.o linecmd.o nlechocmd.o\
 	operators.o regexp.o
 DEBUG=-g
-CFLAGS=$(DEBUG)
-#CC=gcc
+CFLAGS=$(DEBUG) -I/usr/include -D__LP64__ -D__x86_64__ -nodefaultlibs
+CC=x86_64-elf-gcc
 
 all:$P bltinlib.a catf echo expr line nlecho true umask
 
@@ -23,8 +23,8 @@ catfcmd.o: catf.c bltin.h ../shell.h ../error.h
 expr: expr.c bltin.h ../shell.h operators.h operators.o regexp.o error.o stalloc.o
 	$(CC) $(CFLAGS) -o $@ expr.c operators.o regexp.o error.o stalloc.o
 	-rm -f test '['
-	ln expr test
-	ln expr '['
+	ln -s expr test
+	ln -s expr '['
 
 exprcmd.o: expr.c bltin.h ../shell.h operators.h
 	$(CC) -DSHELL $(CFLAGS) -c expr.c
@@ -65,7 +65,7 @@ true:
 	> :
 	chmod 755 :
 	rm -f true
-	ln : true
+	ln -s : true
 
 stalloc.o: ../shell.h
 
