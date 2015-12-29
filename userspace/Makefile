@@ -11,7 +11,7 @@ clean:
 	rm -fr dietlibc-0.33{,.tar.bz2} init init.ld rootfs.bin
 
 rootfs.bin: init Makefile
-	(echo init) | cpio --create > $@
+	(echo ../README.md; echo init) | cpio --create > $@
 
 init: init.c init_lib.c init.ld ../include/cor/*.h ash/ash
 	#cp ash/ash init
