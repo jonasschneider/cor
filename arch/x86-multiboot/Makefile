@@ -24,4 +24,5 @@ runtime.o: ../../src/runtime.c
 	$(CC) -o $@ $< -c $(KCCFLAGS)
 
 clean:
+	make -C asm clean
 	rm -f boot.o runtime.o $(PREFIX)/cor-x86_64-multiboot.iso $(PREFIX)/cor.elf
