@@ -12,6 +12,11 @@ is_return_from_trampoline:
   jmp trampoline_from_user
 
 isr_dispatcher:
+  # no==0xd (protection fault): return from userspace
+  sub $0xd, %rax
+  jz cor_panic
+  add $0xd, %rax
+
   # no==49 (syscall): return from userspace
   sub $49, %rax
   jz is_return_from_trampoline

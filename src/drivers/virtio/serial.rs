@@ -210,53 +210,53 @@ impl Serialdev {
     state = state | VIRTIO_STATUS_DRIVER_OK;
     configport.write8(18, state);
     println!("Device state is now: {}", state);
-    println!("ISR: {}", rxport.read8(19));
+    // println!("ISR: {}", rxport.read8(19));
 
-    println!("rxbuf: {:?}", rxbuf);
-    println!("Triggering..");
+    // println!("rxbuf: {:?}", rxbuf);
+    // println!("Triggering..");
 
-    // notify on both queues
-    txport.write16(16, 1);
-    txport.write16(16, 0);
-    //txport.write16(16, 2);
-
-
-    // let handler = RxHandler {
-    //   rings: vec![(used,wakeup.clone())],
-    //   isr_status_port: rxport,
-    // };
-
-    // a PORT_OPEN(0) ctrl message (indicating the port is closed) is sent after EOF on stdin, i.e. if you pipe something into qemu
-
-    //sched::irq::add_handler(0x2b, box handler);
-
-    println!("tx: {:?}", used.take_from_ring());
-    println!("rx: {:?}", rxused.take_from_ring());
-
-    println!("ctrl-rx: {:?}", ctrlused.take_from_ring());
-    println!("ISR: {}", rxport.read8(19));
-    unsafe { asm_eoi(); }
-    println!("rxbuf: {:?}", rxbuf);
-
-    avail.add_to_ring(0);
-
-    txport.write16(16, 1);
-    //txport.write16(16, 0);
-    //txport.write16(16, 2);
+    // // notify on both queues
+    // txport.write16(16, 1);
+    // txport.write16(16, 0);
+    // //txport.write16(16, 2);
 
 
-    println!("Waiting for take() on rx-used..");
-    while let None = rxused.take_from_ring() {}
-    println!("done");
+    // // let handler = RxHandler {
+    // //   rings: vec![(used,wakeup.clone())],
+    // //   isr_status_port: rxport,
+    // // };
 
-    println!("tx: {:?}", used.take_from_ring());
-    println!("rx: {:?}", rxused.take_from_ring());
-    println!("ctrl-rx: {:?} ({:?})", ctrlused.take_from_ring(), cbuf);
-    println!("ISR: {}", rxport.read8(19));
-    unsafe { asm_eoi(); }
-    println!("rxbuf: {:?}", rxbuf);
+    // // a PORT_OPEN(0) ctrl message (indicating the port is closed) is sent after EOF on stdin, i.e. if you pipe something into qemu
 
-    //panic!("done");
+    // //sched::irq::add_handler(0x2b, box handler);
+
+    // println!("tx: {:?}", used.take_from_ring());
+    // println!("rx: {:?}", rxused.take_from_ring());
+
+    // println!("ctrl-rx: {:?}", ctrlused.take_from_ring());
+    // println!("ISR: {}", rxport.read8(19));
+    // unsafe { asm_eoi(); }
+    // println!("rxbuf: {:?}", rxbuf);
+
+    // avail.add_to_ring(0);
+
+    // txport.write16(16, 1);
+    // //txport.write16(16, 0);
+    // //txport.write16(16, 2);
+
+
+    // println!("Waiting for take() on rx-used..");
+    // while let None = rxused.take_from_ring() {}
+    // println!("done");
+
+    // println!("tx: {:?}", used.take_from_ring());
+    // println!("rx: {:?}", rxused.take_from_ring());
+    // println!("ctrl-rx: {:?} ({:?})", ctrlused.take_from_ring(), cbuf);
+    // println!("ISR: {}", rxport.read8(19));
+    // unsafe { asm_eoi(); }
+    // println!("rxbuf: {:?}", rxbuf);
+
+    // //panic!("done");
 
     Ok(Serialdev { port: txport, bufs: bufs, avail: avail, next: 0, used: used, rxbuf: rxbuf,
       rxavail: rxavail, rxused: rxused})

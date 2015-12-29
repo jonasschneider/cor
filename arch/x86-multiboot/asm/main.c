@@ -15,6 +15,7 @@ unsigned long *timer = (unsigned long*)(0x81000|0x0000008000000000);
 volatile char resume_boot_marker = 0;
 
 void cor_panic(const char *msg) {
+  if(msg == 0) msg = "(unknown)";
   cor_printk("\nPANIC: %s\n    (at t=%x)\n", msg, *timer);
   // panicking is actually pretty hard; we should clean up and disable as many interrupts
   // etc. as possible here, since these can wake us up from HLT.

@@ -37,7 +37,7 @@ void mm_init() {
   // }
 
   largest_base = (void*)0x8000200000;
-  largest_limit =            0x80000;
+  largest_limit =            0xfffff;
 
   /*
     We do pretty much the best implementation ever: just ignore all segments but the biggest.

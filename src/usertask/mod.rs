@@ -98,6 +98,9 @@ pub fn exec_init() {
         print!("after read: {:?}", data);
         //print!("    | {}", text);
       },
+      // Syscall(s) => {
+      //   println!("syscall: {:?}",s);
+      // },
       _ => {
         println!("unknown syscall, crashing process: {:?}", r);
         break

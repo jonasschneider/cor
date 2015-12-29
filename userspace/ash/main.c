@@ -62,6 +62,7 @@ main(argc, argv)  char **argv; {
       volatile int state;
       char *shinit;
 
+      cmdloop(1);
 #if PROFILE
       monitor(4, etext, profile_buf, sizeof profile_buf, 50);
 #endif
