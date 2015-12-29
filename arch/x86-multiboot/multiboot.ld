@@ -29,9 +29,9 @@ SECTIONS
     *(.text*)
   }
 
-  . = 0x80001a0000;
+  . = 0x80001c0000;
 
-  .data : AT(0x1a0000) {
+  .data : AT(0x1c0000) {
     *(.rodata*)
     *(.data*)
     *(COMMON)

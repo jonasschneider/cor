@@ -16,7 +16,7 @@ Feature: Disk access
       #include <stdio.h>
 
       int main() {
-        ssize_t ret_in;
+        size_t ret_in;
         char buffer[24];
 
         int fd = open("/test.txt, O_RDONLY);

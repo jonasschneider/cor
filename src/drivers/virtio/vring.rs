@@ -110,8 +110,8 @@ pub struct Used {
 
 impl Used {
   // TODO: not sure if this is correct
-  // Return the descriptor index of the taken buffer, if any.
-  pub fn take_from_ring(&mut self) -> Option<u16> {
+  // Return the descriptor index of the taken buffer, if any, and how many bytes were written by the device in that buffer.
+  pub fn take_from_ring(&mut self) -> Option<(u16, usize)> {
     let current_head = NativeEndian::read_u16(&self.mem[2..]);
 
     let ring_index_to_take = match self.last_taken_index {
@@ -131,7 +131,7 @@ impl Used {
         let len = NativeEndian::read_u32(&self.mem[4+4+8*(i as usize)..]);
         self.last_taken_index = Some(i);
         println!("Taking buffer {} (written={}) from index {}", descid, len, i);
-        Some(descid)
+        Some((descid, len as usize))
       },
       None => {
         //println!("Nothing to take: head {}, last {:?}", current_head, self.last_taken_index);

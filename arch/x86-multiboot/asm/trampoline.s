@@ -10,7 +10,10 @@ trampoline_to_user_rsp:
 trampoline_to_user_codeseg:
   .quad 0
 
-
+# value to load into rax before (re-)entering userspace
+.globl trampoline_to_user_raxval
+trampoline_to_user_raxval:
+  .quad 0
 
 trampoline_previous_kernel_rsp:
   .quad 0
@@ -40,11 +43,18 @@ trampoline_to_user:
     pushf
     pushq %rcx
     pushq %rax
+
+    # Store syscall ret value
+    #movabs trampoline_to_user_raxval, %rax
+
+    # Bye
     iretq
 
 
 .globl trampoline_from_user
 trampoline_from_user:
+    # Note that we'll always clobber rax, rbx and a couple more here. FIXME
+
     movabs %rax, trampoline_from_user_arg1
     mov %rbx, %rax
     movabs %rax, trampoline_from_user_arg2

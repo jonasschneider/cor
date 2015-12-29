@@ -14,6 +14,7 @@ const VRING_DESC_F_WRITE: u16 = 2; /* This marks a buffer as write-only (otherwi
 
 use super::vring::Descriptor;
 use mem::*;
+use collections::vec_deque::VecDeque;
 
 extern {
   fn asm_eoi();
@@ -27,15 +28,18 @@ pub struct Serialdev {
   avail: vring::Avail,
   used: vring::Used,
   next: u16,
+
+  rxavail: vring::Avail,
+  rxused: vring::Used,
 }
 
 impl Serialdev {
   pub fn putc(&mut self, c: char) {
     // FIXME: racy..?
     let bufs: &mut [Box<[u8;100]>] = self.bufs.borrow_mut();
-    let mut b = &mut bufs[self.next as usize];
+    let mut b = &mut bufs[0];
     b[0] = c as u8;
-    self.avail.add_to_ring(self.next);
+    self.avail.add_to_ring(0);
     println!("enqueued it: {:?}", &self.avail.mem[128*16..]);
 
     self.port.write16(16, 1);
@@ -45,8 +49,37 @@ impl Serialdev {
 
     }
     println!("done");
+  }
 
-    self.next = self.next + 1;
+  pub fn read(&mut self, buf: &mut[u8]) -> usize {
+    // self.next = self.next + 1; // just for safety, i think descriptors might be cached?
+
+    // self.rxavail.write_descriptor_at(self.next as usize, Descriptor {
+    //   addr: physical_from_kernel((buf[..]).as_ptr() as usize) as u64,
+    //   len: buf.len() as u32,
+    //   flags: VRING_DESC_F_WRITE,
+    //   next: 0,
+    // });
+    // self.rxavail.add_to_ring(self.next);
+
+    println!("before wait: {:?}", self.rxbuf);
+
+    self.rxavail.add_to_ring(0);
+    self.port.write16(16, 0);
+
+    let mut n;
+    loop {
+      match self.rxused.take_from_ring() {
+        None => {},
+        Some((ref bufdesc, ref read)) => { n=*read;break; }
+      }
+    }
+
+    buf.clone_from_slice(&self.rxbuf[0..n]);
+
+    println!("after wait: {:?}", self.rxbuf);
+
+    n
   }
 
   pub fn new(mut port: cpuio::IoPort) -> Result<Self, InitError> {
@@ -166,7 +199,7 @@ impl Serialdev {
     buf[20] = '\n' as u8;
     avail.write_descriptor_at(0, Descriptor {
       addr: physical_from_kernel(buf.as_ptr() as usize) as u64,
-      len: 40,
+      len: 1,
       flags: 0,
       next: 0,
     });
@@ -223,6 +256,9 @@ impl Serialdev {
     unsafe { asm_eoi(); }
     println!("rxbuf: {:?}", rxbuf);
 
-    Ok(Serialdev { port: txport, bufs: bufs, avail: avail, next: 0, used: used, rxbuf: rxbuf})
+    //panic!("done");
+
+    Ok(Serialdev { port: txport, bufs: bufs, avail: avail, next: 0, used: used, rxbuf: rxbuf,
+      rxavail: rxavail, rxused: rxused})
   }
 }

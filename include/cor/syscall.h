@@ -1,3 +1,5 @@
 #define SYSCALL_EXIT 1
 #define SYSCALL_WRITE 2
-#define SYSCALL_MOREMEM 3
+#define SYSCALL_READ 3
+#define SYSCALL_OPEN 4
+#define SYSCALL_MOREMEM 5

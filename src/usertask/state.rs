@@ -13,6 +13,7 @@ extern {
   static mut trampoline_from_user_rip : u64;
   static mut trampoline_from_user_rsp : u64;
   static mut trampoline_from_user_codeseg : u64;
+  static mut trampoline_to_user_raxval : u64;
 }
 
 type uptr = u64;
@@ -27,6 +28,8 @@ pub struct UsermodeState {
 pub enum SyscallType {
   Exit(i64),
   Write(u64, uptr, usize),
+  Read(u64, uptr, usize),
+  Open(uptr, u64),
 }
 
 #[derive(Debug)]
@@ -41,11 +44,12 @@ impl UsermodeState {
     UsermodeState { rip: entrypoint, rsp: initial_stack }
   }
 
-  pub fn step(&mut self) -> StepResult {
+  pub fn step(&mut self, raxval: u64) -> StepResult {
     unsafe {
       trampoline_to_user_codeseg = 24 | 3; // 3*8=GDT offset, RPL=3
       trampoline_to_user_rsp = self.rsp;
       trampoline_to_user_rip = self.rip;
+      trampoline_to_user_raxval = raxval;
 
       println!("Trampolining to userspace: rip@{:x} codeseg@{:x} rsp@{:x}", trampoline_to_user_rip, trampoline_to_user_codeseg, trampoline_to_user_rsp);
 
@@ -59,6 +63,8 @@ impl UsermodeState {
       match trampoline_from_user_arg1 {
         1 => StepResult::Syscall(SyscallType::Exit(trampoline_from_user_arg2 as i64)),
         2 => StepResult::Syscall(SyscallType::Write(trampoline_from_user_arg2 as u64, trampoline_from_user_arg3 as uptr, trampoline_from_user_arg4 as usize)),
+        3 => StepResult::Syscall(SyscallType::Read(trampoline_from_user_arg2 as u64, trampoline_from_user_arg3 as uptr, trampoline_from_user_arg4 as usize)),
+        4 => StepResult::Syscall(SyscallType::Open(trampoline_from_user_arg2 as uptr, trampoline_from_user_arg3 as u64)),
         _ => StepResult::Crash,
       }
     }

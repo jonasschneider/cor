@@ -13,6 +13,31 @@ int exit(int ret) {
   return 0;
 }
 
+int open(const char *path, int flags) {
+  __asm__ ( "movq %0, %%rax\n"
+            "movq %1, %%rbx\n"
+            "movq %2, %%rcx\n"
+            "int $49"
+          :
+          : "r"((uint64_t)SYSCALL_OPEN), "r"((uint64_t)path), "r"((uint64_t)flags)
+          : "rax", "rbx", "rcx", "rdx", "r12", "r13", "r14", "r15"
+          );
+  return 0;
+}
+
+int read(int fd, const void *buf, size_t count) {
+  __asm__ ( "movq %0, %%rax\n"
+            "movq %1, %%rbx\n"
+            "movq %2, %%rcx\n"
+            "movq %3, %%rdx\n"
+            "int $49"
+          :
+          : "r"((uint64_t)SYSCALL_READ), "r"((uint64_t)fd), "r"((uint64_t)buf), "r"((uint64_t)count)
+          : "rax", "rbx", "rcx", "rdx", "r12", "r13", "r14", "r15"
+          );
+  return 0;
+}
+
 int write(int fd, const void *buf, size_t count) {
   __asm__ ( "movq %0, %%rax\n"
             "movq %1, %%rbx\n"
