@@ -3,5 +3,11 @@
 # but we deliberately want to skip past the error, and explicitly disconnect without resuming.
 # FIXME: the race condition in case qemu is slow. But i think gdb retries.
 
-DEBUGFLAGS="-DWITH_DEBUG_TRAP" make clean all
-qemu-system-x86_64 -d int,pcall,cpu_reset,ioport,unimp,guest_errors -s -nographic -serial stdio -monitor stdio -cdrom cor.iso $QEMUOPT
+#DEBUGFLAGS="-DWITH_DEBUG_TRAP" make clean all
+qemu-system-x86_64 -d int,pcall,cpu_reset,ioport,unimp,guest_errors -s -nographic $QEMUOPT \
+  -trace events=events \
+  -cdrom target/x86_64-none-elf/release/cor-x86_64-multiboot.iso \
+  -drive file=userspace/rootfs.bin,if=virtio \
+  -device virtio-serial \
+  -chardev socket,path=/tmp/foo,server,nowait,id=foo \
+  -device virtserialport,chardev=foo,name=org.fedoraproject.console.foo

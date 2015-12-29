@@ -1,4 +1,20 @@
 #!/bin/sh
 # Start qemu without the qemu console, connects stdin/stdout to serial.
 # Still starts the gdb server for you to attach to.
-exec qemu-system-x86_64 -s -nographic -serial stdio -monitor null -cdrom target/x86_64-none-elf/release/cor-x86_64-multiboot.iso -drive file=userspace/rootfs.bin,if=virtio
+exec qemu-system-x86_64 -s -nographic -serial stdio -monitor null \
+  -cdrom target/x86_64-none-elf/release/cor-x86_64-multiboot.iso \
+  -drive file=userspace/rootfs.bin,if=virtio \
+  -device virtio-serial \
+  -chardev socket,path=/tmp/foo,server,id=foo \
+  -device virtconsole,chardev=foo
+
+  #-chardev stdio,id=foo \
+#-chardev socket,path=/tmp/foo,server,id=foo \
+  #-chardev stdio,id=foo \
+#  -chardev stdio,id=foo \
+#   -serial none -chardev stdio,mux=on,id=cons \
+#   -device virtio-serial \
+#   -device virtconsole,chardev=cons,name=console.0 -mon cons -nographic \
+
+# #-device virtserialport,chardev=foo,name=org.fedoraproject.port.0
+#

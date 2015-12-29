@@ -128,12 +128,13 @@ impl Used {
     match ring_index_to_take {
       Some(i) => {
         let descid = NativeEndian::read_u32(&self.mem[4+8*(i as usize)..]) as u16; // downcast, see virtio spec
+        let len = NativeEndian::read_u32(&self.mem[4+4+8*(i as usize)..]);
         self.last_taken_index = Some(i);
-        println!("Taking buffer {} from index {}", descid, i);
+        println!("Taking buffer {} (written={}) from index {}", descid, len, i);
         Some(descid)
       },
       None => {
-        println!("Nothing to take: head {}, last {:?}", current_head, self.last_taken_index);
+        //println!("Nothing to take: head {}, last {:?}", current_head, self.last_taken_index);
         None
       }
     }

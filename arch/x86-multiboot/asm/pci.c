@@ -98,7 +98,6 @@ void pciConfigWriteLong (uint8_t bus, uint8_t slot,
 }
 
 void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
-  cor_printk("Found a virtio block device!\nThis is its configuration space:\n");
   for(int i = 0; i < 0x3c; i+=4) {
     cor_printk("%x = %x\n", i, pciConfigReadLong(bus, slot, function, i));
   }
@@ -116,9 +115,6 @@ void setup_virtio(uint8_t bus, uint8_t slot, uint8_t function) {
 
   // This is pretty much all we actually interface with PCI; once we have the
   // I/O base port, we're golden.
-
-  cor_printk("Letting Rustland set up the Virtio device..\n");
-  virtio_init(io_base);
 }
 
 // When a configuration access attempts to select a device that does not exist,
@@ -142,8 +138,9 @@ uint16_t pciCheckVendor(uint8_t bus, uint8_t slot) {
         cor_printk("this is a virtio NIC. cool\n");
       }
       if(subsystem==2) {
-        setup_virtio(bus, slot, 0);
+        cor_printk("this is a virtio block device. cool\n");
       }
+      setup_virtio(bus, slot, 0);
     }
   }
   return vendor;

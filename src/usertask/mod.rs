@@ -17,8 +17,15 @@ use alloc::arc::Arc;
 pub fn exec_init() {
   println!("Starting init task! Or at least I hope so.");
 
-  // TODO: request this from t
+  let serport = unsafe { cpuio::alloc(0xc080, 24, "XXXXXXXXXXXXXXXXXXXXXXXX").unwrap() };
+  let mut serdev = virtio::serial::Serialdev::new(serport).unwrap();
+  serdev.putc('.');
+  serdev.putc('\n');
+  panic!("done");
+
+  // TODO: request this from somewhere
   let port = unsafe { cpuio::alloc(0xc040, 24, "XXXXXXXXXXXXXXXXXXXXXXXX").unwrap() };
+
   let blockdev: virtio::Blockdev = virtio::Blockdev::new(port).unwrap();
   println!("result of blockdevice init: {:?}", blockdev);
 

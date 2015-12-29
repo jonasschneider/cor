@@ -17,6 +17,7 @@
 
 mod queue;
 mod vring;
+pub mod serial;
 
 use prelude::*;
 
@@ -124,6 +125,7 @@ impl Client for Blockdev {
 
     let (done, buf, wait_tok) = self.in_flight.lock().remove(&tok).unwrap(); // panics on invalid token / double read?
 
+    // FIXME: make sure that we're not holding any of these borrows or locks before we go to sleep
     wait_tok.wait();
     println!("wait token signals completion of: {:?}", tok);
     println!("Virtio call completed, retval={}", done[0]);
@@ -209,7 +211,7 @@ impl Blockdev {
       isr_status_port: rxport,
     };
 
-    sched::irq::add_handler(0x2b, box handler);
+    sched::irq::add_handler(0x2a, box handler);
 
     Ok(Blockdev { pool: RefCell::new(pool), port: RefCell::new(txport),
       in_flight: GlobalMutex::new(BTreeMap::new()),
