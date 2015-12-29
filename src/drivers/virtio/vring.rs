@@ -76,6 +76,7 @@ pub struct Avail {
 // TODO make sure that the wrapping is not modulo u16, but modulo qsz
 impl Avail {
   pub fn write_descriptor_at(&mut self, pos: usize, d: Descriptor) {
+    assert!(pos < self.qsz);
     NativeEndian::write_u64(&mut self.mem[pos*16..], d.addr);
     NativeEndian::write_u32(&mut self.mem[pos*16+8..], d.len);
     NativeEndian::write_u16(&mut self.mem[pos*16+12..], d.flags);
@@ -85,10 +86,9 @@ impl Avail {
   pub fn add_to_ring(&mut self, idx: u16) {
     let mut current_head = NativeEndian::read_u16(&self.mem[self.qsz*16+2..]);
 
-    // Put the buffer into the virtqueue's "avail" array (the index-0 is actually
-    // `idx % qsz`, which wraps around after we've filled the avail array once,
-    // the value-0 is the index into the descriptor table above)
-    NativeEndian::write_u16(&mut self.mem[self.qsz*16+4+(current_head as usize)*2..], idx);
+    // Put the buffer into the Avail's ring.
+    // The current_head wraps around at 2^16-1, but the ring wraps around at self.qsz.
+    NativeEndian::write_u16(&mut self.mem[self.qsz*16+4+((current_head%(self.qsz as u16)) as usize)*2..], idx);
     current_head = current_head.wrapping_add(1);
 
     // Now, place a memory barrier so the above write is seen for sure.. is that enough?
@@ -103,8 +103,8 @@ impl Avail {
 
 #[derive(Debug)]
 pub struct Used {
-  mem: Box<[u8]>,
-  qsz: usize,
+  pub mem: Box<[u8]>,
+  pub qsz: usize,
   last_taken_index: Option<u16>,
 }
 
@@ -115,10 +115,17 @@ impl Used {
     let current_head = NativeEndian::read_u16(&self.mem[2..]);
 
     let ring_index_to_take = match self.last_taken_index {
-      None => if current_head != 0 { Some(0) } else { None },
+      None =>
+        if current_head != 0 {
+          self.last_taken_index = Some(0);
+          Some(0)
+        } else {
+          None
+        },
       Some(last) => {
         if current_head != last.wrapping_add(1) { // There is *something* between the last thing we took and the head
-          Some(last.wrapping_add(1)) // allow wraparound
+          self.last_taken_index = Some(last.wrapping_add(1));
+          Some(last.wrapping_add(1) % (self.qsz as u16)) // allow wraparound
         } else {
           None
         }
@@ -129,7 +136,6 @@ impl Used {
       Some(i) => {
         let descid = NativeEndian::read_u32(&self.mem[4+8*(i as usize)..]) as u16; // downcast, see virtio spec
         let len = NativeEndian::read_u32(&self.mem[4+4+8*(i as usize)..]);
-        self.last_taken_index = Some(i);
         println!("Taking buffer {} (written={}) from index {}", descid, len, i);
         Some((descid, len as usize))
       },

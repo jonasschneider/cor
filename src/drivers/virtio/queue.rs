@@ -74,8 +74,15 @@ impl BufferPool {
       next: 0,
     });
 
-    self.next_descriptor_i = self.next_descriptor_i + 3;
     self.avail.add_to_ring(i_);
+
+    self.next_descriptor_i = self.next_descriptor_i + 3;
+
+    // TODO: real ring behaviour
+    if self.next_descriptor_i > 30  {
+      self.next_descriptor_i = 0;
+    }
+
     Ok(i_)
   }
 }

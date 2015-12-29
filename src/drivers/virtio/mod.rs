@@ -65,6 +65,7 @@ impl sched::irq::InterruptHandler for RxHandler {
     }
 
     for &mut(ref mut used, ref signals_lk) in &mut self.rings {
+      println!("Used: sz {}, mem@{:p}{:?}", used.qsz, used.mem.as_ptr(), used.mem);
       let ref mut signals = signals_lk.lock();
       while let Some((ref descid, ref written)) = used.take_from_ring() {
         let wakeup = signals.remove(&descid).unwrap(); // remove from the set of in-flight reqs, panic if absent
