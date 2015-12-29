@@ -5,7 +5,7 @@ exec qemu-system-x86_64 -s -nographic -serial stdio -monitor null \
   -cdrom target/x86_64-none-elf/release/cor-x86_64-multiboot.iso \
   -drive file=userspace/rootfs.bin,if=virtio \
   -device virtio-serial \
-  -chardev socket,path=/tmp/foo,server,id=foo \
+  -chardev socket,path=/tmp/foo,server,nowait,id=foo \
   -device virtconsole,chardev=foo
 
   #-chardev stdio,id=foo \

@@ -4,8 +4,7 @@
 # FIXME: the race condition in case qemu is slow. But i think gdb retries.
 
 #DEBUGFLAGS="-DWITH_DEBUG_TRAP" make clean all
-qemu-system-x86_64 -d int,pcall,cpu_reset,ioport,unimp,guest_errors -s -nographic $QEMUOPT \
-  -trace events=events \
+exec qemu-system-x86_64 -d guest_errors -s -nographic $QEMUOPT \
   -cdrom target/x86_64-none-elf/release/cor-x86_64-multiboot.iso \
   -drive file=userspace/rootfs.bin,if=virtio \
   -device virtio-serial \
