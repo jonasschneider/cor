@@ -106,15 +106,13 @@ impl Virtq {
     self.avail.add_to_ring(descriptor_id);
     println!("enqueued it: {:?}", &self.avail.mem[128*16..]);
 
-    println!("Waiting for take() on used.. XX");
-
     port.write16(16, 1);
 
-    // sync:
-    while let None = self.used_buffers.lock().pop_front() {
-      port.write16(16, 1);
-    }
-    println!("done");
+    // // sync:
+    // while let None = self.used_buffers.lock().pop_front() {
+    //   port.write16(16, 1);
+    // }
+    // println!("done");
     Some(n)
   }
 
