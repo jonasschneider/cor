@@ -14,7 +14,8 @@ const VRING_DESC_F_WRITE: u16 = 2; /* This marks a buffer as write-only (otherwi
 
 use super::vring::Descriptor;
 use mem::*;
-use collections::vec_deque::VecDeque;
+
+use sched;
 
 extern {
   fn asm_eoi();
@@ -23,32 +24,25 @@ extern {
 pub struct Serialdev {
   port: cpuio::IoPort,
   rxbuf: Box<[u8; 20]>,
-  //cbuf: Box<[u8; 8]>,
-  bufs: Vec<Box<[u8;100]>>,
-  avail: vring::Avail,
-  used: vring::Used,
-  next: u16,
 
   rxavail: vring::Avail,
   rxused: vring::Used,
+
+  txq: super::virtq::Virtq,
 }
 
 impl Serialdev {
   pub fn putc(&mut self, c: char) {
-    // FIXME: racy..?
-    let bufs: &mut [Box<[u8;100]>] = self.bufs.borrow_mut();
-    let mut b = &mut bufs[0];
+    let mut b = [0u8; 1];
     b[0] = c as u8;
-    self.avail.add_to_ring(0);
-    println!("enqueued it: {:?}", &self.avail.mem[128*16..]);
-
-    self.port.write16(16, 1);
+    let n = self.txq.send(&b[..], &mut self.port);
 
     println!("Waiting for take() on used..");
-    while let None = self.used.take_from_ring() {
+    loop {}
+    // while let None = self.used.take_from_ring() {
 
-    }
-    println!("done");
+    // }
+    // println!("done");
   }
 
   pub fn read(&mut self, buf: &mut[u8]) -> usize {
@@ -165,21 +159,43 @@ impl Serialdev {
 
     // TX
 
-    // Set queue_select
-    txport.write16(14, 1);
+    let (mut txq, txrecv) = super::virtq::Virtq::new(1, &mut txport);
 
-    // Determine how many descriptors the queue has, and allocate memory for the
-    // descriptor table and the ring arrays.
-    let length = txport.read16(12);
-    println!("Max tx len is: {}",rxlength);
-    let (address, mut avail, mut used) = vring::setup(length);
+    println!("txq: {:?}", &txq);
 
-    let physical_32 = physical_from_kernel(address as usize) as u32; // FIXME: not really a safe cast
-    txport.write32(8, physical_32 >> 12);
+    let handler = super::virtq::RxHandler {
+      rings: vec![txrecv],
+      isr_status_port: rxport,
+    };
 
-    println!("Device state is now: {}", state);
+    sched::irq::add_handler(0x2b, box handler);
 
-    let mut bufs = vec![];
+
+
+
+
+    // // Set queue_select
+    // txport.write16(14, 1);
+
+    // // Determine how many descriptors the queue has, and allocate memory for the
+    // // descriptor table and the ring arrays.
+    // let length = txport.read16(12);
+    // println!("Max tx len is: {}",rxlength);
+    // let (address, mut avail, mut used) = vring::setup(length);
+
+    // let physical_32 = physical_from_kernel(address as usize) as u32; // FIXME: not really a safe cast
+    // txport.write32(8, physical_32 >> 12);
+
+    // println!("Device state is now: {}", state);
+
+    // for _ in 0..10 {
+    //     register
+
+    for _ in 0..10 {
+      txq.register(box ['X' as u8; 1], false);
+    }
+
+    println!("txq with bufs: {:?}", &txq);
 
     // for i in 0..(length as usize) {
     //   let buf = box ['X' as u8; 1];
@@ -195,15 +211,15 @@ impl Serialdev {
     // avail.add_to_ring(0);
     // avail.add_to_ring(1);
 
-    let mut buf = box ['X' as u8; 100];
-    buf[20] = '\n' as u8;
-    avail.write_descriptor_at(0, Descriptor {
-      addr: physical_from_kernel(buf.as_ptr() as usize) as u64,
-      len: 1,
-      flags: 0,
-      next: 0,
-    });
-    bufs.push(buf);
+    // let mut buf = box ['X' as u8; 100];
+    // buf[20] = '\n' as u8;
+    // avail.write_descriptor_at(0, Descriptor {
+    //   addr: physical_from_kernel(buf.as_ptr() as usize) as u64,
+    //   len: 1,
+    //   flags: 0,
+    //   next: 0,
+    // });
+    // bufs.push(buf);
     //avail.add_to_ring(0);
 
     // Tell the device we're done setting it up
@@ -258,7 +274,11 @@ impl Serialdev {
 
     // //panic!("done");
 
-    Ok(Serialdev { port: txport, bufs: bufs, avail: avail, next: 0, used: used, rxbuf: rxbuf,
-      rxavail: rxavail, rxused: rxused})
+    let mut dev = Serialdev { port: txport, rxbuf: rxbuf,
+      rxavail: rxavail, rxused: rxused, txq: txq};
+
+    dev.putc('!');
+
+    Ok(dev)
   }
 }

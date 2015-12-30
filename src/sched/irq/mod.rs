@@ -1,3 +1,5 @@
+use prelude::*;
+
 mod table;
 use sync::global_mutex::GlobalMutex;
 
@@ -8,19 +10,11 @@ use sync::global_mutex::GlobalMutex;
 // locking a sleeping lock sync borrows ownership of the process context
 // -> enforces that sleeping mutexes can only be acquired in process context
 
-use alloc::boxed::Box;
-use collections::vec::Vec;
-use core::fmt;
 use core::sync::atomic::{AtomicBool,Ordering};
 
-pub trait InterruptHandler: Send {
+pub trait InterruptHandler: Send + Debug {
   fn critical(&mut self); // will be executed with interrupts disabled
   fn noncritical(&self); // will be executed with interrupts disabled, ISR shared
-}
-impl fmt::Debug for Box<InterruptHandler> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<handler>")
-    }
 }
 
 // Comparable to irq_desc_t (Table 4-4 in UTLK)

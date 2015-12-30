@@ -15,6 +15,7 @@ impl Deref for SectorCheckout {
 
 //impl Drop for SectorCheckout -> return buffer to cache .. maybe just an Arc?
 
+// idea: page cache returns Page objects that contain a SleepingRWLock on the page memory?
 // TODO: Cache should be Clone
 pub trait Cache: Sync + fmt::Debug {
   // Read the specified sector from the page cache.

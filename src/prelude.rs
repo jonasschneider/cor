@@ -5,5 +5,8 @@ pub use core::slice;
 pub use core;
 pub use collections;
 pub use collections::vec::Vec;
+pub use collections::vec_deque::VecDeque;
 pub use alloc::arc::Arc;
 pub use collections::string::String;
+pub use core::iter::FromIterator;
+pub use core::fmt::Debug;

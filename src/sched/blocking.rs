@@ -59,5 +59,15 @@ impl WaitToken {
       println!("Wait token {:?} isn't woken yet, sleeping..",&self);
       sched::kyield();
     }
+    println!("Woke wait token {:?}", &self);
+  }
+
+  pub fn multiwait(&mut self) {
+    while !self.inner.woken.compare_and_swap(true, false, Ordering::SeqCst) {
+      //sched::park_until_irq(0x2b);
+      println!("Wait token {:?} isn't woken yet, sleeping..",&self);
+      sched::kyield();
+    }
+    println!("Woke wait token {:?}, and put it back to sleep", &self);
   }
 }
