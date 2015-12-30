@@ -186,7 +186,7 @@ impl Serialdev {
     // for _ in 0..10 {
     //     register
 
-    for _ in 0..100 {
+    for _ in 0..10 {
       txq.register(box ['X' as u8; 1], false);
     }
 

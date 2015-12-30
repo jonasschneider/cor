@@ -69,16 +69,23 @@ pub struct Rx {
     // for blockdev: read wait tokens, wake up accordingly
     // for chardev-tx: just put back buffer into free_buffers
     // for chardev-rx: put into chardev.unread_buffers
+    free_buffers: Arc<GlobalMutex<VecDeque<Buf>>>,
 }
 
 impl Rx {
   fn check(&mut self) {
+    use core::iter::Extend;
+
     while let Some((ref descid, ref written)) = self.used.take_from_ring() {
       println!("Took buffer {:?} with {} written", descid, written);
       let buf = self.inflight_buffers.lock().remove(descid).unwrap();
       self.used_buffers.lock().push_back(buf);
     }
     println!("no more buffers to take");
+
+    // device-specific behaviour ("noop" for serial-tx)
+    let mut b = self.used_buffers.lock();
+    self.free_buffers.lock().extend(b.drain(..));
   }
   fn process_used(buf: Buf, written: usize) -> Option<Buf> {
     Some(buf)
@@ -93,13 +100,13 @@ pub struct Virtq {
   used_buffers: Arc<GlobalMutex<VecDeque<Buf>>>,
   inflight_buffers: Arc<GlobalMutex<BTreeMap<u16, Buf>>>,
 
-  free_buffers: VecDeque<Buf>,
+  free_buffers: Arc<GlobalMutex<VecDeque<Buf>>>,
   free_descriptors: VecDeque<u16>,
 }
 
 impl Virtq {
   pub fn send(&mut self, data: &[u8], port: &mut cpuio::IoPort) -> Option<usize> {
-    let Buf(descriptor_id, mut buf) = self.free_buffers.pop_front().unwrap(); // panic on no available buf
+    let Buf(descriptor_id, mut buf) = self.free_buffers.lock().pop_front().unwrap(); // panic on no available buf
     let n = buf.clone_from_slice(data);
     // careful: need to add to inflight before adding to ring
     assert!(self.inflight_buffers.lock().insert(descriptor_id, Buf(descriptor_id, buf)).is_none());
@@ -125,7 +132,7 @@ impl Virtq {
       flags: flags,
       next: 0,
     });
-    self.free_buffers.push_back(Buf(i, mem));
+    self.free_buffers.lock().push_back(Buf(i, mem));
   }
 
   // queue_index is the index on the virtio device to initialize
@@ -137,25 +144,27 @@ impl Virtq {
     // descriptor table and the ring arrays.
     let length = port.read16(12);
 
-    let (address, mut avail, mut used) = vring::setup(length);
+    let (address, mut availring, mut usedring) = vring::setup(length);
 
     let physical_32 = physical_from_kernel(address as usize) as u32; // FIXME: not really a safe cast
     port.write32(8, physical_32 >> 12);
 
     let (wait, signal) = sched::blocking::tokens(String::new());
 
+    let used = Arc::new(GlobalMutex::new(VecDeque::new()));
     let free = Arc::new(GlobalMutex::new(VecDeque::new()));
     let inf = Arc::new(GlobalMutex::new(BTreeMap::new()));
 
     let rx = Rx {
-      used: used,
-      used_buffers: free.clone(),
+      used: usedring,
+      used_buffers: used.clone(),
       inflight_buffers: inf.clone(),
       device_activity: signal,
       // process_used: box move |buf, written| {
       //   println!("process_used: written={}, {:?}", written, buf);
       //   Some(buf)
       // },
+      free_buffers: free.clone(),
     };
 
     let mut descs = VecDeque::with_capacity(length as usize);
@@ -164,11 +173,11 @@ impl Virtq {
     }
 
     (Virtq {
-      avail: avail,
+      avail: availring,
       device_activity: wait,
-      used_buffers: free,
+      used_buffers: used,
 
-      free_buffers: VecDeque::new(),
+      free_buffers: free,
       free_descriptors: descs,
       inflight_buffers: inf,
     }, rx)
