@@ -154,7 +154,14 @@ impl Serialdev {
 
     // TX
 
-    let (mut txq, txrecv) = super::virtq::Virtq::new(1, &mut txport);
+    // Behaviour: When the device consumes a tx buffer, we simply re-queue
+    // it as a free buffer.
+    let (mut txq, txrecv) = super::virtq::Virtq::new(1, &mut txport, box move |used, free| {
+      use core::iter::Extend;
+
+      println!("serialtx processing used buffers: {:?}", used);
+      free.lock().extend(used.drain(..));
+    });
 
     println!("txq: {:?}", &txq);
 

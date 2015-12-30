@@ -16,7 +16,7 @@ const VRING_DESC_F_WRITE: u16 = 2; /* This marks a buffer as write-only (otherwi
 
 // might also be a buffer with several segments.. bleh
 #[derive(Debug)]
-struct Buf(u16, Box<[u8]>);
+pub struct Buf(u16, Box<[u8]>);
 // ID is accessible and unique *for the lifetime of the LogicalBuf*
 
 type CondvarWait = sched::blocking::WaitToken;
@@ -27,7 +27,7 @@ pub struct RxHandler {
   pub isr_status_port: cpuio::IoPort,
 
   // The rings to receive on
-  pub rings: Vec<Box<RxTrait>>,
+  pub rings: Vec<Rx>,
 }
 
 extern {
@@ -60,24 +60,24 @@ impl sched::irq::InterruptHandler for RxHandler {
   }
 }
 
-pub trait RxTrait: Send {
-  fn check(&mut self);
-}
-
-pub struct Rx<F: FnMut(&mut VecDeque<Buf>) + Send> {
+pub struct Rx {
   used: vring::Used,
   used_buffers: Arc<GlobalMutex<VecDeque<Buf>>>,
   inflight_buffers: Arc<GlobalMutex<BTreeMap<u16, Buf>>>,
   device_activity: CondvarSignal,
 
+  // I don't *really* want this here, but otherwise you can't access the Virtq
+  // from the callback handler.
+  free_buffers: Arc<GlobalMutex<VecDeque<Buf>>>,
+
   // Do something with the `used` vec, after some things have been added to it.
-  process_used: F,
+  process_used: Box<FnMut(&mut VecDeque<Buf>, &GlobalMutex<VecDeque<Buf>>) -> () + Send>,
     // for blockdev: read wait tokens, wake up accordingly
     // for chardev-tx: just put back buffer into free_buffers
     // for chardev-rx: put into chardev.unread_buffers
 }
 
-impl<F: FnMut(&mut VecDeque<Buf>) + Send> RxTrait for Rx<F> {
+impl Rx {
   fn check(&mut self) {
     let mut any = false;
     let mut used = self.used_buffers.lock();
@@ -91,7 +91,7 @@ impl<F: FnMut(&mut VecDeque<Buf>) + Send> RxTrait for Rx<F> {
 
     if any {
       println!("Took some buffers, calling process_used()..");
-      self.process_used.call_mut((&mut *used,));
+      self.process_used.call_mut((&mut *used,&*self.free_buffers));
     } else {
       println!("Had no buffers to take.");
     }
@@ -142,7 +142,7 @@ impl Virtq {
   }
 
   // queue_index is the index on the virtio device to initialize
-  pub fn new(queue_index: u16, port: &mut cpuio::IoPort) -> (Self, Box<RxTrait>) {
+  pub fn new(queue_index: u16, port: &mut cpuio::IoPort, process: Box<FnMut(&mut VecDeque<Buf>, &GlobalMutex<VecDeque<Buf>>,) -> () + Send>) -> (Self, Rx) {
     // Set queue_select
     port.write16(14, queue_index);
 
@@ -161,21 +161,14 @@ impl Virtq {
     let free = Arc::new(GlobalMutex::new(VecDeque::new()));
     let inf = Arc::new(GlobalMutex::new(BTreeMap::new()));
 
-    let free_clone = free.clone();
-
     let rx = Rx {
       used: usedring,
       used_buffers: used.clone(),
       inflight_buffers: inf.clone(),
       device_activity: signal,
 
-      // Behaviour: simply re-queue all used bufs as available
-      process_used: move |used| {
-        use core::iter::Extend;
-
-        println!("process_used: {:?}", used);
-        free_clone.lock().extend(used.drain(..));
-      },
+      process_used: process,
+      free_buffers: free.clone(),
     };
 
     let mut descs = VecDeque::with_capacity(length as usize);
@@ -191,6 +184,6 @@ impl Virtq {
       free_buffers: free,
       free_descriptors: descs,
       inflight_buffers: inf,
-    }, box rx as Box<RxTrait>)
+    }, rx)
   }
 }
