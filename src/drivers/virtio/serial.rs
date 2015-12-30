@@ -165,84 +165,16 @@ impl Serialdev {
 
     sched::irq::add_handler(0x2b, box handler);
 
-
-
-
-
-    // // Set queue_select
-    // txport.write16(14, 1);
-
-    // // Determine how many descriptors the queue has, and allocate memory for the
-    // // descriptor table and the ring arrays.
-    // let length = txport.read16(12);
-    // println!("Max tx len is: {}",rxlength);
-    // let (address, mut avail, mut used) = vring::setup(length);
-
-    // let physical_32 = physical_from_kernel(address as usize) as u32; // FIXME: not really a safe cast
-    // txport.write32(8, physical_32 >> 12);
-
-    // println!("Device state is now: {}", state);
-
-    // for _ in 0..10 {
-    //     register
-
     for _ in 0..10 {
       txq.register(box ['X' as u8; 1], false);
     }
-
-    println!("txq with bufs: {:?}", &txq);
-
-    // for i in 0..(length as usize) {
-    //   let buf = box ['X' as u8; 1];
-    //   let data: *const u8 = buf.as_ptr();
-    //   avail.write_descriptor_at(i, Descriptor {
-    //     addr: physical_from_kernel(data as usize) as u64,
-    //     len: 1,
-    //     flags: 0,
-    //     next: 0,
-    //   });
-    //   bufs.push(buf);
-    // }
-    // avail.add_to_ring(0);
-    // avail.add_to_ring(1);
-
-    // let mut buf = box ['X' as u8; 100];
-    // buf[20] = '\n' as u8;
-    // avail.write_descriptor_at(0, Descriptor {
-    //   addr: physical_from_kernel(buf.as_ptr() as usize) as u64,
-    //   len: 1,
-    //   flags: 0,
-    //   next: 0,
-    // });
-    // bufs.push(buf);
-    //avail.add_to_ring(0);
 
     // Tell the device we're done setting it up
     state = state | VIRTIO_STATUS_DRIVER_OK;
     configport.write8(18, state);
     println!("Device state is now: {}", state);
-    // println!("ISR: {}", rxport.read8(19));
 
-    // println!("rxbuf: {:?}", rxbuf);
-    // println!("Triggering..");
-
-    // // notify on both queues
-    // txport.write16(16, 1);
-    // txport.write16(16, 0);
-    // //txport.write16(16, 2);
-
-
-    // // let handler = RxHandler {
-    // //   rings: vec![(used,wakeup.clone())],
-    // //   isr_status_port: rxport,
-    // // };
-
-    // // a PORT_OPEN(0) ctrl message (indicating the port is closed) is sent after EOF on stdin, i.e. if you pipe something into qemu
-
-    // //sched::irq::add_handler(0x2b, box handler);
-
-    // println!("tx: {:?}", used.take_from_ring());
-    // println!("rx: {:?}", rxused.take_from_ring());
+    // TODO: a PORT_OPEN(0) ctrl message (indicating the port was closed) is sent after EOF on qemu's stdin
 
     // println!("ctrl-rx: {:?}", ctrlused.take_from_ring());
     // println!("ISR: {}", rxport.read8(19));

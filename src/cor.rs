@@ -1,8 +1,8 @@
 #![crate_type="staticlib"]
 #![crate_name="cor"]
 #![feature(box_syntax,repr_simd,const_fn,slice_bytes,fnbox)]
-#![feature(alloc,collections,core_intrinsics,clone_from_slice)]
-#![feature(lang_items,unsafe_destructor,asm,box_patterns,str_char)]
+#![feature(alloc,collections,core_intrinsics,clone_from_slice,unboxed_closures)]
+#![feature(lang_items,unsafe_destructor,asm,box_patterns,str_char,fn_traits)]
 #![no_std]
 
 extern crate kalloc;

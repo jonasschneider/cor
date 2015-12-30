@@ -37,7 +37,6 @@ extern {
 
 impl sched::irq::InterruptHandler for RxHandler {
   fn critical(&mut self) {
-
     // The virtio IRQ status is reset by **reading** from this port
     if self.isr_status_port.read8(19) & 1 == 0  {
       println!("ISR==0, this interrupt likely wasn't for us.");
@@ -56,39 +55,43 @@ impl sched::irq::InterruptHandler for RxHandler {
   }
 }
 
-
-#[derive(Debug)]
 pub struct Rx {
   used: vring::Used,
   used_buffers: Arc<GlobalMutex<VecDeque<Buf>>>,
   inflight_buffers: Arc<GlobalMutex<BTreeMap<u16, Buf>>>,
   device_activity: CondvarSignal,
 
-  //process_used: Box<Fn(Buf, usize) -> Option<Buf>>,
-    // if you take the Buf for yourself, make sure that you deregister it before dropping.
+  // Do something with the `used` vec, after some things have been added to it.
+  process_used: Box<FnMut(&mut VecDeque<Buf>) + Send>,
     // for blockdev: read wait tokens, wake up accordingly
     // for chardev-tx: just put back buffer into free_buffers
     // for chardev-rx: put into chardev.unread_buffers
-    free_buffers: Arc<GlobalMutex<VecDeque<Buf>>>,
+}
+
+impl Debug for Rx {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "<Rx>")
+  }
 }
 
 impl Rx {
   fn check(&mut self) {
-    use core::iter::Extend;
+    let mut any = false;
+    let mut used = self.used_buffers.lock();
 
     while let Some((ref descid, ref written)) = self.used.take_from_ring() {
+      any = true;
       println!("Took buffer {:?} with {} written", descid, written);
       let buf = self.inflight_buffers.lock().remove(descid).unwrap();
-      self.used_buffers.lock().push_back(buf);
+      used.push_back(buf);
     }
-    println!("no more buffers to take");
 
-    // device-specific behaviour ("noop" for serial-tx)
-    let mut b = self.used_buffers.lock();
-    self.free_buffers.lock().extend(b.drain(..));
-  }
-  fn process_used(buf: Buf, written: usize) -> Option<Buf> {
-    Some(buf)
+    if any {
+      println!("Took some buffers, calling process_used()..");
+      self.process_used.call_mut((&mut *used,));
+    } else {
+      println!("Had no buffers to take.");
+    }
   }
 }
 
@@ -155,16 +158,21 @@ impl Virtq {
     let free = Arc::new(GlobalMutex::new(VecDeque::new()));
     let inf = Arc::new(GlobalMutex::new(BTreeMap::new()));
 
+    let free_clone = free.clone();
+
     let rx = Rx {
       used: usedring,
       used_buffers: used.clone(),
       inflight_buffers: inf.clone(),
       device_activity: signal,
-      // process_used: box move |buf, written| {
-      //   println!("process_used: written={}, {:?}", written, buf);
-      //   Some(buf)
-      // },
-      free_buffers: free.clone(),
+
+      // Behaviour: simply re-queue all used bufs as available
+      process_used: box move |used| {
+        use core::iter::Extend;
+
+        println!("process_used: {:?}", used);
+        free_clone.lock().extend(used.drain(..));
+      },
     };
 
     let mut descs = VecDeque::with_capacity(length as usize);
