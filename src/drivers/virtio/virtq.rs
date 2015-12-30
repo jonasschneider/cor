@@ -23,16 +23,21 @@ type CondvarWait = sched::blocking::WaitToken;
 type CondvarSignal = sched::blocking::SignalToken;
 
 // Handles receive notifications for a virtio device.
-#[derive(Debug)]
 pub struct RxHandler {
   pub isr_status_port: cpuio::IoPort,
 
   // The rings to receive on
-  pub rings: Vec<Rx>,
+  pub rings: Vec<Box<RxTrait>>,
 }
 
 extern {
   fn asm_eoi();
+}
+
+impl Debug for RxHandler {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "<RxHandler>")
+  }
 }
 
 impl sched::irq::InterruptHandler for RxHandler {
@@ -55,26 +60,24 @@ impl sched::irq::InterruptHandler for RxHandler {
   }
 }
 
-pub struct Rx {
+pub trait RxTrait: Send {
+  fn check(&mut self);
+}
+
+pub struct Rx<F: FnMut(&mut VecDeque<Buf>) + Send> {
   used: vring::Used,
   used_buffers: Arc<GlobalMutex<VecDeque<Buf>>>,
   inflight_buffers: Arc<GlobalMutex<BTreeMap<u16, Buf>>>,
   device_activity: CondvarSignal,
 
   // Do something with the `used` vec, after some things have been added to it.
-  process_used: Box<FnMut(&mut VecDeque<Buf>) + Send>,
+  process_used: F,
     // for blockdev: read wait tokens, wake up accordingly
     // for chardev-tx: just put back buffer into free_buffers
     // for chardev-rx: put into chardev.unread_buffers
 }
 
-impl Debug for Rx {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "<Rx>")
-  }
-}
-
-impl Rx {
+impl<F: FnMut(&mut VecDeque<Buf>) + Send> RxTrait for Rx<F> {
   fn check(&mut self) {
     let mut any = false;
     let mut used = self.used_buffers.lock();
@@ -139,7 +142,7 @@ impl Virtq {
   }
 
   // queue_index is the index on the virtio device to initialize
-  pub fn new(queue_index: u16, port: &mut cpuio::IoPort) -> (Self, Rx) {
+  pub fn new(queue_index: u16, port: &mut cpuio::IoPort) -> (Self, Box<RxTrait>) {
     // Set queue_select
     port.write16(14, queue_index);
 
@@ -167,7 +170,7 @@ impl Virtq {
       device_activity: signal,
 
       // Behaviour: simply re-queue all used bufs as available
-      process_used: box move |used| {
+      process_used: move |used| {
         use core::iter::Extend;
 
         println!("process_used: {:?}", used);
@@ -188,6 +191,6 @@ impl Virtq {
       free_buffers: free,
       free_descriptors: descs,
       inflight_buffers: inf,
-    }, rx)
+    }, box rx as Box<RxTrait>)
   }
 }
