@@ -1,16 +1,6 @@
-use kalloc::__rust_allocate as allocate;
-use alloc::boxed::Box;
-use core;
-use core::slice;
-use core::fmt;
-use kbuf;
-use collections;
-use collections::vec::Vec;
-use core::borrow::BorrowMut;
-use core::mem;
-use mem::*;
-use sched;
+use prelude::*;
 
+use mem::align_up;
 use byteorder::{ByteOrder,NativeEndian};
 
 const VRING_DESC_F_NEXT: u16 = 1; /* This marks a buffer as continuing via the next field. */
@@ -66,11 +56,17 @@ pub struct Descriptor {
   pub next: u16,
 }
 
-#[derive(Debug)]
 pub struct Avail {
   pub mem: Box<[u8]>,
   qsz: usize,
 }
+
+impl Debug for Avail {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "vring::Avail(head={})", NativeEndian::read_u16(&self.mem[self.qsz*16+2..]))
+  }
+}
+
 
 // Optimizations could probably still break this. :(
 // TODO make sure that the wrapping is not modulo u16, but modulo qsz
@@ -101,11 +97,16 @@ impl Avail {
   }
 }
 
-#[derive(Debug)]
 pub struct Used {
   pub mem: Box<[u8]>,
   pub qsz: usize,
   last_taken_index: Option<u16>,
+}
+
+impl Debug for Used {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "vring::Used(head={})", NativeEndian::read_u16(&self.mem[2..]))
+  }
 }
 
 impl Used {

@@ -53,7 +53,7 @@ void fmod() { cor_panic("fmod()"); }
 
 void rust_deallocate(void *what, size_t old_size, size_t align) {
   rust_allocd -= old_size;
-  cor_printk("bro, do you even free %p; %p (rust now holding %x bytes)\n", what, old_size, rust_allocd);
+  cor_printk("[free %p]", what);
   // TODO
   old_size = old_size;
   align = align;

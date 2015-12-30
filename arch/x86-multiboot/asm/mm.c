@@ -63,6 +63,7 @@ void mm_init() {
 
 
 void *tkalloc(size_t s, const char *what_for, uint64_t align) {
+  what_for = what_for;
   if(source_region.used + s > source_region.limit) {
     cor_printk("kalloc is OOM: requested %x, but already used %x out of %x\n",s,source_region.used,source_region.limit);
     cor_panic("");
@@ -72,7 +73,7 @@ void *tkalloc(size_t s, const char *what_for, uint64_t align) {
   void *p = source_region.base + source_region.used;
   source_region.used += s;
 
-  cor_printk("- tkalloc: %s (%x) --> %p\n", what_for, s, p);
+  cor_printk("[alloc %x -> %p]", s, p);
 
   return p;
 }
