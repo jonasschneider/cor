@@ -8,7 +8,8 @@ irq_log:
 
 is_return_from_trampoline:
   pop %rax # restore original rax
-  cli # TODO
+  #cli # TODO
+  sti
   jmp trampoline_from_user
 
 isr_dispatcher:

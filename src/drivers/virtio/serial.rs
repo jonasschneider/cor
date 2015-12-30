@@ -37,12 +37,7 @@ impl Serialdev {
     b[0] = c as u8;
     let n = self.txq.send(&b[..], &mut self.port);
 
-    println!("Waiting for take() on used..");
-    loop {}
-    // while let None = self.used.take_from_ring() {
-
-    // }
-    // println!("done");
+    println!("serial send done");
   }
 
   pub fn read(&mut self, buf: &mut[u8]) -> usize {
@@ -191,7 +186,7 @@ impl Serialdev {
     // for _ in 0..10 {
     //     register
 
-    for _ in 0..10 {
+    for _ in 0..100 {
       txq.register(box ['X' as u8; 1], false);
     }
 
@@ -277,6 +272,7 @@ impl Serialdev {
     let mut dev = Serialdev { port: txport, rxbuf: rxbuf,
       rxavail: rxavail, rxused: rxused, txq: txq};
 
+    dev.putc('?');
     dev.putc('!');
 
     Ok(dev)

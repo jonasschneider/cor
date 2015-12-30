@@ -37,7 +37,7 @@ extern {
 
 impl sched::irq::InterruptHandler for RxHandler {
   fn critical(&mut self) {
-    unsafe { asm_eoi(); } // TODO
+
     // The virtio IRQ status is reset by **reading** from this port
     if self.isr_status_port.read8(19) & 1 == 0  {
       println!("ISR==0, this interrupt likely wasn't for us.");
@@ -48,7 +48,7 @@ impl sched::irq::InterruptHandler for RxHandler {
       rx.check();
     }
 
-
+    unsafe { asm_eoi(); } // TODO
   }
 
   fn noncritical(&self) {
@@ -60,6 +60,7 @@ impl sched::irq::InterruptHandler for RxHandler {
 #[derive(Debug)]
 pub struct Rx {
   used: vring::Used,
+  used_buffers: Arc<GlobalMutex<VecDeque<Buf>>>,
   inflight_buffers: Arc<GlobalMutex<BTreeMap<u16, Buf>>>,
   device_activity: CondvarSignal,
 
@@ -72,7 +73,12 @@ pub struct Rx {
 
 impl Rx {
   fn check(&mut self) {
-
+    while let Some((ref descid, ref written)) = self.used.take_from_ring() {
+      println!("Took buffer {:?} with {} written", descid, written);
+      let buf = self.inflight_buffers.lock().remove(descid).unwrap();
+      self.used_buffers.lock().push_back(buf);
+    }
+    println!("no more buffers to take");
   }
   fn process_used(buf: Buf, written: usize) -> Option<Buf> {
     Some(buf)
@@ -95,19 +101,21 @@ impl Virtq {
   pub fn send(&mut self, data: &[u8], port: &mut cpuio::IoPort) -> Option<usize> {
     let Buf(descriptor_id, mut buf) = self.free_buffers.pop_front().unwrap(); // panic on no available buf
     let n = buf.clone_from_slice(data);
+    // careful: need to add to inflight before adding to ring
+    assert!(self.inflight_buffers.lock().insert(descriptor_id, Buf(descriptor_id, buf)).is_none());
     self.avail.add_to_ring(descriptor_id);
     println!("enqueued it: {:?}", &self.avail.mem[128*16..]);
 
     println!("Waiting for take() on used.. XX");
 
+    port.write16(16, 1);
 
-    loop {
+    // sync:
+    while let None = self.used_buffers.lock().pop_front() {
       port.write16(16, 1);
     }
-    // while let None = self.used.take_from_ring() {
-
-    // }
-    // println!("done");
+    println!("done");
+    Some(n)
   }
 
   pub fn register(&mut self, mem: Box<[u8]>, device_writable: bool) {
@@ -143,6 +151,7 @@ impl Virtq {
 
     let rx = Rx {
       used: used,
+      used_buffers: free.clone(),
       inflight_buffers: inf.clone(),
       device_activity: signal,
       // process_used: box move |buf, written| {

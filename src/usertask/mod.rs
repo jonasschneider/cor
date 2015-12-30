@@ -47,6 +47,8 @@ pub fn exec_init() {
   println!("||\n||  $ stat /init");
   println!("||  size {}", size);
 
+  serdev.putc('*');
+
   let mut buf = vec!(0u8; size);
   let read = fs.slurp("/init", &mut buf);
 
@@ -73,10 +75,12 @@ pub fn exec_init() {
   loop {
     let r = s.step(last_syscall_retval);
     println!("Step result: {:?}", r);
+
     match r {
       Syscall(Write(fd, buf, len)) => {
         let data = unsafe { slice::from_raw_parts(buf as *const u8, len as usize) }; // copy_from_user
         let text = str::from_utf8(data).unwrap();
+
         for c in data {
           serdev.putc(*c as char);
         }
