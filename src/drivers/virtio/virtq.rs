@@ -1,7 +1,6 @@
 use prelude::*;
 use mem::*;
 
-use core::borrow::{BorrowMut,Borrow};
 use cpuio;
 
 use super::vring;
@@ -14,10 +13,10 @@ use sync::global_mutex::GlobalMutex;
 const VRING_DESC_F_NEXT: u16 = 1; /* This marks a buffer as continuing via the next field. */
 const VRING_DESC_F_WRITE: u16 = 2; /* This marks a buffer as write-only (otherwise read-only). */
 
-// might also be a buffer with several segments.. bleh
+// TODO: multi-scatter buffers for FS
+// TODO: can we keep all these things private?
 #[derive(Debug)]
 pub struct Buf(u16, pub Box<[u8]>);
-// ID is accessible and unique *for the lifetime of the LogicalBuf*
 
 type CondvarWait = sched::blocking::WaitToken;
 type CondvarSignal = sched::blocking::SignalToken;
@@ -116,18 +115,15 @@ impl Virtq {
   pub fn send(&mut self, data: &[u8], port: &mut cpuio::IoPort) -> Option<usize> {
     let Buf(descriptor_id, mut buf) = self.free_buffers.lock().pop_front().unwrap(); // panic on no available buf
     let n = buf.clone_from_slice(data);
-    // careful: need to add to inflight before adding to ring
+
+    // careful: need to add to inflight before adding to ring.
+    // Also, make sure that we're not overriding any other in-flight entry.
     assert!(self.inflight_buffers.lock().insert(descriptor_id, Buf(descriptor_id, buf)).is_none());
     self.avail.add_to_ring(descriptor_id);
-    println!("enqueued it: {:?}", &self.avail.mem[128*16..]);
 
+    // Notify, TODO: make this optional
     port.write16(16, 1);
 
-    // // sync:
-    // while let None = self.used_buffers.lock().pop_front() {
-    //   port.write16(16, 1);
-    // }
-    // println!("done");
     Some(n)
   }
 
@@ -173,6 +169,7 @@ impl Virtq {
       free_buffers: free.clone(),
     };
 
+    // set initial free descriptor list
     let mut descs = VecDeque::with_capacity(length as usize);
     for i in 0..length {
       descs.push_back(i);
