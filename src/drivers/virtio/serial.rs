@@ -40,20 +40,26 @@ impl Serialdev {
   pub fn read(&mut self, buf: &mut[u8]) -> usize {
     let mut n;
     loop {
+      // Make sure that we don't keep the lock held when we possibly call kyield()
+      // TODO: Enforce this using the type systems (sleep tokens that downgrade to spinlock tokens)
       let r = {
         let mut lock = self.rxq.used_buffers.lock();
         lock.pop_front()
       };
-      match r {
-        None => { sched::kyield(); }, // FIXME: make sure you cannot sleep with spinlocks held
-        Some((ref rxbuf, ref read)) => {
-          n=*read;
 
-          buf.clone_from_slice(&rxbuf.1[0..n]);
-          println!("read: {:?}", &rxbuf);
-          break;
-        }
+      if let Some((rxbuf, read)) = r {
+        n = read;
+
+        buf.clone_from_slice(&rxbuf.1[0..n]);
+        println!("read: {:?}", &rxbuf);
+
+        // enqueue the buffer again for the next read
+        self.rxq.free_buffers.lock().push_back(rxbuf);
+        self.rxq.send(&[0u8; 20], &mut self.port);
+
+        break;
       }
+      sched::kyield();
     }
 
     n
@@ -86,19 +92,14 @@ impl Serialdev {
     // support any flags, so we can just set 0.
     configport.write16(4, 0); // XX
 
-
-    // Now comes the block-device-specific setup.
-    // (The configuration of a single virtqueue isn't device-specific though; it's the same
-    // for i.e. the virtio network controller)
-
     // Discover virtqueues; the block devices only has one
     if configport.read16(4) != 0 {
       return Err(InitError::VirtioHandshakeFailure)
     }
 
-
     // RX
 
+    // Behaviour: Move stuff into an "unread queue" -> TODO: encapsulation
     let (mut rxq, rxrecv) = super::virtq::Virtq::new(0, &mut txport, box move |used, free| {
       println!("serialrx processing used buffers: {:?}", used);
     });
@@ -106,26 +107,6 @@ impl Serialdev {
       rxq.register(box ['X' as u8; 20], true); // writable by them
       rxq.send(&[0u8; 20], &mut txport);
     }
-
-    // ctrl
-
-        // txport.write16(14, 2); // CTRL-RX
-
-        // let ctrllength = txport.read16(12);
-        // println!("Ctrl qsz is: {}",ctrllength);
-        // let (ctrladdress, mut ctrlavail, mut ctrlused) = vring::setup(ctrllength);
-
-        // let ctrlp = physical_from_kernel(ctrladdress as usize) as u32; // FIXME: not really a safe cast
-        // txport.write32(8, ctrlp >> 12);
-
-        // let cbuf = box [0u8; 8];
-        // ctrlavail.write_descriptor_at(0, Descriptor {
-        //   addr: physical_from_kernel((cbuf[..]).as_ptr() as usize) as u64,
-        //   len: 8,
-        //   flags: VRING_DESC_F_WRITE,
-        //   next: 0,
-        // });
-        // ctrlavail.add_to_ring(0);
 
     // TX
 
@@ -141,8 +122,6 @@ impl Serialdev {
       txq.register(box ['X' as u8; 1], false);
     }
 
-    println!("txq: {:?}", &txq);
-
     let handler = super::virtq::RxHandler {
       rings: vec![rxrecv, txrecv],
       isr_status_port: rxport,
@@ -151,38 +130,12 @@ impl Serialdev {
     sched::irq::add_handler(0x2b, box handler);
 
 
-
     // Tell the device we're done setting it up
     state = state | VIRTIO_STATUS_DRIVER_OK;
     configport.write8(18, state);
     println!("Device state is now: {}", state);
 
     // TODO: a PORT_OPEN(0) ctrl message (indicating the port was closed) is sent after EOF on qemu's stdin
-
-    // println!("ctrl-rx: {:?}", ctrlused.take_from_ring());
-    // println!("ISR: {}", rxport.read8(19));
-    // unsafe { asm_eoi(); }
-    // println!("rxbuf: {:?}", rxbuf);
-
-    // avail.add_to_ring(0);
-
-    // txport.write16(16, 1);
-    // //txport.write16(16, 0);
-    // //txport.write16(16, 2);
-
-
-    // println!("Waiting for take() on rx-used..");
-    // while let None = rxused.take_from_ring() {}
-    // println!("done");
-
-    // println!("tx: {:?}", used.take_from_ring());
-    // println!("rx: {:?}", rxused.take_from_ring());
-    // println!("ctrl-rx: {:?} ({:?})", ctrlused.take_from_ring(), cbuf);
-    // println!("ISR: {}", rxport.read8(19));
-    // unsafe { asm_eoi(); }
-    // println!("rxbuf: {:?}", rxbuf);
-
-    // //panic!("done");
 
     let mut dev = Serialdev { port: txport, rxq: rxq, txq: txq};
 

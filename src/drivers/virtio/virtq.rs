@@ -108,7 +108,7 @@ pub struct Virtq {
   pub used_buffers: Arc<GlobalMutex<VecDeque<(Buf, usize)>>>,
   inflight_buffers: Arc<GlobalMutex<BTreeMap<u16, Buf>>>,
 
-  free_buffers: Arc<GlobalMutex<VecDeque<Buf>>>,
+  pub free_buffers: Arc<GlobalMutex<VecDeque<Buf>>>,
   free_descriptors: VecDeque<u16>,
 }
 
