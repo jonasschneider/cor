@@ -23,11 +23,8 @@ extern {
 
 pub struct Serialdev {
   port: cpuio::IoPort,
-  rxbuf: Box<[u8; 20]>,
 
-  rxavail: vring::Avail,
-  rxused: vring::Used,
-
+  rxq: super::virtq::Virtq,
   txq: super::virtq::Virtq,
 }
 
@@ -41,32 +38,23 @@ impl Serialdev {
   }
 
   pub fn read(&mut self, buf: &mut[u8]) -> usize {
-    // self.next = self.next + 1; // just for safety, i think descriptors might be cached?
-
-    // self.rxavail.write_descriptor_at(self.next as usize, Descriptor {
-    //   addr: physical_from_kernel((buf[..]).as_ptr() as usize) as u64,
-    //   len: buf.len() as u32,
-    //   flags: VRING_DESC_F_WRITE,
-    //   next: 0,
-    // });
-    // self.rxavail.add_to_ring(self.next);
-
-    println!("before wait: {:?}", self.rxbuf);
-
-    self.rxavail.add_to_ring(0);
-    self.port.write16(16, 0);
-
     let mut n;
     loop {
-      match self.rxused.take_from_ring() {
-        None => {},
-        Some((ref bufdesc, ref read)) => { n=*read;break; }
+      let r = {
+        let mut lock = self.rxq.used_buffers.lock();
+        lock.pop_front()
+      };
+      match r {
+        None => { sched::kyield(); }, // FIXME: make sure you cannot sleep with spinlocks held
+        Some((ref rxbuf, ref read)) => {
+          n=*read;
+
+          buf.clone_from_slice(&rxbuf.1[0..n]);
+          println!("read: {:?}", &rxbuf);
+          break;
+        }
       }
     }
-
-    buf.clone_from_slice(&self.rxbuf[0..n]);
-
-    println!("after wait: {:?}", self.rxbuf);
 
     n
   }
@@ -111,26 +99,13 @@ impl Serialdev {
 
     // RX
 
-        // Set queue_select
-        txport.write16(14, 0);
-
-        // Determine how many descriptors the queue has, and allocate memory for the
-        // descriptor table and the ring arrays.
-        let rxlength = txport.read16(12);
-        println!("Max rx len is: {}",rxlength);
-        let (rxaddress, mut rxavail, mut rxused) = vring::setup(rxlength);
-
-        let rxp = physical_from_kernel(rxaddress as usize) as u32; // FIXME: not really a safe cast
-        txport.write32(8, rxp >> 12);
-
-        let rxbuf = box ['X' as u8; 20];
-        rxavail.write_descriptor_at(0, Descriptor {
-          addr: physical_from_kernel((rxbuf[..]).as_ptr() as usize) as u64,
-          len: 20,
-          flags: VRING_DESC_F_WRITE,
-          next: 0,
-        });
-        rxavail.add_to_ring(0);
+    let (mut rxq, rxrecv) = super::virtq::Virtq::new(0, &mut txport, box move |used, free| {
+      println!("serialrx processing used buffers: {:?}", used);
+    });
+    for _ in 0..1 {
+      rxq.register(box ['X' as u8; 20], true); // writable by them
+      rxq.send(&[0u8; 20], &mut txport);
+    }
 
     // ctrl
 
@@ -160,21 +135,22 @@ impl Serialdev {
       use core::iter::Extend;
 
       println!("serialtx processing used buffers: {:?}", used);
-      free.lock().extend(used.drain(..));
+      free.lock().extend(used.drain(..).map(|(buf, read)| buf));
     });
+    for _ in 0..10 {
+      txq.register(box ['X' as u8; 1], false);
+    }
 
     println!("txq: {:?}", &txq);
 
     let handler = super::virtq::RxHandler {
-      rings: vec![txrecv],
+      rings: vec![rxrecv, txrecv],
       isr_status_port: rxport,
     };
 
     sched::irq::add_handler(0x2b, box handler);
 
-    for _ in 0..10 {
-      txq.register(box ['X' as u8; 1], false);
-    }
+
 
     // Tell the device we're done setting it up
     state = state | VIRTIO_STATUS_DRIVER_OK;
@@ -208,8 +184,7 @@ impl Serialdev {
 
     // //panic!("done");
 
-    let mut dev = Serialdev { port: txport, rxbuf: rxbuf,
-      rxavail: rxavail, rxused: rxused, txq: txq};
+    let mut dev = Serialdev { port: txport, rxq: rxq, txq: txq};
 
     dev.putc('?');
     dev.putc('!');

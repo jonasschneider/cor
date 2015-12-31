@@ -124,6 +124,7 @@ impl<T> GlobalMutex<T>
 
     fn obtain_lock(&self)
     {
+        unsafe { asm!("cli"); } // FIXME: nesting! sigh.
         while self.lock.compare_and_swap(false, true, Ordering::SeqCst) != false
         {
             // Do nothing
@@ -210,6 +211,7 @@ impl<'a, T> Drop for GlobalMutexGuard<'a, T>
     fn drop(&mut self)
     {
         self.lock.store(false, Ordering::SeqCst);
+        unsafe { asm!("sti"); } // FIXME: nesting! sigh.
     }
 }
 

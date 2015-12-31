@@ -16,7 +16,7 @@ const VRING_DESC_F_WRITE: u16 = 2; /* This marks a buffer as write-only (otherwi
 
 // might also be a buffer with several segments.. bleh
 #[derive(Debug)]
-pub struct Buf(u16, Box<[u8]>);
+pub struct Buf(u16, pub Box<[u8]>);
 // ID is accessible and unique *for the lifetime of the LogicalBuf*
 
 type CondvarWait = sched::blocking::WaitToken;
@@ -62,7 +62,7 @@ impl sched::irq::InterruptHandler for RxHandler {
 
 pub struct Rx {
   used: vring::Used,
-  used_buffers: Arc<GlobalMutex<VecDeque<Buf>>>,
+  used_buffers: Arc<GlobalMutex<VecDeque<(Buf, usize)>>>,
   inflight_buffers: Arc<GlobalMutex<BTreeMap<u16, Buf>>>,
   device_activity: CondvarSignal,
 
@@ -71,7 +71,7 @@ pub struct Rx {
   free_buffers: Arc<GlobalMutex<VecDeque<Buf>>>,
 
   // Do something with the `used` vec, after some things have been added to it.
-  process_used: Box<FnMut(&mut VecDeque<Buf>, &GlobalMutex<VecDeque<Buf>>) -> () + Send>,
+  process_used: Box<FnMut(&mut VecDeque<(Buf, usize)>, &GlobalMutex<VecDeque<Buf>>) -> () + Send>,
     // for blockdev: read wait tokens, wake up accordingly
     // for chardev-tx: just put back buffer into free_buffers
     // for chardev-rx: put into chardev.unread_buffers
@@ -79,14 +79,16 @@ pub struct Rx {
 
 impl Rx {
   fn check(&mut self) {
+    println!("Checking some ring.");
     let mut any = false;
     let mut used = self.used_buffers.lock();
+    println!("Got teh spinlock");
 
     while let Some((ref descid, ref written)) = self.used.take_from_ring() {
       any = true;
       println!("Took buffer {:?} with {} written", descid, written);
       let buf = self.inflight_buffers.lock().remove(descid).unwrap();
-      used.push_back(buf);
+      used.push_back((buf,*written));
     }
 
     if any {
@@ -103,7 +105,7 @@ pub struct Virtq {
   avail: vring::Avail,
 
   device_activity: CondvarWait,
-  used_buffers: Arc<GlobalMutex<VecDeque<Buf>>>,
+  pub used_buffers: Arc<GlobalMutex<VecDeque<(Buf, usize)>>>,
   inflight_buffers: Arc<GlobalMutex<BTreeMap<u16, Buf>>>,
 
   free_buffers: Arc<GlobalMutex<VecDeque<Buf>>>,
@@ -142,7 +144,7 @@ impl Virtq {
   }
 
   // queue_index is the index on the virtio device to initialize
-  pub fn new(queue_index: u16, port: &mut cpuio::IoPort, process: Box<FnMut(&mut VecDeque<Buf>, &GlobalMutex<VecDeque<Buf>>,) -> () + Send>) -> (Self, Rx) {
+  pub fn new(queue_index: u16, port: &mut cpuio::IoPort, process: Box<FnMut(&mut VecDeque<(Buf, usize)>, &GlobalMutex<VecDeque<Buf>>,) -> () + Send>) -> (Self, Rx) {
     // Set queue_select
     port.write16(14, queue_index);
 
