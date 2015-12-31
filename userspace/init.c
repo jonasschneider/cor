@@ -14,7 +14,7 @@ int main() {
     read(fd, buf, 256);
 
     int pos = 0;
-    while(buf[pos] != ' ' && buf[pos] != '\n') {
+    while(buf[pos] && buf[pos] != ' ' && buf[pos] != '\n') {
       pos++;
     }
     buf[pos] = 0; // set space to \0

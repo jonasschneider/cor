@@ -13,7 +13,7 @@ is_return_from_trampoline:
   jmp trampoline_from_user
 
 isr_dispatcher:
-  # no==0xd (protection fault): return from userspace
+  # no==0xd (protection fault): bail
   sub $0xd, %rax
   jz cor_panic
   add $0xd, %rax

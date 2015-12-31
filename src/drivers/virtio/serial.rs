@@ -134,23 +134,23 @@ impl Serialdev {
 
     // ctrl
 
-        txport.write16(14, 2); // CTRL-RX
+        // txport.write16(14, 2); // CTRL-RX
 
-        let ctrllength = txport.read16(12);
-        println!("Ctrl qsz is: {}",ctrllength);
-        let (ctrladdress, mut ctrlavail, mut ctrlused) = vring::setup(ctrllength);
+        // let ctrllength = txport.read16(12);
+        // println!("Ctrl qsz is: {}",ctrllength);
+        // let (ctrladdress, mut ctrlavail, mut ctrlused) = vring::setup(ctrllength);
 
-        let ctrlp = physical_from_kernel(ctrladdress as usize) as u32; // FIXME: not really a safe cast
-        txport.write32(8, ctrlp >> 12);
+        // let ctrlp = physical_from_kernel(ctrladdress as usize) as u32; // FIXME: not really a safe cast
+        // txport.write32(8, ctrlp >> 12);
 
-        let cbuf = box [0u8; 8];
-        ctrlavail.write_descriptor_at(0, Descriptor {
-          addr: physical_from_kernel((cbuf[..]).as_ptr() as usize) as u64,
-          len: 8,
-          flags: VRING_DESC_F_WRITE,
-          next: 0,
-        });
-        ctrlavail.add_to_ring(0);
+        // let cbuf = box [0u8; 8];
+        // ctrlavail.write_descriptor_at(0, Descriptor {
+        //   addr: physical_from_kernel((cbuf[..]).as_ptr() as usize) as u64,
+        //   len: 8,
+        //   flags: VRING_DESC_F_WRITE,
+        //   next: 0,
+        // });
+        // ctrlavail.add_to_ring(0);
 
     // TX
 
