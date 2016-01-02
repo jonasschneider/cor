@@ -17,10 +17,10 @@ pub trait Client: fmt::Debug {
 
   // Submits a sequest to read the specified sector.
   // Returns a token that can be used to block until the read is completed.
-  fn read_dispatch(&self, sector: u64, buf: Box<[u8]>) -> Result<Self::Tag, Error>;
+  fn read_dispatch(&mut self, sector: u64, buf: Box<[u8]>) -> Result<Self::Tag, Error>;
 
   // Block until the read identified by the token is completed, then writes the read data
   // into `buf` (which must be of size 512).
   // TODO: This is actually just a badly-designed Future! We could probably just call it .wait() on the Tag?
-  fn read_await(&self, tok: Self::Tag) -> Result<Box<[u8]>, Error>;
+  fn read_await(&mut self, tok: Self::Tag) -> Result<Box<[u8]>, Error>;
 }

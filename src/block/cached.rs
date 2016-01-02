@@ -26,25 +26,26 @@ pub trait Cache: Sync + fmt::Debug {
 }
 
 
-unsafe impl<C: Client> Sync for NoopCache<C> {} // TODO TODO
+use sync::global_mutex::GlobalMutex;
+
 #[derive(Debug)]
-pub struct NoopCache<C: Client> {
-  blockdev: C,
+pub struct NoopCache<C: Client + Send> {
+  blockdev: Arc<GlobalMutex<C>>,
 }
 
-impl<C: Client> Cache for NoopCache<C> {
+impl<C: Client + Send> Cache for NoopCache<C> {
   fn get(&self, sector: u64) -> Result<SectorCheckout, Error> {
     // just dumb read & block immediately
     let b = vec![0u8;512].into_boxed_slice();
-    let tok = self.blockdev.read_dispatch(sector as u64, b).unwrap();
-    let buf = self.blockdev.read_await(tok).unwrap();
+    let tok = self.blockdev.lock().read_dispatch(sector as u64, b).unwrap();
+    let buf = self.blockdev.lock().read_await(tok).unwrap();
     Ok(SectorCheckout{ _data: buf })
   }
 }
 
 // didn't we say Client was sync and shared-not-cloned? idk
-impl<C: Client> NoopCache<C> {
+impl<C: Client + Send> NoopCache<C> {
   pub fn new(c: C) -> Self {
-    NoopCache{ blockdev: c }
+    NoopCache{ blockdev: Arc::new(GlobalMutex::new(c)) }
   }
 }

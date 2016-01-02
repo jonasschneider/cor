@@ -31,8 +31,6 @@ extern {
   fn asm_eoi();
 }
 
-unsafe impl Sync for Blockdev {} // TODO
-
 use core::cell::RefCell;
 use collections::btree_map::BTreeMap;
 
@@ -40,9 +38,8 @@ type SignalMap = BTreeMap<u16,SignalToken>;
 
 #[derive(Debug)]
 pub struct Blockdev {
-  port: RefCell<cpuio::IoPort>, // exclusive access to the entire port, for now
-
-  q: GlobalMutex<virtq::Virtq>,
+  port: cpuio::IoPort,
+  q: virtq::Virtq,
 
   completed_requests: Arc<GlobalMutex<BTreeMap<u16,virtq::Buf>>>,
 }
@@ -53,11 +50,10 @@ use byteorder::{ByteOrder,NativeEndian};
 impl Client for Blockdev {
   type Tag = u16;
 
-  fn read_dispatch(&self, sector: u64, mut buf: Box<[u8]>) -> Result<Self::Tag, Error> {
+  fn read_dispatch(&mut self, sector: u64, mut buf: Box<[u8]>) -> Result<Self::Tag, Error> {
     assert_eq!(512, buf.len());
 
     println!("virtio blockdev: Reading sector {}", sector);
-    let mut port = self.port.borrow_mut();
 
     let mut hdr = box [0u8; 16];
     NativeEndian::write_u32(&mut hdr[0..], 0); // kind: 0=read
@@ -65,35 +61,25 @@ impl Client for Blockdev {
     NativeEndian::write_u64(&mut hdr[8..], sector as u64);
     let mut done = box [17u8; 1]; // != 0 for checking that it was set by the host
 
-    // 1. get id
-    let mut q = self.q.lock();
-    let id = q.register_and_send_rww(hdr, buf, done);
+    let tag = self.q.register_and_send_rww(hdr, buf, done);
 
-    // 3. use id
-    q.xx(id, &mut *port);
+    self.q.xx(tag, &mut self.port);
 
-    // println!("Now in flight, kicking: {:?}", self.in_flight);
-
-    // // TODO: don't kick unconditionally
-    // port.write16(16, 0);
-
-    Ok(id as Self::Tag)
+    Ok(tag as Self::Tag)
   }
 
-  fn read_await(&self, tag: Self::Tag) -> Result<Box<[u8]>, Error> {
+  fn read_await(&mut self, tag: Self::Tag) -> Result<Box<[u8]>, Error> {
     // FIXME: make sure that we're not holding any borrows or locks before we go to sleep?
-    // TODO loopy
-    let condvar = self.q.lock().device_activity.clone();
-    condvar.wait();
+    // TODO loop / condition check macro
+    self.q.device_activity.clone().wait();
 
     match self.completed_requests.lock().remove(&tag).unwrap() {
       // drop hdr
       virtq::Buf::Rww(id1, _, id2, data, id3, done) => {
         {
-          let mut d = self.q.lock();
-          d.free_descriptors.push_back(id1);
-          d.free_descriptors.push_back(id2);
-          d.free_descriptors.push_back(id3);
+          self.q.free_descriptors.push_back(id1);
+          self.q.free_descriptors.push_back(id2);
+          self.q.free_descriptors.push_back(id3);
         }
 
         println!("Virtio call completed, retval={}", done[0]);
@@ -189,8 +175,8 @@ impl Blockdev {
     configport.write8(18, state);
 
     Ok(Blockdev {
-      port: RefCell::new(txport),
-      q: GlobalMutex::new(q),
+      port: txport,
+      q: q,
       completed_requests: completed,
     })
   }
