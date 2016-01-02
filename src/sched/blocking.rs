@@ -22,6 +22,8 @@ pub struct SignalToken {
   inner: Arc<Inner>,
 }
 
+// Fixme: this Clone is dubious
+#[derive(Clone)]
 #[derive(Debug)]
 pub struct WaitToken {
   inner: Arc<Inner>,

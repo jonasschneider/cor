@@ -15,6 +15,7 @@
 //     system.
 
 
+// TODO(perf): the Tag could probably just be
 mod virtq;
 mod vring;
 pub mod serial;
@@ -43,39 +44,14 @@ pub struct Blockdev {
 
   q: GlobalMutex<virtq::Virtq>,
 
-  wakeup_tokens: Arc<GlobalMutex<SignalMap>>,
   completed_requests: Arc<GlobalMutex<BTreeMap<u16,virtq::Buf>>>,
 }
 
 use sync::global_mutex::GlobalMutex;
 use byteorder::{ByteOrder,NativeEndian};
 
-struct Tag(WaitToken, u16);
-use core::cmp::{Ord,Ordering,Eq};
-
-impl Ord for Tag {
-  fn cmp(&self, other: &Self) -> Ordering {
-    self.1.cmp(&other.1)
-  }
-}
-
-impl PartialOrd for Tag {
-  fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-    Some(self.cmp(other))
-  }
-}
-
-impl PartialEq for Tag {
-  fn eq(&self, other: &Self) -> bool {
-    self.1.eq(&other.1)
-  }
-}
-
-impl Eq for Tag { }
-
-
 impl Client for Blockdev {
-  type Tag = Tag;
+  type Tag = u16;
 
   fn read_dispatch(&self, sector: u64, mut buf: Box<[u8]>) -> Result<Self::Tag, Error> {
     assert_eq!(512, buf.len());
@@ -93,12 +69,6 @@ impl Client for Blockdev {
     let mut q = self.q.lock();
     let id = q.register_and_send_rww(hdr, buf, done);
 
-    // 2. set handler for id
-    let mut n = String::new();
-    write!(n, "virtio-block read of sector {}", sector);
-    let (wait, signal) = sched::blocking::tokens(n);
-    self.wakeup_tokens.lock().insert(id, signal);
-
     // 3. use id
     q.xx(id, &mut *port);
 
@@ -107,16 +77,16 @@ impl Client for Blockdev {
     // // TODO: don't kick unconditionally
     // port.write16(16, 0);
 
-    Ok(Tag(wait, id))
+    Ok(id as Self::Tag)
   }
 
-  fn read_await(&self, tok: Self::Tag) -> Result<Box<[u8]>, Error> {
-    let Tag(wait, id) = tok;
+  fn read_await(&self, tag: Self::Tag) -> Result<Box<[u8]>, Error> {
+    // FIXME: make sure that we're not holding any borrows or locks before we go to sleep?
+    // TODO loopy
+    let condvar = self.q.lock().device_activity.clone();
+    condvar.wait();
 
-    // FIXME: make sure that we're not holding any of these borrows or locks before we go to sleep
-    wait.wait();
-
-    match self.completed_requests.lock().remove(&id).unwrap() {
+    match self.completed_requests.lock().remove(&tag).unwrap() {
       // drop hdr
       virtq::Buf::Rww(id1, _, id2, data, id3, done) => {
         {
@@ -187,24 +157,18 @@ impl Blockdev {
 
     // The tokens for tagged I/O that allow the IRQ handler to wake up the specific
     // task that is waiting for the finished I/O.
-    let wakeup = Arc::new(GlobalMutex::new(BTreeMap::new()));
-    let wakeup_irqside = wakeup.clone();
-
     let completed = Arc::new(GlobalMutex::new(BTreeMap::new()));
     let completed_irqside = completed.clone();
 
     let (mut q, rx) = virtq::Virtq::new(0, &mut txport, box move |used, free| {
-      let ref mut signals: SignalMap = *wakeup_irqside.lock();
-
       let ref mut completed = completed_irqside.lock();
 
       for (buf, written) in used.drain(..) {
         assert_eq!(513, written);
         match buf {
           virtq::Buf::Rww(id, hdr, datadesc, data, donedesc, done) => {
-            println!("Buffer {} is used, signalling", id);
+            println!("Request with tag {} is completed", id);
             assert!(completed.insert(id, virtq::Buf::Rww(id, hdr, datadesc, data, donedesc, done)).is_none());
-            signals.remove(&id).unwrap().signal();
           }
           _ => {
             panic!("unexpected buffer type");
@@ -224,9 +188,10 @@ impl Blockdev {
     state = state | VIRTIO_STATUS_DRIVER_OK;
     configport.write8(18, state);
 
-    Ok(Blockdev { port: RefCell::new(txport),
-      wakeup_tokens: wakeup, q: GlobalMutex::new(q),
+    Ok(Blockdev {
+      port: RefCell::new(txport),
+      q: GlobalMutex::new(q),
       completed_requests: completed,
-       })
+    })
   }
 }

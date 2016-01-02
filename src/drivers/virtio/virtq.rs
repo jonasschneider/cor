@@ -21,7 +21,7 @@ pub enum Buf {
   Rww(u16, Box<[u8]>, u16, Box<[u8]>, u16, Box<[u8]>),
 }
 
-type CondvarWait = sched::blocking::WaitToken;
+pub type CondvarWait = sched::blocking::WaitToken;
 type CondvarSignal = sched::blocking::SignalToken;
 
 // Handles receive notifications for a virtio device.
@@ -65,7 +65,7 @@ impl sched::irq::InterruptHandler for RxHandler {
 pub struct Rx {
   used: vring::Used,
   used_buffers: Arc<GlobalMutex<VecDeque<(Buf, usize)>>>,
-  inflight_buffers: Arc<GlobalMutex<BTreeMap<u16, Buf>>>,
+  inflight_buffers: Arc<GlobalMutex<BTreeMap<u16, Buf>>>, // TODO(perf): array-based map is probably faster
   device_activity: CondvarSignal,
 
   // I don't *really* want this here, but otherwise you can't access the Virtq
@@ -96,6 +96,7 @@ impl Rx {
     if any {
       println!("Took some buffers, calling process_used()..");
       self.process_used.call_mut((&mut *used,&*self.free_buffers));
+      self.device_activity.signal(); // TODO: notify_all instead of notify_one
     } else {
       println!("Had no buffers to take.");
     }
@@ -106,7 +107,9 @@ impl Rx {
 pub struct Virtq {
   avail: vring::Avail,
 
-  device_activity: CondvarWait,
+  // this is the only field that should really be public
+  pub device_activity: CondvarWait,
+
   pub used_buffers: Arc<GlobalMutex<VecDeque<(Buf, usize)>>>,
   inflight_buffers: Arc<GlobalMutex<BTreeMap<u16, Buf>>>,
 
