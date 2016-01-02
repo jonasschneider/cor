@@ -62,6 +62,8 @@ impl sched::irq::InterruptHandler for RxHandler {
   }
 }
 
+pub type Handler = Box<FnMut(&mut VecDeque<(Buf, usize)>, &GlobalMutex<VecDeque<Buf>>) -> () + Send>;
+
 pub struct Rx {
   used: vring::Used,
   used_buffers: Arc<GlobalMutex<VecDeque<(Buf, usize)>>>,

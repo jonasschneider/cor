@@ -14,11 +14,10 @@
 //     virtio interfaces and how it presents them to the guest OS's file
 //     system.
 
-
-// TODO(perf): the Tag could probably just be
 mod virtq;
 mod vring;
 pub mod serial;
+mod pci;
 
 use prelude::*;
 
@@ -27,12 +26,10 @@ use sched;
 use sched::blocking::{WaitToken,SignalToken};
 use block::{Client,Error};
 
-extern {
-  fn asm_eoi();
-}
-
 use core::cell::RefCell;
 use collections::btree_map::BTreeMap;
+use sync::global_mutex::GlobalMutex;
+use byteorder::{ByteOrder,NativeEndian};
 
 type SignalMap = BTreeMap<u16,SignalToken>;
 
@@ -44,8 +41,6 @@ pub struct Blockdev {
   completed_requests: Arc<GlobalMutex<BTreeMap<u16,virtq::Buf>>>,
 }
 
-use sync::global_mutex::GlobalMutex;
-use byteorder::{ByteOrder,NativeEndian};
 
 impl Client for Blockdev {
   type Tag = u16;
@@ -73,9 +68,9 @@ impl Client for Blockdev {
     // TODO loop / condition check macro
     self.q.device_activity.clone().wait();
 
-    match self.completed_requests.lock().remove(&tag).unwrap() {
+    match self.completed_requests.lock().remove(&tag) {
       // drop hdr
-      virtq::Buf::Rww(id1, _, id2, data, id3, done) => {
+      Some(virtq::Buf::Rww(id1, _, id2, data, id3, done)) => {
         {
           self.q.free_descriptors.push_back(id1);
           self.q.free_descriptors.push_back(id2);
@@ -89,7 +84,7 @@ impl Client for Blockdev {
         }
         return Ok(data)
       }
-      _ => { panic!("unexpected buffer type") }
+      x => { panic!("wut! unexpected buffer type {:?}",x) }
     }
 
     Err(Error::InternalError)
@@ -105,48 +100,12 @@ pub enum InitError {
   VirtioRequestFailed,
 }
 
-const VIRTIO_STATUS_ACKNOWLEDGE: u8 = 1;
-const VIRTIO_STATUS_DRIVER: u8 = 2;
-const VIRTIO_STATUS_DRIVER_OK: u8 = 4;
-const VIRTIO_STATUS_FAILED: u8 = 128;
-
 impl Blockdev {
   pub fn new(mut port: cpuio::IoPort) -> Result<Self, InitError> {
-    println!("Initializing virtio block device with ioport {:?}..", port);
-
-    let (mut configport, mut operationsport) = port.split_at_masks(
-      "XXXXXXXX----------X-XXXX",  // feature negotiation flags, device status, MSI-X fields
-      "--------XXXXXXXXXX-X----"); // queue address, size, select, notify, ISR status
-
-    let (mut rxport, mut txport) = operationsport.split_at_masks(
-      "-------------------X----",  // ISR status
-      "--------XXXXXXXXXX------"); // queue address, size, select, notify
-
-    let mut state = 0u8;
-    configport.write8(18, state);
-
-    state = state | VIRTIO_STATUS_ACKNOWLEDGE;
-    configport.write8(18, state);
-
-    state = state | VIRTIO_STATUS_DRIVER;
-    configport.write8(18, state);
-
-    // Feature negotiation
-    let offered_featureflags = configport.read16(0);
-    println!("The device offered us these feature bits: {:?}", offered_featureflags);
-    // In theory, we'd do `negotiated = offered & supported`; we don't actually
-    // support any flags, so we can just set 0.
-    configport.write16(4, 0);
-    if configport.read16(4) != 0 {
-      return Err(InitError::VirtioHandshakeFailure)
-    }
-
-    // The tokens for tagged I/O that allow the IRQ handler to wake up the specific
-    // task that is waiting for the finished I/O.
     let completed = Arc::new(GlobalMutex::new(BTreeMap::new()));
     let completed_irqside = completed.clone();
 
-    let (mut q, rx) = virtq::Virtq::new(0, &mut txport, box move |used, free| {
+    let request_completion_handler = (box move |used, free| {
       let ref mut completed = completed_irqside.lock();
 
       for (buf, written) in used.drain(..) {
@@ -161,22 +120,14 @@ impl Blockdev {
           }
         }
       }
-    });
+    }) as virtq::Handler;
 
-    let handler = virtq::RxHandler {
-      rings: vec![rx],
-      isr_status_port: rxport,
-    };
-
-    sched::irq::add_handler(0x2a, box handler);
-
-    // Tell the device we're done setting it up
-    state = state | VIRTIO_STATUS_DRIVER_OK;
-    configport.write8(18, state);
+    let handlers = vec![(0, request_completion_handler)];
+    let (mut qs, mut txport) = pci::init(port, 0x2a, handlers);
 
     Ok(Blockdev {
       port: txport,
-      q: q,
+      q: qs.remove(0),
       completed_requests: completed,
     })
   }
