@@ -32,7 +32,7 @@ pub fn exec_init() {
   let blockdev: virtio::Blockdev = virtio::Blockdev::new(port).unwrap();
   println!("result of blockdevice init: {:?}", blockdev);
 
-  let cache = block::cached::NoopCache::new(box blockdev);
+  let cache = block::cached::NoopCache::new(blockdev);
 
   let mut fs = fs::Cpiofs::new(Arc::new(cache) as Arc<block::Cache>);
   println!("fs: {:?}", fs);

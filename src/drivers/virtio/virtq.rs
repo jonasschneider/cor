@@ -16,7 +16,10 @@ const VRING_DESC_F_WRITE: u16 = 2; /* This marks a buffer as write-only (otherwi
 // TODO: multi-scatter buffers for FS
 // TODO: can we keep all these things private?
 #[derive(Debug)]
-pub struct Buf(u16, pub Box<[u8]>);
+pub enum Buf {
+  Simple(u16, Box<[u8]>),
+  Rww(u16, Box<[u8]>, u16, Box<[u8]>, u16, Box<[u8]>),
+}
 
 type CondvarWait = sched::blocking::WaitToken;
 type CondvarSignal = sched::blocking::SignalToken;
@@ -108,23 +111,30 @@ pub struct Virtq {
   inflight_buffers: Arc<GlobalMutex<BTreeMap<u16, Buf>>>,
 
   pub free_buffers: Arc<GlobalMutex<VecDeque<Buf>>>,
-  free_descriptors: VecDeque<u16>,
+  pub free_descriptors: VecDeque<u16>,
+
+  index: u16,
 }
 
 impl Virtq {
   pub fn send(&mut self, data: &[u8], port: &mut cpuio::IoPort) -> Option<usize> {
-    let Buf(descriptor_id, mut buf) = self.free_buffers.lock().pop_front().unwrap(); // panic on no available buf
-    let n = buf.clone_from_slice(data);
+    // panic when either no buffer is available at all, or the available one isn't Simple
+    match self.free_buffers.lock().pop_front() {
+      Some(Buf::Simple(descriptor_id, mut buf)) => {
+        let n = buf.clone_from_slice(data);
 
-    // careful: need to add to inflight before adding to ring.
-    // Also, make sure that we're not overriding any other in-flight entry.
-    assert!(self.inflight_buffers.lock().insert(descriptor_id, Buf(descriptor_id, buf)).is_none());
-    self.avail.add_to_ring(descriptor_id);
+        // careful: need to add to inflight before adding to ring.
+        // Also, make sure that we're not overriding any other in-flight entry.
+        assert!(self.inflight_buffers.lock().insert(descriptor_id, Buf::Simple(descriptor_id, buf)).is_none());
+        self.avail.add_to_ring(descriptor_id);
 
-    // Notify, TODO: make this optional
-    port.write16(16, 1);
+        // Notify, TODO: make this optional
+        port.write16(16, self.index);
 
-    Some(n)
+        Some(n)
+      },
+      _ => { panic!("no suitable buffer found for send"); }
+    }
   }
 
   pub fn register(&mut self, mem: Box<[u8]>, device_writable: bool) {
@@ -136,7 +146,49 @@ impl Virtq {
       flags: flags,
       next: 0,
     });
-    self.free_buffers.lock().push_back(Buf(i, mem));
+    self.free_buffers.lock().push_back(Buf::Simple(i, mem));
+  }
+
+  pub fn register_and_send_rww(&mut self, hdr: Box<[u8]>, data: Box<[u8]>, done: Box<[u8]>) -> u16 {
+    let i1 = self.free_descriptors.pop_front().unwrap();
+    let i2 = self.free_descriptors.pop_front().unwrap();
+    let i3 = self.free_descriptors.pop_front().unwrap();
+
+    self.avail.write_descriptor_at(i1 as usize, Descriptor {
+      addr: physical_from_kernel(hdr.as_ptr() as usize) as u64,
+      len: hdr.len() as u32,
+      flags: VRING_DESC_F_NEXT,
+      next: i2,
+    });
+
+    self.avail.write_descriptor_at(i2 as usize, Descriptor {
+      addr: physical_from_kernel(data.as_ptr() as usize) as u64,
+      len: data.len() as u32,
+      flags: VRING_DESC_F_NEXT | VRING_DESC_F_WRITE,
+      next: i3,
+    });
+
+    self.avail.write_descriptor_at(i3 as usize, Descriptor {
+      addr: physical_from_kernel(done.as_ptr() as usize) as u64,
+      len: done.len() as u32,
+      flags: VRING_DESC_F_WRITE,
+      next: 0,
+    });
+
+    let buf = Buf::Rww(i1, hdr, i2, data, i3, done);
+
+    // no overwrite, and add to inflight before adding to ring
+    assert!(self.inflight_buffers.lock().insert(i1, buf).is_none());
+
+    // todo: need to think harder about wraparound and tag uniqueness
+    i1
+  }
+
+  pub fn xx(&mut self, i1: u16, port: &mut cpuio::IoPort)  {
+    self.avail.add_to_ring(i1);
+
+    // Notify, TODO: make this optional
+    port.write16(16, self.index);
   }
 
   // queue_index is the index on the virtio device to initialize
@@ -147,6 +199,7 @@ impl Virtq {
     // Determine how many descriptors the queue has, and allocate memory for the
     // descriptor table and the ring arrays.
     let length = port.read16(12);
+    assert!(length > 0);
 
     let (address, mut availring, mut usedring) = vring::setup(length);
 
@@ -183,6 +236,7 @@ impl Virtq {
       free_buffers: free,
       free_descriptors: descs,
       inflight_buffers: inf,
+      index: queue_index,
     }, rx)
   }
 }

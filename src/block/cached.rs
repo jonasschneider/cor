@@ -26,13 +26,13 @@ pub trait Cache: Sync + fmt::Debug {
 }
 
 
-unsafe impl Sync for NoopCache {} // TODO TODO
+unsafe impl<C: Client> Sync for NoopCache<C> {} // TODO TODO
 #[derive(Debug)]
-pub struct NoopCache {
-  blockdev: Box<Client>,
+pub struct NoopCache<C: Client> {
+  blockdev: C,
 }
 
-impl Cache for NoopCache {
+impl<C: Client> Cache for NoopCache<C> {
   fn get(&self, sector: u64) -> Result<SectorCheckout, Error> {
     // just dumb read & block immediately
     let b = vec![0u8;512].into_boxed_slice();
@@ -43,8 +43,8 @@ impl Cache for NoopCache {
 }
 
 // didn't we say Client was sync and shared-not-cloned? idk
-impl NoopCache {
-  pub fn new(c: Box<Client>) -> Self {
+impl<C: Client> NoopCache<C> {
+  pub fn new(c: C) -> Self {
     NoopCache{ blockdev: c }
   }
 }

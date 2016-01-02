@@ -95,6 +95,9 @@ pub struct GlobalMutexGuard<'a, T:'a>
 
 unsafe impl<T> Sync for GlobalMutex<T> {}
 
+use core::sync::atomic::{AtomicUsize,ATOMIC_USIZE_INIT};
+static DEPTH: AtomicUsize = ATOMIC_USIZE_INIT;
+
 impl<T> GlobalMutex<T>
 {
     /// Creates a new spinlock wrapping the supplied data.
@@ -124,7 +127,11 @@ impl<T> GlobalMutex<T>
 
     fn obtain_lock(&self)
     {
-        unsafe { asm!("cli"); } // FIXME: nesting! sigh.
+        let d = DEPTH.fetch_add(1, Ordering::SeqCst);
+        if d == 0 {
+            println!("LOCK: disabling interrupts");
+            unsafe { asm!("cli"); }
+        }
         while self.lock.compare_and_swap(false, true, Ordering::SeqCst) != false
         {
             // Do nothing
@@ -158,8 +165,14 @@ impl<T> GlobalMutex<T>
 
     /// Tries to lock the GlobalMutex. If it is already locked, it will return None. Otherwise it returns
     /// a guard within Some.
+    // FIXME: this is pretty ugly with interrupts, should probably get rid of it
     pub fn try_lock(&self) -> Option<GlobalMutexGuard<T>>
     {
+        let d = DEPTH.fetch_add(1, Ordering::SeqCst);
+        if d == 0 {
+            println!("LOCK: disabling interrupts");
+            unsafe { asm!("cli"); }
+        }
         if self.lock.compare_and_swap(false, true, Ordering::SeqCst) == false
         {
             Some(
@@ -171,6 +184,10 @@ impl<T> GlobalMutex<T>
         }
         else
         {
+            if DEPTH.fetch_sub(1, Ordering::SeqCst) == 1 {
+                println!("LOCK: enabling interrupts");
+                unsafe { asm!("sti"); }
+            }
             None
         }
     }
@@ -211,7 +228,10 @@ impl<'a, T> Drop for GlobalMutexGuard<'a, T>
     fn drop(&mut self)
     {
         self.lock.store(false, Ordering::SeqCst);
-        unsafe { asm!("sti"); } // FIXME: nesting! sigh.
+        if DEPTH.fetch_sub(1, Ordering::SeqCst) == 1 {
+            println!("LOCK: enabling interrupts");
+            unsafe { asm!("sti"); }
+        }
     }
 }
 

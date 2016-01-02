@@ -38,16 +38,21 @@ impl Serialdev {
         lock.pop_front()
       };
 
-      if let Some((rxbuf, count)) = r {
-        n = count;
+      if let Some((b, count)) = r {
+        match b {
+          virtq::Buf::Simple(desc, data) => {
+            n = count;
 
-        buf.clone_from_slice(&rxbuf.1[0..n]);
+            buf.clone_from_slice(&data[0..n]);
 
-        // enqueue the buffer again for the next read
-        self.rxq.free_buffers.lock().push_back(rxbuf);
-        self.rxq.send(&[0u8; 20], &mut self.port);
+            // enqueue the buffer again for the next read
+            self.rxq.free_buffers.lock().push_back(virtq::Buf::Simple(desc, data));
+            self.rxq.send(&[0u8; 20], &mut self.port);
 
-        break;
+            break;
+          },
+          _ => { panic!("unexpected buffer type"); }
+        }
       }
 
       sched::kyield();
