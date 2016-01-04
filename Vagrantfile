@@ -5,6 +5,7 @@ Vagrant.configure("2") do |config|
   config.vm.box = "archlinux-x86_64"
 
   config.vm.define "arch" do
+    config.vm.network "private_network", type: "dhcp", ip: "172.28.128.80"
     config.vm.box = "archlinux-x86_64"
   end
 end
