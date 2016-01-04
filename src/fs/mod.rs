@@ -4,8 +4,7 @@ use block;
 use alloc::arc::Arc;
 
 use alloc::boxed::Box;
-use ::mem;
-use ::drivers::virtio::Blockdev;
+use mem;
 use core::str;
 use self::cpio::{Cursor,Entry};
 use collections::vec::Vec;

@@ -29,7 +29,7 @@ pub fn exec_init() {
   // TODO: request this from somewhere
   let port = unsafe { cpuio::alloc(0xc040, 24, "XXXXXXXXXXXXXXXXXXXXXXXX").unwrap() };
 
-  let blockdev: virtio::Blockdev = virtio::Blockdev::new(port).unwrap();
+  let blockdev = virtio::block::Blockdev::new(port).unwrap();
   println!("result of blockdevice init: {:?}", blockdev);
 
   let cache = block::cached::NoopCache::new(blockdev);

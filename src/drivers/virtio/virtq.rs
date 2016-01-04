@@ -10,16 +10,20 @@ use sched;
 use collections::btree_map::BTreeMap;
 use sync::global_mutex::GlobalMutex;
 
+// TODO: Buf should totally be private. The current behaviour allows users to leak
+// descriptors if they drop the Buf without explicitly removing the descriptors.
+// Actually, pretty much all fields of Virtq should be private.
+
 const VRING_DESC_F_NEXT: u16 = 1; /* This marks a buffer as continuing via the next field. */
 const VRING_DESC_F_WRITE: u16 = 2; /* This marks a buffer as write-only (otherwise read-only). */
 
-// TODO: multi-scatter buffers for FS
-// TODO: can we keep all these things private?
 #[derive(Debug)]
 pub enum Buf {
   Simple(u16, Box<[u8]>),
   Rww(u16, Box<[u8]>, u16, Box<[u8]>, u16, Box<[u8]>),
 }
+
+type RwwTag = u16;
 
 pub type CondvarWait = sched::blocking::WaitToken;
 type CondvarSignal = sched::blocking::SignalToken;
@@ -154,7 +158,7 @@ impl Virtq {
     self.free_buffers.lock().push_back(Buf::Simple(i, mem));
   }
 
-  pub fn register_and_send_rww(&mut self, hdr: Box<[u8]>, data: Box<[u8]>, done: Box<[u8]>) -> u16 {
+  pub fn register_rww(&mut self, hdr: Box<[u8]>, data: Box<[u8]>, done: Box<[u8]>) -> RwwTag {
     let i1 = self.free_descriptors.pop_front().unwrap();
     let i2 = self.free_descriptors.pop_front().unwrap();
     let i3 = self.free_descriptors.pop_front().unwrap();
@@ -185,11 +189,11 @@ impl Virtq {
     // no overwrite, and add to inflight before adding to ring
     assert!(self.inflight_buffers.lock().insert(i1, buf).is_none());
 
-    // todo: need to think harder about wraparound and tag uniqueness
-    i1
+    // TODO: need a better encapsulation for the tag
+    i1 as RwwTag
   }
 
-  pub fn xx(&mut self, i1: u16, port: &mut cpuio::IoPort)  {
+  pub fn send_rww(&mut self, i1: RwwTag, port: &mut cpuio::IoPort)  {
     self.avail.add_to_ring(i1);
 
     // Notify, TODO: make this optional

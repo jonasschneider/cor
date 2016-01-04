@@ -1,7 +1,7 @@
 use prelude::*;
 
 use cpuio;
-use super::{virtq,InitError};
+use super::virtq;
 use super::pci;
 use mem::*;
 use sched;
@@ -55,7 +55,7 @@ impl Serialdev {
     n
   }
 
-  pub fn new(mut port: cpuio::IoPort) -> Result<Self, InitError> {
+  pub fn new(mut port: cpuio::IoPort) -> Result<Self, ()> {
     let rxhandler = (box move |used, free| {
       println!("serialrx processing used buffers: {:?}", used);
     }) as virtq::Handler;

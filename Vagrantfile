@@ -2,6 +2,8 @@
 # vi: set ft=ruby :
 
 Vagrant.configure("2") do |config|
+  config.vm.box = "archlinux-x86_64"
+
   config.vm.define "arch" do
     config.vm.box = "archlinux-x86_64"
   end
