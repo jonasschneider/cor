@@ -1,4 +1,3 @@
-typedef unsigned char uint8_t;
 typedef unsigned long long uint64_t;
 
 size_t rust_allocd = 0;
@@ -20,36 +19,10 @@ void *rust_allocate(size_t size, size_t align) {
   void *ptr = tkalloc(size, "rust_allocate()", align);
   void *x = ptr;
   while(x < ptr) {
-    *((uint8_t*)x++) = 0;
+    *((unsigned char*)x++) = 0;
   }
-  //ptr = __builtin_memset(ptr, 0, size);
   return ptr;
 }
-
-// TODO: review these.
-void memset(void *dst, int fill, size_t n) {
-  size_t i = n;
-  while(i-- > 0) {
-    *((uint8_t*)dst++) = fill;
-  }
-}
-void memcpy(void *dst, void *src, size_t n) {
-  size_t i = n;
-  while(i-- > 0) {
-    *((uint8_t*)dst++) = *((uint8_t*)src++);
-  }
-}
-// FIXME: memmove breaks for overlapping areas
-void memmove(void *dst, void *src, size_t n) {
-  size_t i = n;
-  while(i-- > 0) {
-    *((uint8_t*)dst++) = *((uint8_t*)src++);
-  }
-}
-
-void memcmp() { cor_panic("memcmp()"); }
-void fmodf() { cor_panic("fmodf()"); }
-void fmod() { cor_panic("fmod()"); }
 
 void rust_deallocate(void *what, size_t old_size, size_t align) {
   rust_allocd -= old_size;

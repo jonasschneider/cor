@@ -6,6 +6,7 @@ dependencies = [
  "collections 0.0.1",
  "core 0.0.1",
  "kalloc 0.0.1",
+ "rlibc 0.0.1",
 ]
 
 [[package]]
@@ -30,6 +31,13 @@ version = "0.0.1"
 
 [[package]]
 name = "kalloc"
+version = "0.0.1"
+dependencies = [
+ "core 0.0.1",
+]
+
+[[package]]
+name = "rlibc"
 version = "0.0.1"
 dependencies = [
  "core 0.0.1",

@@ -11,3 +11,4 @@ core = { path = "src/lib/libcore" }
 kalloc = { path = "src/lib/libkalloc" }
 alloc = { path = "src/lib/liballoc" }
 collections = { path = "src/lib/libcollections" }
+rlibc = { path = "src/lib/rlibc" }

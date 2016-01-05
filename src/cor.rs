@@ -5,6 +5,7 @@
 #![feature(lang_items,unsafe_destructor,asm,box_patterns,str_char,fn_traits)]
 #![no_std]
 
+extern crate rlibc;
 extern crate kalloc;
 extern crate alloc;
 

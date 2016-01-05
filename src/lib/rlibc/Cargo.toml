@@ -1,0 +1,10 @@
+[package]
+name = "rlibc"
+version = "0.0.1"
+authors = ["https://github.com/alexcrichton/rlibc"]
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+core = { path = "../libcore" }
