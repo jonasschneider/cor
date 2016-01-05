@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stddef.h> // for size_t
 
 typedef unsigned int uint;
 

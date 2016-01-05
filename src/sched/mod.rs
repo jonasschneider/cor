@@ -6,6 +6,79 @@ use core::mem;
 use core;
 use collections::linked_list::LinkedList;
 
+
+
+// On first access to the global, initialize it using the given expression.
+// You *must* ensure that until the first access returns, no further accesses occur.
+macro_rules! unsafe_lazy_static {
+    ($(#[$attr:meta])* static ref $N:ident : $T:ty = $e:expr; $($t:tt)*) => {
+        unsafe_lazy_static!(PRIV, $(#[$attr])* static ref $N : $T = $e; $($t)*);
+    };
+    ($(#[$attr:meta])* pub static ref $N:ident : $T:ty = $e:expr; $($t:tt)*) => {
+        unsafe_lazy_static!(PUB, $(#[$attr])* static ref $N : $T = $e; $($t)*);
+    };
+    ($VIS:ident, $(#[$attr:meta])* static ref $N:ident : $T:ty = $e:expr; $($t:tt)*) => {
+        unsafe_lazy_static!(MAKE TY, $VIS, $(#[$attr])*, $N);
+        impl ::core::ops::Deref for $N {
+            type Target = $T;
+            fn deref<'a>(&'a self) -> &'a $T {
+                #[inline(always)]
+                fn __static_ref_initialize() -> $T { $e }
+
+                unsafe {
+                    #[inline(always)]
+                    fn require_sync<T: Sync>(_: &T) { }
+
+                    #[inline(always)]
+                    unsafe fn __stability() -> &'static $T {
+                        use core::cell::UnsafeCell;
+
+                        struct SyncCell(UnsafeCell<Option<$T>>);
+                        unsafe impl Sync for SyncCell {}
+
+                        static mut DONE: bool = false;
+
+                        static DATA: SyncCell = SyncCell(UnsafeCell::new(None));
+                        if !DONE {
+                          *DATA.0.get() = Some(__static_ref_initialize());
+                          DONE = true;
+                        }
+                        match *DATA.0.get() {
+                            Some(ref x) => x,
+                            None => core::intrinsics::unreachable(),
+                        }
+                    }
+
+                    let static_ref = __stability();
+                    require_sync(static_ref);
+                    static_ref
+                }
+            }
+        }
+        unsafe_lazy_static!($($t)*);
+    };
+    (MAKE TY, PUB, $(#[$attr:meta])*, $N:ident) => {
+        #[allow(missing_copy_implementations)]
+        #[allow(non_camel_case_types)]
+        #[allow(dead_code)]
+        $(#[$attr])*
+        pub struct $N {__private_field: ()}
+        #[doc(hidden)]
+        pub static $N: $N = $N {__private_field: ()};
+    };
+    (MAKE TY, PRIV, $(#[$attr:meta])*, $N:ident) => {
+        #[allow(missing_copy_implementations)]
+        #[allow(non_camel_case_types)]
+        #[allow(dead_code)]
+        $(#[$attr])*
+        struct $N {__private_field: ()}
+        #[doc(hidden)]
+        static $N: $N = $N {__private_field: ()};
+    };
+    () => ()
+}
+
+
 mod context;
 pub mod blocking;
 pub mod irq;
@@ -21,7 +94,7 @@ struct Task {
   // context switching info
   started : bool,
   stack: kbuf::Buf<'static>,
-  rsp: u64,
+  rsp: *mut u64,
   entrypoint: Option<Entrypoint>, // will be None after launch
 
   // parking/scheduling info
@@ -52,15 +125,18 @@ extern {
   static mut context_switch_jumpto : u64;
 
   fn context_switch();
-
-  static mut irq_log : [u8; 256];
 }
 // Okay, this should not be a static and Rust rightly slaps us in the face for
 // trying to use a mutable static thingie. However, we don't even have
 // multiple cores right now, and we don't have any abstraction for per-core
 // state either.
 // TODO(smp): fix all of this
-static mut theState : *mut PerCoreState = 0 as *mut PerCoreState;
+
+use sync::global_mutex::GlobalMutex;
+
+unsafe_lazy_static! {
+  static ref theState: GlobalMutex<PerCoreState> = { GlobalMutex::new(PerCoreState{runnable: LinkedList::new(), current: None}) };
+}
 
 use core::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
 
@@ -73,31 +149,6 @@ pub fn kyield() {
   }
 }
 
-pub fn reset_irq(irq: u16) {
-  unsafe { irq_log[irq as usize] = 0; }
-}
-
-pub fn park_until_irq(irq: u16) {
-  unsafe {
-    let ref mut c = (*theState).current;  // there should always be a current after context switch
-    match c {
-      &mut None => {
-        println!("no task after afterswitch?!");
-      }
-      &mut Some(ref mut t) => {
-        println!("sched: Parking {:?} until irq {}", t, irq);
-        t.parked_for_irq = irq
-      }
-    }
-  }
-  while unsafe { irq_log[irq as usize] == 0 } {
-    println!("Irq {} still hasn't been logged, continuing park..", irq);
-    kyield();
-  }
-  println!("Irq {} logged, exiting parking!", irq);
-  reset_irq(irq); // FIXME: need better global handling of this
-}
-
 
 // This is the actual entry point we reach after switching tasks.
 // It reads the current task from the per-CPU storage,
@@ -105,25 +156,28 @@ pub fn park_until_irq(irq: u16) {
 //
 // Maybe it should also do things like set up thread-local storage?
 fn starttask() {
-  unsafe {
-    let ref mut c = (*theState).current;  // there should always be a current after context switch
-    match c {
-      &mut None => {
-        println!("no task after afterswitch?!");
-      }
-      &mut Some(ref mut t) => {
-        println!("launching task entrypoint");
-        let entryp = mem::replace(&mut t.entrypoint, None).unwrap();
-        let lebox = entryp.0;
-        FnBox::call_box(lebox, ());
-        println!("task entrypoint returned, yielding away from us for the last time");
-        t.exited = true;
-        kyield();
-        panic!("kyield() returned after exit");
-      }
-    }
-
+  let lebox;
+  {
+    let mut s = theState.lock();
+    println!("Starting task {:p}", &s.current);
+    let mut t = mem::replace(&mut s.current, None).unwrap();
+    lebox = mem::replace(&mut t.entrypoint, None).unwrap();
+    mem::replace(&mut s.current, Some(t));
   }
+
+  FnBox::call_box(lebox.0, ());
+  println!("task entrypoint returned, yielding away from us for the last time");
+
+  {
+    let mut s = theState.lock();
+    let mut t = mem::replace(&mut s.current, None).unwrap();
+    t.exited = true;
+    mem::replace(&mut s.current, Some(t));
+  }
+
+  kyield();
+
+  panic!("kyield() returned after exit");
 }
 
 // Defining the actual yield in Rust is unsafe because we enter the function
@@ -132,82 +186,82 @@ fn starttask() {
 // it in asm!
 // Returns true if a context switch should follow, false otherwise.
 fn reschedule() -> bool {
-  // unsafe because we have to access the global state..
-  // we're doing lots more of unsafe operations in here.
-  // TODO: finer-grained unsafe blocks here, and think harder about everything unsafe
-  unsafe {
-    // eep
-    context_switch_oldrsp_dst = 0;
-    context_switch_newrsp = 0;
-    context_switch_jumpto = 0;
+  // FIXME: this is a mess
 
-    let ref mut s = *theState;
-    println!("yielding with state={:?}, data={:?}", s, context_switch_oldrsp_dst);
+  let mut cur = theState.lock();
 
-    let next = match s.runnable.pop_front() {
-      None => {
-        println!("No other task to yield to found!");
-        if let Some(ref t) = s.current {
-          if t.exited {
-            println!("Last task exited. Panic!");
-            loop {}
-          } else {
-            // FIXME: this is horrible, but I want to halt somewhere.
-            if t.desc.as_bytes() == "idle".as_bytes() {
-              println!("Only the idle task remains. Bye!");
-              panic!("Scheduler stop")
-            } else {
-              println!("Continuing the last task.");
-              return false
-            }
-          }
-        } else {
-          println!("No current task during failing reschedule. Panic!");
+  println!("Task {:p} called for a reschedule.", &cur.current);
+  println!("Info: {:?}", &cur.current);
+
+  println!("LOLZERZ");
+
+  // eep
+  unsafe { context_switch_oldrsp_dst = 0 };
+  unsafe { context_switch_newrsp = 0 };
+  unsafe { context_switch_jumpto = 0 };
+
+
+  println!("yielding, state={:?}", *cur);
+
+  println!("again: {:?}", *cur);
+
+  let nextval = cur.runnable.pop_front();
+
+  println!("next: {:?}", nextval);
+
+  let next = match nextval {
+    None => {
+      println!("No other task to yield to found!");
+      if let Some(ref t) = cur.current {
+        if t.exited {
+          println!("Last task exited. Panic!");
           loop {}
-        }
-      }
-      Some(mut boxt) => {
-        context_switch_newrsp = boxt.rsp as u64; // POINTER SIZES FTW
-        println!("loading sp=0x{:x}", context_switch_newrsp);
-
-        if !boxt.started {
-          boxt.started = true;
-          context_switch_jumpto = starttask as u64;
-        }
-        println!("yielding to {:?}", boxt.desc);
-        Some(boxt)
-      }
-    };
-
-    let old = mem::replace(&mut s.current, next);
-    match old {
-      Some(mut old_t) => {
-        if old_t.exited {
-          println!("task marked as exited, not rescheduling");
         } else {
-          context_switch_oldrsp_dst = mem::transmute(&old_t.rsp);
-          s.runnable.push_back(old_t); // TODO(perf): this allocates!!! LinkedList sucks, apparently
+          // FIXME: this is horrible, but I want to halt somewhere.
+          if t.desc.as_bytes() == "idle".as_bytes() {
+            println!("Only the idle task remains. Bye!");
+            panic!("Scheduler stop")
+          } else {
+            println!("Continuing the last task.");
+            return false
+          }
         }
-      },
-      None => {
-        println!("initial switch");
+      } else {
+        println!("No current task during failing reschedule. Panic!");
+        loop {}
       }
+    }
+    Some(mut boxt) => {
+      unsafe { context_switch_newrsp = *boxt.rsp }; // pointer size..
+      println!("loading sp=0x{:x}", unsafe{*boxt.rsp});
+
+      if !boxt.started {
+        boxt.started = true;
+        unsafe { context_switch_jumpto = starttask as u64 };
+      }
+      println!("yielding to {:?}", boxt.desc);
+      Some(boxt)
+    }
+  };
+
+  let old = mem::replace(&mut cur.current, next);
+  match old {
+    Some(mut old_t) => {
+      if old_t.exited {
+        println!("task marked as exited, not rescheduling");
+      } else {
+        unsafe { context_switch_oldrsp_dst = old_t.rsp as u64; }
+        cur.runnable.push_back(old_t); // TODO(perf): this allocates!!! LinkedList sucks, apparently
+      }
+    },
+    None => {
+      println!("initial switch");
     }
   }
 
-  true
-}
+  println!("Leaving state: {:?}", *cur);
 
-pub fn init() {
-  println!("initing sched!");
-  let s = box PerCoreState{runnable: LinkedList::new(), current: None};
-  unsafe  {
-    // This will (per IRC) consume the box, and turn it into a pointer
-    // to the thing that was in the box (the box itself isn't a struct anywhere in memory)
-    // This also means that the box won't be dropped once we leave this function,
-    // but will instead 'leak' -- which is exactly what we want.
-    theState = mem::transmute(s);
-  }
+  true
 }
 
 // This is where we enforce that only Send things can cross a task boundary.
@@ -215,8 +269,9 @@ pub fn add_task<F, T>(entrypoint: F, desc: &'static str)
   where F: FnOnce() -> T, F: Send + 'static, T: Send + 'static {
   let id = NEXT_TASK_ID.fetch_add(1, Ordering::SeqCst);
 
+  // FIXME: Stack protection is still *totally* needed...
   let stack = kbuf::new("task stack");
-  let rsp = unsafe { (stack.original_mem as u64) } +0x3ff0;
+  let rsp = unsafe { (stack.original_mem as u64) } +0xfff0;
   println!("Task RSP: 0x{:x}", rsp);
   let main = move || {
     entrypoint();
@@ -224,13 +279,12 @@ pub fn add_task<F, T>(entrypoint: F, desc: &'static str)
 
   let t = box Task{id: id, desc: desc, entrypoint: Some(Entrypoint(box main)),
     stack: stack,
-    rsp: rsp,
+    rsp: Box::into_raw(box rsp), // FIXME: leak!
     started: false,
     exited: false,
     parked_for_irq: 0};
 
-  // unsafe because we have to access the global state.. ugh
-  unsafe { (*theState).runnable.push_back(t); }
+  theState.lock().runnable.push_back(t);
 }
 
 // Start the scheduler loop, consuming the active thread as the 'boot thread'.

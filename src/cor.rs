@@ -59,7 +59,6 @@ fn idle_task() {
 
 #[no_mangle]
 pub fn rs_sched_exec() {
-  sched::init();
   sched::add_task(idle_task, "idle");
 
   // Okay, now that we have the scheduler set up, we can start doing things

@@ -39,12 +39,22 @@ context_switch:
     cmp $0, %rax
     je context_switch_discard_old # skip saving the old values, this is only needed when a task exits
     push %rbp
+    push %r12
+    push %r13
+    push %r14
+    push %r15
+    push %rbx
     mov %rsp, (%rax)
   context_switch_discard_old:
     mov %r8, %rsp
     cmp $0, %r10
     jne context_switch_jmp_to_starttask
 
+    pop %rbx
+    pop %r15
+    pop %r14
+    pop %r13
+    pop %r12
     pop %rbp
     ret # this will "return" to the new stack
 

@@ -2,10 +2,6 @@
 .globl   dummy_isr
 .align   4
 
-.globl irq_log
-irq_log:
-  .fill 256, 1, 0
-
 is_return_from_trampoline:
   pop %rax # restore original rax
   #cli # TODO
@@ -22,15 +18,6 @@ isr_dispatcher:
   sub $49, %rax
   jz is_return_from_trampoline
   add $49, %rax
-
-  # set the appropriate flag in irq_log
-  push %rbx
-  mov %rax, %rbx
-  movabs $irq_log, %rax
-  movb $1, (%rax, %rbx)
-  mov %rbx, %rax
-  pop %rbx
-
 
   // TODO: only push/pop the x86-64 caller-saved registers here
   push %rbx

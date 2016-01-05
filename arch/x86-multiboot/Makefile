@@ -1,7 +1,7 @@
 ROOT=../..
 include ../../Makefile.conf
 CC=x86_64-elf-gcc
-PREFIX=../../target/x86_64-none-elf/release
+PREFIX=../../target/x86_64-none-elf/debug
 .PHONY: clean
 
 $(PREFIX)/cor-x86_64-multiboot.iso: $(PREFIX)/cor.elf
@@ -11,7 +11,7 @@ $(PREFIX)/cor-x86_64-multiboot.iso: $(PREFIX)/cor.elf
 	grub-mkrescue -d /usr/lib/grub/i386-pc/ -o $@ $(PREFIX)/iso
 
 $(PREFIX)/libcor.a: $(shell find ../../src)
-	cargo rustc --release --target=`pwd`/x86_64-none-elf.json -- -C no-stack-check -C relocation-model=static -C code-model=large -Z no-landing-pads
+	cargo rustc --target=`pwd`/x86_64-none-elf.json -- -C no-stack-check -C relocation-model=static -C code-model=large -Z no-landing-pads
 
 $(PREFIX)/cor.elf: boot.o asm/* runtime.o $(PREFIX)/libcor.a
 	env CC=$(CC) make -C asm

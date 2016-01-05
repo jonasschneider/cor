@@ -3,6 +3,7 @@ include ../Makefile.conf
 .PHONY: all clean
 
 all:
+	ln -fs `pwd`/../userspace/crt0.o ash/bltin/
 	$(MAKE) -C ash
 	$(MAKE) rootfs.bin
 
