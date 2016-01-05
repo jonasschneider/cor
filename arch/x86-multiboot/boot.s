@@ -7,7 +7,7 @@
 
 .section .bootstrap_stack, "aw", @nobits
 stack_bottom:
-.skip 16384 # 16 KiB
+.skip 160384 # 16 KiB
 stack_top:
 
 .section .bootstart
