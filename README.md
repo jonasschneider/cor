@@ -48,25 +48,24 @@ In the [OSDev ontology](http://wiki.osdev.org/What_order_should_I_make_things_in
   - [x] Move to higher-half kernel
 - [x] Trampoline from C to Rust code after bootstrapping
 - [x] Naive userspace page table setup for init
-- [ ] Concurrency / Multiprocessing
-  - [x] Enable PIT chip
+- [x] Concurrency & context switching in kernelspace
   - [x] Cooperative scheduler for kernel tasks (using kyield)
-  - [x] Idle task using HLT
-  - [x] Basic system calls from userland
-  - [ ] Yielding from userspace
-  - [ ] Well-defined I/O blocking for kernel threads (runqueue, waitqueues)
-  - [ ] Process memory space management (free everything on exit)
+  - [x] Idle task using HLT & PIT
+- [x] First steps in userspace
+  - [x] Basic system calls
+  - [x] Simple console I/O, enough to make a shell
+- [ ] Userspace multiprocessing
+  - [ ] Accountable task memory space management (free everything on exit)
   - [ ] Process lifecycle / identity management, multiple processes, process table
-  - [ ] Timer-based preemptive scheduling for userspace
   - [ ] fork()
+  - [ ] Timer-based preemptive round-robin scheduling
   - [ ] Thread-local storage for user space
-  - [ ] CPU-local storage for kernel space (for SMP: eliminate mutable statics)
+  - [ ] CPU-local storage for kernel space (for SMP: document what needs mutable statics and what is per-CPU)
 - [x] Low-level non-spinning synchronization between kernel processes using wait/signal tokens
-- [ ] Think harder about safe IRQ handling
-  - strict separation between IRQ handler data and regular kernel data (Rust's ownership principles)
-  - 'softirqs'/deferred processing for devices like virtio
-  - context layers: userspace, kernelspace, irq? -> explicit synchronization always needed
-  - special variable scopes: per-CPU, per-task, system-global (items, and the IRQ table)
+- [x] Safe simplified IRQ handling
+  - [x] Maintain a system-wide table of IRQ handlers
+  - [x] Enforce Rust's ownership principles for all data structures reachable from an IRQ handler
+  - [ ] softirqs/deferred processing?
 - [ ] Filesystem
   - [x] Attach virtio (virtio-scsi, or preferredly virtio-blk) to QEMU
   - [x] PCI device detection
@@ -74,14 +73,13 @@ In the [OSDev ontology](http://wiki.osdev.org/What_order_should_I_make_things_in
   - [x] no-op buffer page cache / buffer pool manager
   - [x] tiniest filesystem imaginable (read-only single-level?) -> `cpio` format
   - [x] read init from filesystem instead of baking it in
-  - [ ] file descriptors / opening files from userspace
+  - [ ] file descriptors / opening files from userspace -> synchronization story
 - [ ] Better toolchain for userspace
   - [x] Make a "hello world" binary that runs on host Linux and is as static as it gets (no libc)
   - [ ] Mod dietlibc to fit our syscall mechanism
-  - [ ] Package that as libcorc or something
+  - [ ] Package that as libcorc or something (no! instead it's just `libc` for the x86_64-cor platform)
 - [ ] Use an actual `i686-elf` cross-compiler instead of mingling with gcc-linux
-- [ ] Build something like a shell that talks over serial (this will be our init)
-- [ ] Userspace binaries (`ls` and such)
+- [ ] Bare-bones userspace binary collection (`ls` and such)
 - [ ] Networking:
   - [ ] virtio NIC
   - [ ] Ethernet/Layer 2 broadcasting & receiving
@@ -91,9 +89,25 @@ In the [OSDev ontology](http://wiki.osdev.org/What_order_should_I_make_things_in
   - [ ] TCP
   - [ ] Tiny webserver
 - [ ] Webserver in userspace
-- [ ] SSH server userspace
+- [ ] SSH server in userspace (Dropbear?)
+- [ ] More transparent synchronization primitives
+  - [ ] Well-defined, generalized I/O blocking for kernel threads (runqueue, waitqueues?)
+  - [ ] SleepingMutex
+- [ ] Support dynamic linking?
+- [ ] Allow safely skipping ring switches
+  - Run applications as provably safe&restricted kernel modules
+    - first: by uploading Rust executables
+    - in theory, we'd want to have a rustc in kernelspace, and then upload provably-sound Rust code from userspace
+    - Figure out a story for preemption of this code ("real" kernel modules could still be nonpreemptive?)
+    - Distinction: kernel module = may contain unsafe, not preempted,
+                   userspace app = may not contain unsafe, preempted.
+  - aka: never have to invent "BPF-style" syntaxes again, for:
+    - packet filters
+    - FUSE?
 
+more safety things:
 - model I/O ports as slices of a 0-dimensional data type
+- InterruptLocked (see rust forums)
 
 More unicorns:
 
